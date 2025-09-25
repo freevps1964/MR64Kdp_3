@@ -1,0 +1,104 @@
+{
+  "header": {
+    "title": "MR64Kdp Book",
+    "saveAndArchive": "Save & Archive",
+    "promptProjectName": "Enter a name for your project:",
+    "progress": "Progress"
+  },
+  "tabs": {
+    "research": "Research",
+    "structure": "Structure",
+    "content": "Content",
+    "layout": "Layout",
+    "cover": "Cover",
+    "metadata": "Metadata",
+    "validation": "Validation"
+  },
+  "welcome": {
+    "title": "Welcome to MR64Kdp Book",
+    "description": "Your AI assistant for self-publishing on Amazon KDP. From topic research to the final PDF, we're with you every step of the way.",
+    "startProject": "Start New Project",
+    "starting": "Starting...",
+    "archiveTitle": "Project Archive",
+    "lastSaved": "Last saved",
+    "loadProject": "Load",
+    "deleteProject": "Delete",
+    "confirmDelete": "Are you sure you want to delete the project \"{title}\"?"
+  },
+  "project": {
+    "defaultTitle": "New Project"
+  },
+  "researchTab": {
+    "title": "Topic Research",
+    "description": "Enter a topic for your book to start the AI-powered research. We will analyze the market, suggest titles, and find relevant keywords for KDP.",
+    "placeholder": "e.g., Keto diet for beginners",
+    "button": "Start Research",
+    "loading": "Researching... This may take a moment.",
+    "resultsTitle": "Research Results",
+    "marketSummary": "Market Summary",
+    "suggestedTitles": "Suggested Titles",
+    "suggestedSubtitles": "Suggested Subtitles",
+    "kdpKeywords": "KDP Keywords",
+    "sources": "Web Sources",
+    "error": "An error occurred during research. Please try again."
+  },
+  "structureTab": {
+    "title": "Book Structure",
+    "description": "Generate a logical structure for your book, including chapters and subchapters. You can edit the structure before proceeding.",
+    "button": "Generate Structure",
+    "loading": "Generating structure...",
+    "error": "Could not generate a structure. Please ensure you have completed the research step.",
+    "saveButton": "Save Structure",
+    "chapter": "Chapter",
+    "subchapter": "Subchapter"
+  },
+  "contentTab": {
+    "title": "Content Creation",
+    "description": "Select a chapter or subchapter from the list to write or generate its content with AI assistance.",
+    "placeholder": "Select a chapter to begin...",
+    "generateButton": "Generate Content",
+    "saveButton": "Save Content",
+    "generating": "Generating...",
+    "saving": "Saving..."
+  },
+  "layoutTab": {
+    "title": "Book Layout",
+    "description": "Choose a layout template to professionally format your book.",
+    "classic": "Classic",
+    "modern": "Modern",
+    "minimalist": "Minimalist",
+    "comingSoon": "PDF preview and generation coming soon."
+  },
+  "coverTab": {
+    "title": "Cover Design",
+    "description": "Describe the cover you envision and let the AI generate stunning options for you.",
+    "promptLabel": "Cover Prompt",
+    "button": "Generate Covers",
+    "loading": "Generating covers... This can take up to a minute.",
+    "resultsTitle": "Generated Covers",
+    "selectButton": "Select this cover",
+    "selected": "Selected"
+  },
+  "metadataTab": {
+    "title": "Book Metadata",
+    "description": "Fill in the essential details for publishing on Amazon KDP. This information will help readers find your book.",
+    "projectTitle": "Project Title",
+    "subtitle": "Subtitle",
+    "author": "Author",
+    "kdpKeywords": "KDP Keywords (comma-separated)",
+    "categories": "Categories (comma-separated)",
+    "descriptionLabel": "Book Description",
+    "generateDescription": "Generate Description",
+    "saveButton": "Save Metadata"
+  },
+  "validationTab": {
+    "title": "Validation & Export",
+    "description": "Review your project and check against KDP guidelines before exporting the final files.",
+    "checklistTitle": "Pre-flight Checklist",
+    "item1": "All chapters have content.",
+    "item2": "Metadata is complete (Title, Author, Description).",
+    "item3": "A cover has been selected.",
+    "item4": "Layout has been chosen.",
+    "exportButton": "Export Print-Ready PDF (Coming Soon)"
+  }
+}

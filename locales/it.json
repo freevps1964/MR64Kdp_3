@@ -1,0 +1,104 @@
+{
+  "header": {
+    "title": "MR64Kdp Book",
+    "saveAndArchive": "Salva e Archivia",
+    "promptProjectName": "Inserisci un nome per il tuo progetto:",
+    "progress": "Avanzamento"
+  },
+  "tabs": {
+    "research": "Ricerca",
+    "structure": "Struttura",
+    "content": "Contenuti",
+    "layout": "Layout",
+    "cover": "Copertina",
+    "metadata": "Metadati",
+    "validation": "Validazione"
+  },
+  "welcome": {
+    "title": "Benvenuto in MR64Kdp Book",
+    "description": "Il tuo assistente AI per il self-publishing su Amazon KDP. Dalla ricerca dell'argomento al PDF finale, siamo con te in ogni passo.",
+    "startProject": "Inizia un Nuovo Progetto",
+    "starting": "Inizio...",
+    "archiveTitle": "Archivio Progetti",
+    "lastSaved": "Ultimo salvataggio",
+    "loadProject": "Carica",
+    "deleteProject": "Elimina",
+    "confirmDelete": "Sei sicuro di voler eliminare il progetto \"{title}\"?"
+  },
+  "project": {
+    "defaultTitle": "Nuovo Progetto"
+  },
+  "researchTab": {
+    "title": "Ricerca Argomento",
+    "description": "Inserisci un argomento per il tuo libro per avviare la ricerca basata sull'IA. Analizzeremo il mercato, suggeriremo titoli e troveremo parole chiave pertinenti per KDP.",
+    "placeholder": "Es. Dieta chetogenica per principianti",
+    "button": "Avvia Ricerca",
+    "loading": "Ricerca in corso... Potrebbe volerci un momento.",
+    "resultsTitle": "Risultati della Ricerca",
+    "marketSummary": "Riepilogo del Mercato",
+    "suggestedTitles": "Titoli Suggeriti",
+    "suggestedSubtitles": "Sottotitoli Suggeriti",
+    "kdpKeywords": "Parole Chiave KDP",
+    "sources": "Fonti Web",
+    "error": "Si è verificato un errore durante la ricerca. Riprova."
+  },
+  "structureTab": {
+    "title": "Struttura del Libro",
+    "description": "Genera una struttura logica per il tuo libro, inclusi capitoli e sottocapitoli. Puoi modificare la struttura prima di procedere.",
+    "button": "Genera Struttura",
+    "loading": "Generazione della struttura...",
+    "error": "Impossibile generare la struttura. Assicurati di aver completato la fase di ricerca.",
+    "saveButton": "Salva Struttura",
+    "chapter": "Capitolo",
+    "subchapter": "Sottocapitolo"
+  },
+  "contentTab": {
+    "title": "Creazione Contenuti",
+    "description": "Seleziona un capitolo o sottocapitolo dalla lista per scrivere o generare il suo contenuto con l'assistenza dell'IA.",
+    "placeholder": "Seleziona un capitolo per iniziare...",
+    "generateButton": "Genera Contenuto",
+    "saveButton": "Salva Contenuto",
+    "generating": "Generazione in corso...",
+    "saving": "Salvataggio..."
+  },
+  "layoutTab": {
+    "title": "Layout del Libro",
+    "description": "Scegli un modello di layout per formattare professionalmente il tuo libro.",
+    "classic": "Classico",
+    "modern": "Moderno",
+    "minimalist": "Minimalista",
+    "comingSoon": "L'anteprima e la generazione del PDF saranno presto disponibili."
+  },
+  "coverTab": {
+    "title": "Design della Copertina",
+    "description": "Descrivi la copertina che immagini e lascia che l'IA generi opzioni straordinarie per te.",
+    "promptLabel": "Prompt per la Copertina",
+    "button": "Genera Copertine",
+    "loading": "Generazione copertine... L'operazione può richiedere fino a un minuto.",
+    "resultsTitle": "Copertine Generate",
+    "selectButton": "Seleziona questa copertina",
+    "selected": "Selezionata"
+  },
+  "metadataTab": {
+    "title": "Metadati del Libro",
+    "description": "Compila i dettagli essenziali per la pubblicazione su Amazon KDP. Queste informazioni aiuteranno i lettori a trovare il tuo libro.",
+    "projectTitle": "Titolo del Progetto",
+    "subtitle": "Sottotitolo",
+    "author": "Autore",
+    "kdpKeywords": "Parole Chiave KDP (separate da virgola)",
+    "categories": "Categorie (separate da virgola)",
+    "descriptionLabel": "Descrizione del Libro",
+    "generateDescription": "Genera Descrizione",
+    "saveButton": "Salva Metadati"
+  },
+  "validationTab": {
+    "title": "Validazione ed Esportazione",
+    "description": "Rivedi il tuo progetto e controllalo rispetto alle linee guida di KDP prima di esportare i file finali.",
+    "checklistTitle": "Checklist Pre-esportazione",
+    "item1": "Tutti i capitoli hanno un contenuto.",
+    "item2": "I metadati sono completi (Titolo, Autore, Descrizione).",
+    "item3": "È stata selezionata una copertina.",
+    "item4": "È stato scelto un layout.",
+    "exportButton": "Esporta PDF Pronto per la Stampa (Prossimamente)"
+  }
+}
