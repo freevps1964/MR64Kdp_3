@@ -16,7 +16,7 @@ const StatCard: React.FC<{ value: number; label: string }> = ({ value, label }) 
 const ResearchTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject } = useProject();
-  const [topic, setTopic] = useState(project?.topic || '');
+  const [topic, setTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,12 +32,16 @@ const ResearchTab: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    updateProject({ researchData: null, topic });
+    updateProject({ researchData: null, topic: topic.trim() });
 
     try {
-      const { result, sources } = await researchTopic(topic);
+      const { result } = await researchTopic(topic.trim());
       if (result) {
-        result.sources = sources;
+        // Sort results client-side as a fallback
+        result.titles.sort((a, b) => b.relevance - a.relevance);
+        result.subtitles.sort((a, b) => b.relevance - a.relevance);
+        result.keywords.sort((a, b) => b.relevance - a.relevance);
+        result.sources.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0));
         updateProject({ researchData: result });
       } else {
         throw new Error('No data returned from research.');
@@ -137,8 +141,9 @@ const ResearchTab: React.FC = () => {
               <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.suggestedTitles')}</h3>
               <div className="space-y-2">
                 {project.researchData.titles.map((item, index) => (
-                    <button key={index} onClick={() => handleSelectTitle(item.title)} className={`w-full text-left p-3 rounded-md transition-colors ${project.projectTitle === item.title ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
-                        {item.title}
+                    <button key={index} onClick={() => handleSelectTitle(item.title)} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.projectTitle === item.title ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
+                        <span>{item.title}</span>
+                        <span className="text-xs font-bold text-brand-primary bg-blue-100 px-2 py-1 rounded-full">{item.relevance}%</span>
                     </button>
                 ))}
               </div>
@@ -147,8 +152,9 @@ const ResearchTab: React.FC = () => {
               <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.suggestedSubtitles')}</h3>
                <div className="space-y-2">
                 {project.researchData.subtitles.map((item, index) => (
-                    <button key={index} onClick={() => handleSelectSubtitle(item.subtitle)} className={`w-full text-left p-3 rounded-md transition-colors ${project.subtitle === item.subtitle ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
-                        {item.subtitle}
+                    <button key={index} onClick={() => handleSelectSubtitle(item.subtitle)} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.subtitle === item.subtitle ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
+                        <span>{item.subtitle}</span>
+                        <span className="text-xs font-bold text-brand-primary bg-blue-100 px-2 py-1 rounded-full">{item.relevance}%</span>
                     </button>
                 ))}
               </div>
@@ -159,9 +165,10 @@ const ResearchTab: React.FC = () => {
             <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.kdpKeywords')}</h3>
             <div className="flex flex-wrap gap-2">
               {project.researchData.keywords.map((item, index) => (
-                <span key={index} className="bg-brand-accent/20 text-brand-dark font-semibold px-3 py-1 rounded-full text-sm">
-                  {item.keyword}
-                </span>
+                <div key={index} className="bg-brand-accent/20 text-brand-dark font-semibold px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                  <span>{item.keyword}</span>
+                  <span className="text-xs opacity-75">({item.relevance}%)</span>
+                </div>
               ))}
             </div>
           </div>
@@ -185,19 +192,22 @@ const ResearchTab: React.FC = () => {
              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {project.researchData.sources?.map((source, index) => (
                     source.web?.uri && (
-                        <div key={index} className="flex items-center gap-3 p-2 bg-neutral-light rounded-md">
+                        <div key={index} className="flex items-start gap-3 p-2 bg-neutral-light rounded-md">
                             <input 
                                 type="checkbox" 
                                 id={`source-${index}`}
-                                className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-light"
+                                className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-light mt-1"
                                 checked={project.selectedSources?.some(s => s.web?.uri === source.web?.uri)}
                                 onChange={(e) => handleSourceSelectionChange(source, e.target.checked)}
                             />
-                            <label htmlFor={`source-${index}`} className="text-sm">
+                            <label htmlFor={`source-${index}`} className="text-sm flex-grow">
                                 <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline">
                                     {source.web.title || source.web.uri}
                                 </a>
                             </label>
+                            {source.relevance !== undefined && (
+                                <span className="text-xs font-bold text-brand-primary bg-blue-100 px-2 py-1 rounded-full flex-shrink-0">{source.relevance}%</span>
+                            )}
                         </div>
                     )
                 ))}

@@ -33,7 +33,7 @@ const StructureTab: React.FC = () => {
       }
     }
     
-    if (!project?.topic) {
+    if (!project?.topic || !project.researchData) {
       setError(t('structureTab.error'));
       return;
     }
@@ -41,7 +41,7 @@ const StructureTab: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const structure = await generateStructure(project.topic);
+      const structure = await generateStructure(project.topic, project.projectTitle, project.subtitle, project.researchData.keywords);
       if (structure) {
         const structureWithIds: BookStructure = {
             chapters: structure.chapters.map((chapter) => ({

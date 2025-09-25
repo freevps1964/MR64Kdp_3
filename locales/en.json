@@ -3,10 +3,28 @@
     "title": "MR64Kdp Book",
     "closeProject": "Close Project",
     "saveProject": "Save Project",
-    "projectSaved": "Saved!",
+    "projectSaved": "Project Saved",
     "projectSavedAt": "Saved at {time}",
     "promptRenameProject": "Enter a new name for your project:",
-    "progress": "Progress"
+    "progress": "Progress",
+    "logout": "Logout"
+  },
+  "auth": {
+    "loginTitle": "Access Your Account",
+    "loginDescription": "Log in to continue with your projects.",
+    "signupTitle": "Create an Account",
+    "signupDescription": "Sign up to start creating your books.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "loginButton": "Login",
+    "signupButton": "Sign Up",
+    "or": "OR",
+    "googleButton": "Sign in with Google",
+    "switchToSignup": "Don't have an account? Sign Up",
+    "switchToLogin": "Already have an account? Login",
+    "errorGeneric": "An error occurred. Please try again.",
+    "errorInvalidCredentials": "Invalid email or password.",
+    "errorEmailInUse": "This email is already in use."
   },
   "tabs": {
     "research": "Research",
@@ -77,7 +95,11 @@
     "generateButton": "Generate Content",
     "saveButton": "Save Content",
     "generating": "Generating...",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "generateAllButton": "Generate All Content",
+    "generatingAll": "Generating all content...",
+    "generatingProgress": "Generating: {nodeTitle} ({current}/{total})",
+    "error": "An error occurred while generating content."
   },
   "layoutTab": {
     "title": "Book Layout",

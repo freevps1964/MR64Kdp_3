@@ -3,10 +3,28 @@
     "title": "MR64Kdp Book",
     "closeProject": "Chiudi Progetto",
     "saveProject": "Salva Progetto",
-    "projectSaved": "Salvato!",
+    "projectSaved": "Progetto Salvato",
     "projectSavedAt": "Salvato alle {time}",
     "promptRenameProject": "Inserisci un nuovo nome per il progetto:",
-    "progress": "Avanzamento"
+    "progress": "Avanzamento",
+    "logout": "Logout"
+  },
+  "auth": {
+    "loginTitle": "Accedi al Tuo Account",
+    "loginDescription": "Effettua il login per continuare con i tuoi progetti.",
+    "signupTitle": "Crea un Account",
+    "signupDescription": "Registrati per iniziare a creare i tuoi libri.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "loginButton": "Accedi",
+    "signupButton": "Registrati",
+    "or": "OPPURE",
+    "googleButton": "Accedi con Google",
+    "switchToSignup": "Non hai un account? Registrati",
+    "switchToLogin": "Hai già un account? Accedi",
+    "errorGeneric": "Si è verificato un errore. Riprova.",
+    "errorInvalidCredentials": "Email o password non validi.",
+    "errorEmailInUse": "Questa email è già in uso."
   },
   "tabs": {
     "research": "Ricerca",
@@ -77,7 +95,11 @@
     "generateButton": "Genera Contenuto",
     "saveButton": "Salva Contenuto",
     "generating": "Generazione in corso...",
-    "saving": "Salvataggio..."
+    "saving": "Salvataggio...",
+    "generateAllButton": "Genera Tutto il Contenuto",
+    "generatingAll": "Generazione di tutto il contenuto in corso...",
+    "generatingProgress": "In generazione: {nodeTitle} ({current}/{total})",
+    "error": "Si è verificato un errore durante la generazione del contenuto."
   },
   "layoutTab": {
     "title": "Layout del Libro",

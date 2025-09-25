@@ -8,10 +8,7 @@ const WelcomeScreen: React.FC = () => {
     const { t } = useLocalization();
 
     const handleStartProject = () => {
-        const projectName = prompt(t('welcome.promptNewProjectName'), t('project.defaultTitle'));
-        if (projectName && projectName.trim() !== '') {
-            startNewProject(projectName.trim());
-        }
+        startNewProject(t('project.defaultTitle'));
     };
 
     const handleDelete = (projectId: string, projectTitle: string) => {

@@ -7,18 +7,22 @@ export interface GroundingSource {
     uri: string;
     title: string;
   };
+  relevance?: number;
 }
 
 export interface TitleSuggestion {
   title: string;
+  relevance: number;
 }
 
 export interface SubtitleSuggestion {
   subtitle: string;
+  relevance: number;
 }
 
 export interface Keyword {
   keyword: string;
+  relevance: number;
 }
 
 export interface ResearchResult {
@@ -38,7 +42,7 @@ export interface SubChapter {
 }
 
 export interface Chapter {
-  id: string;
+  id:string;
   title: string;
   content: string;
   subchapters: SubChapter[];
