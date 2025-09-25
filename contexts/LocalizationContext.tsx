@@ -68,7 +68,7 @@ export const LocalizationProvider: React.FC<LocalizationProviderProps> = ({ chil
     
     if (options && translatedString !== key) {
       Object.keys(options).forEach(optionKey => {
-        const regex = new RegExp(`{{${optionKey}}}`, 'g');
+        const regex = new RegExp(`{${optionKey}}`, 'g');
         translatedString = translatedString.replace(regex, String(options[optionKey]));
       });
     }

@@ -6,6 +6,13 @@ import LoadingSpinner from '../icons/LoadingSpinner';
 import Card from '../common/Card';
 import type { GroundingSource } from '../../types';
 
+const StatCard: React.FC<{ value: number; label: string }> = ({ value, label }) => (
+  <div>
+    <p className="text-2xl sm:text-3xl font-bold text-brand-primary">{value}</p>
+    <p className="text-xs sm:text-sm text-neutral-medium">{label}</p>
+  </div>
+);
+
 const ResearchTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject } = useProject();
@@ -62,6 +69,20 @@ const ResearchTab: React.FC = () => {
     updateProject({ selectedSources: newSelected });
   };
 
+  const allSources = project?.researchData?.sources?.filter(s => s.web?.uri) || [];
+  const selectedSourcesUris = new Set(project?.selectedSources?.map(s => s.web?.uri));
+  const areAllSelected = allSources.length > 0 && allSources.every(s => selectedSourcesUris.has(s.web?.uri));
+
+  const handleSelectAllSources = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    const allAvailableSources = project?.researchData?.sources?.filter(s => s.web?.uri) || [];
+    if (isChecked) {
+        updateProject({ selectedSources: allAvailableSources });
+    } else {
+        updateProject({ selectedSources: [] });
+    }
+  };
+
   return (
     <Card>
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('researchTab.title')}</h2>
@@ -93,6 +114,19 @@ const ResearchTab: React.FC = () => {
 
       {project?.researchData && (
         <div className="mt-8 space-y-8 animate-fade-in">
+
+          <div>
+            <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.summaryTitle')}</h3>
+            <div className="p-4 bg-neutral-light/70 rounded-lg border">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <StatCard value={project.researchData.titles.length} label={t('researchTab.summaryTitles')} />
+                    <StatCard value={project.researchData.subtitles.length} label={t('researchTab.summarySubtitles')} />
+                    <StatCard value={project.researchData.keywords.length} label={t('researchTab.summaryKeywords')} />
+                    <StatCard value={project.researchData.sources?.length || 0} label={t('researchTab.summarySources')} />
+                </div>
+            </div>
+          </div>
+
           <div>
             <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.marketSummary')}</h3>
             <p className="text-neutral-dark bg-neutral-light p-4 rounded-md">{project.researchData.marketSummary}</p>
@@ -134,7 +168,21 @@ const ResearchTab: React.FC = () => {
 
           <div>
             <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.sources')}</h3>
-             <div className="space-y-2">
+             {allSources.length > 0 && (
+                <div className="flex items-center gap-3 p-2 mb-2 border-b">
+                    <input 
+                        type="checkbox" 
+                        id="select-all-sources"
+                        className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-light"
+                        checked={areAllSelected}
+                        onChange={handleSelectAllSources}
+                    />
+                    <label htmlFor="select-all-sources" className="text-sm font-semibold cursor-pointer">
+                        {t('researchTab.selectAllSources')}
+                    </label>
+                </div>
+            )}
+             <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {project.researchData.sources?.map((source, index) => (
                     source.web?.uri && (
                         <div key={index} className="flex items-center gap-3 p-2 bg-neutral-light rounded-md">

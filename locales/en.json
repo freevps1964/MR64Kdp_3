@@ -1,8 +1,10 @@
 {
   "header": {
     "title": "MR64Kdp Book",
-    "saveAndArchive": "Save & Archive",
-    "promptProjectName": "Enter a name for your project:",
+    "closeProject": "Close Project",
+    "saveProject": "Save Project",
+    "projectSaved": "Saved!",
+    "promptRenameProject": "Enter a new name for your project:",
     "progress": "Progress"
   },
   "tabs": {
@@ -18,6 +20,7 @@
     "title": "Welcome to MR64Kdp Book",
     "description": "Your AI assistant for self-publishing on Amazon KDP. From topic research to the final PDF, we're with you every step of the way.",
     "startProject": "Start New Project",
+    "promptNewProjectName": "Enter a name for your new project:",
     "starting": "Starting...",
     "archiveTitle": "Project Archive",
     "lastSaved": "Last saved",
@@ -40,7 +43,13 @@
     "suggestedSubtitles": "Suggested Subtitles",
     "kdpKeywords": "KDP Keywords",
     "sources": "Web Sources",
-    "error": "An error occurred during research. Please try again."
+    "selectAllSources": "Select All",
+    "error": "An error occurred during research. Please try again.",
+    "summaryTitle": "Research Summary",
+    "summaryTitles": "Suggested Titles",
+    "summarySubtitles": "Suggested Subtitles",
+    "summaryKeywords": "KDP Keywords",
+    "summarySources": "Web Sources"
   },
   "structureTab": {
     "title": "Book Structure",
@@ -48,9 +57,16 @@
     "button": "Generate Structure",
     "loading": "Generating structure...",
     "error": "Could not generate a structure. Please ensure you have completed the research step.",
-    "saveButton": "Save Structure",
+    "saveButton": "Save Changes",
     "chapter": "Chapter",
-    "subchapter": "Subchapter"
+    "subchapter": "Subchapter",
+    "addChapter": "Add Chapter",
+    "addSubchapter": "Add Subchapter",
+    "confirmDeleteChapter": "Are you sure you want to delete this chapter and all its subchapters?",
+    "unsavedChanges": "You have unsaved changes. Generating a new structure will overwrite them. Continue?",
+    "editTitlePlaceholder": "Enter title...",
+    "deleteChapterTitle": "Delete Chapter",
+    "deleteSubchapterTitle": "Delete Subchapter"
   },
   "contentTab": {
     "title": "Content Creation",

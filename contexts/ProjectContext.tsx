@@ -44,7 +44,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     const newProject: Project = {
       id: generateId(),
       projectTitle: title,
-      topic: '',
+      topic: title,
       subtitle: '',
       author: '',
       description: '',
