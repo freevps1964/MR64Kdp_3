@@ -4,6 +4,7 @@
     "closeProject": "Chiudi Progetto",
     "saveProject": "Salva Progetto",
     "projectSaved": "Salvato!",
+    "projectSavedAt": "Salvato alle {time}",
     "promptRenameProject": "Inserisci un nuovo nome per il progetto:",
     "progress": "Avanzamento"
   },
@@ -14,7 +15,8 @@
     "layout": "Layout",
     "cover": "Copertina",
     "metadata": "Metadati",
-    "validation": "Validazione"
+    "validation": "Validazione",
+    "disabledTooltip": "Completa i passaggi precedenti per sbloccare"
   },
   "welcome": {
     "title": "Benvenuto in MR64Kdp Book",
@@ -63,7 +65,7 @@
     "addChapter": "Aggiungi Capitolo",
     "addSubchapter": "Aggiungi Sottocapitolo",
     "confirmDeleteChapter": "Sei sicuro di voler eliminare questo capitolo e tutti i suoi sottocapitoli?",
-    "unsavedChanges": "Hai delle modifiche non salvate. Generando una nuova struttura le sovrascriverai. Continuare?",
+    "unsavedChanges": "Generando una nuova struttura sovrascriverai quella attuale. Continuare?",
     "editTitlePlaceholder": "Inserisci il titolo...",
     "deleteChapterTitle": "Elimina Capitolo",
     "deleteSubchapterTitle": "Elimina Sottocapitolo"

@@ -9,9 +9,18 @@ const ValidationTab: React.FC = () => {
 
   const isMetadataComplete = !!(project?.projectTitle && project?.author && project?.description);
   
-  const allChapters = project?.bookStructure?.chapters.flatMap(c => [c, ...c.subchapters]) || [];
-  const contentCount = Object.keys(project?.chapterContents || {}).filter(key => project?.chapterContents[key].trim() !== '').length;
-  const areAllChaptersWritten = allChapters.length > 0 && contentCount >= allChapters.length;
+  let areAllChaptersWritten = false;
+  if (project?.bookStructure && project.bookStructure.chapters.length > 0) {
+    // A "content node" is a chapter without subchapters, or a subchapter.
+    // These are the only places we expect written content.
+    const contentNodes = project.bookStructure.chapters.flatMap(chapter =>
+      chapter.subchapters.length > 0 ? chapter.subchapters : [chapter]
+    );
+    
+    areAllChaptersWritten = contentNodes.length > 0 && contentNodes.every(
+      node => node.content?.trim() !== ''
+    );
+  }
 
   const checklistItems = [
     { label: t('validationTab.item1'), checked: areAllChaptersWritten },

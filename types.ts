@@ -34,11 +34,13 @@ export type Language = 'it' | 'en';
 export interface SubChapter {
   id: string;
   title: string;
+  content: string;
 }
 
 export interface Chapter {
   id: string;
   title: string;
+  content: string;
   subchapters: SubChapter[];
 }
 
@@ -60,7 +62,6 @@ export interface Project {
   researchData: ResearchResult | null;
   selectedSources: GroundingSource[];
   bookStructure: BookStructure | null;
-  chapterContents: Record<string, string>; // key is chapterId or subChapterId
   lastSaved: string;
   layoutTemplate: LayoutTemplate;
   coverImage: string | null; // base64 string

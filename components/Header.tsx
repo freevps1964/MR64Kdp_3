@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocalization } from '../hooks/useLocalization';
 import { useProject } from '../hooks/useProject';
 import LanguageSelector from './LanguageSelector';
@@ -7,8 +7,7 @@ import ProgressBar from './ProgressBar';
 const Header: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject, endCurrentProject } = useProject();
-  const [isSaving, setIsSaving] = useState(false);
-
+  
   const handleRenameProject = () => {
     if (!project) return;
     const newName = prompt(t('header.promptRenameProject'), project.projectTitle);
@@ -17,14 +16,16 @@ const Header: React.FC = () => {
     }
   };
   
-  const handleSaveProject = () => {
-    // The project saves automatically via updateProject, 
-    // so this button is for user reassurance.
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 2000);
-  };
+  const lastSavedText = useMemo(() => {
+    if (!project?.lastSaved) return '';
+    const lastSavedDate = new Date(project.lastSaved);
+    // Format to local time, e.g., "14:35"
+    const timeString = lastSavedDate.toLocaleTimeString(navigator.language, {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return t('header.projectSavedAt', { time: timeString });
+  }, [project?.lastSaved, t]);
 
   return (
     <header className="bg-brand-primary text-white shadow-md sticky top-0 z-20">
@@ -49,18 +50,10 @@ const Header: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
              {project && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleSaveProject}
-                  disabled={isSaving}
-                  className={`font-bold py-2 px-4 rounded-md text-sm transition-colors ${
-                    isSaving 
-                      ? 'bg-green-600 text-white cursor-default' 
-                      : 'bg-brand-secondary hover:bg-brand-dark text-white'
-                  }`}
-                >
-                  {isSaving ? t('header.projectSaved') : t('header.saveProject')}
-                </button>
+              <div className="flex items-center space-x-4">
+                 <span className="text-sm text-green-300 hidden sm:block">
+                  &#10003; {lastSavedText}
+                </span>
                 <button 
                   onClick={endCurrentProject}
                   className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors"

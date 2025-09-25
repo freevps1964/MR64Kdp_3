@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { Project } from '../types';
+import { Project, BookStructure, Chapter } from '../types';
 
 export interface ProjectContextType {
   project: Project | null;
@@ -8,11 +8,20 @@ export interface ProjectContextType {
   startNewProject: (title: string) => void;
   loadProject: (projectId: string) => void;
   updateProject: (updates: Partial<Project>) => void;
-  updateChapterContent: (chapterId: string, content: string) => void;
-  archiveCurrentProject: (projectName: string) => void;
-  deleteProject: (projectId: string) => void;
+  updateNodeContent: (nodeId: string, content: string) => void;
   endCurrentProject: () => void;
+  deleteProject: (projectId: string) => void;
+  
+  // New specific structure methods
+  setBookStructure: (structure: BookStructure) => void;
+  updateChapterTitle: (chapterId: string, title: string) => void;
+  updateSubchapterTitle: (subchapterId: string, title: string) => void;
+  addChapter: () => void;
+  deleteChapter: (chapterId: string) => void;
+  addSubchapter: (chapterId: string) => void;
+  deleteSubchapter: (subchapterId: string) => void;
 }
+
 
 export const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -29,16 +38,42 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const [isProjectStarted, setIsProjectStarted] = useState(false);
 
   useEffect(() => {
-    // Carica l'archivio all'avvio
     const savedArchive = localStorage.getItem(ARCHIVE_KEY);
     if (savedArchive) {
-      setArchivedProjects(JSON.parse(savedArchive));
+      try {
+        const parsedArchive = JSON.parse(savedArchive);
+        if (Array.isArray(parsedArchive)) {
+          setArchivedProjects(parsedArchive);
+        }
+      } catch (error) {
+        console.error("Error parsing project archive:", error);
+        localStorage.removeItem(ARCHIVE_KEY);
+      }
     }
   }, []);
   
   const saveArchive = (projects: Project[]) => {
       localStorage.setItem(ARCHIVE_KEY, JSON.stringify(projects));
   };
+
+  const saveProject = useCallback((proj: Project | null) => {
+    if (!proj) return;
+    
+    setProject(proj);
+
+    setArchivedProjects(prevArchive => {
+      const existingIndex = prevArchive.findIndex(p => p.id === proj.id);
+      let newArchive;
+      if (existingIndex > -1) {
+        newArchive = [...prevArchive];
+        newArchive[existingIndex] = proj;
+      } else {
+        newArchive = [...prevArchive, proj];
+      }
+      saveArchive(newArchive);
+      return newArchive;
+    });
+  }, []);
 
   const startNewProject = (title: string) => {
     const newProject: Project = {
@@ -53,13 +88,12 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       researchData: null,
       selectedSources: [],
       bookStructure: null,
-      chapterContents: {},
       lastSaved: new Date().toISOString(),
       layoutTemplate: 'Classic',
       coverImage: null,
       coverOptions: [],
     };
-    setProject(newProject);
+    saveProject(newProject);
     setIsProjectStarted(true);
   };
   
@@ -72,54 +106,111 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   };
 
   const updateProject = useCallback((updates: Partial<Project>) => {
-    setProject(prevProject => {
-      if (!prevProject) return null;
-      const updatedProject = { ...prevProject, ...updates, lastSaved: new Date().toISOString() };
-      
-      // Salva automaticamente il progetto attivo nell'archivio
-      setArchivedProjects(prevArchive => {
-        const existingIndex = prevArchive.findIndex(p => p.id === updatedProject.id);
-        let newArchive;
-        if (existingIndex > -1) {
-          newArchive = [...prevArchive];
-          newArchive[existingIndex] = updatedProject;
-        } else {
-          newArchive = [...prevArchive, updatedProject];
-        }
-        saveArchive(newArchive);
-        return newArchive;
-      });
+    if (!project) return;
+    const updatedProject = { ...project, ...updates, lastSaved: new Date().toISOString() };
+    saveProject(updatedProject);
+  }, [project, saveProject]);
 
-      return updatedProject;
+  const updateNodeContent = (nodeId: string, content: string) => {
+    if (!project || !project.bookStructure) return;
+
+    const newChapters = project.bookStructure.chapters.map(ch => {
+      if (ch.id === nodeId) {
+        return { ...ch, content };
+      }
+      const subIndex = ch.subchapters.findIndex(sub => sub.id === nodeId);
+      if (subIndex > -1) {
+        const newSubchapters = [...ch.subchapters];
+        newSubchapters[subIndex] = { ...newSubchapters[subIndex], content };
+        return { ...ch, subchapters: newSubchapters };
+      }
+      return ch;
     });
-  }, []);
 
-  const updateChapterContent = (chapterId: string, content: string) => {
-    if (project) {
-      const updatedContents = { ...project.chapterContents, [chapterId]: content };
-      updateProject({ chapterContents: updatedContents });
-    }
+    updateProject({ bookStructure: { chapters: newChapters } });
+  };
+
+  const setBookStructure = (structure: BookStructure) => {
+    // Hydrate structure with content fields if they are missing from the source (e.g., Gemini API)
+    const hydratedChapters = structure.chapters.map(ch => ({
+      ...ch,
+      content: ch.content || '',
+      subchapters: ch.subchapters.map(sub => ({
+        ...sub,
+        content: sub.content || '',
+      })),
+    }));
+    updateProject({ bookStructure: { chapters: hydratedChapters } });
+  };
+
+  const updateChapterTitle = (chapterId: string, title: string) => {
+    if (!project || !project.bookStructure) return;
+    const newStructure = {
+      ...project.bookStructure,
+      chapters: project.bookStructure.chapters.map(ch => ch.id === chapterId ? { ...ch, title } : ch)
+    };
+    updateProject({ bookStructure: newStructure });
+  };
+
+  const updateSubchapterTitle = (subchapterId: string, title: string) => {
+    if (!project || !project.bookStructure) return;
+    const newStructure = {
+      ...project.bookStructure,
+      chapters: project.bookStructure.chapters.map(ch => ({
+        ...ch,
+        subchapters: ch.subchapters.map(sub => sub.id === subchapterId ? { ...sub, title } : sub)
+      }))
+    };
+    updateProject({ bookStructure: newStructure });
+  };
+
+  const addChapter = () => {
+    if (!project) return;
+    const newChapter: Chapter = { id: generateId(), title: '', content: '', subchapters: [] };
+    const newStructure: BookStructure = {
+      chapters: [...(project.bookStructure?.chapters || []), newChapter]
+    };
+    updateProject({ bookStructure: newStructure });
+  };
+
+  const deleteChapter = (chapterId: string) => {
+    if (!project || !project.bookStructure) return;
+    
+    const newStructure = {
+      ...project.bookStructure,
+      chapters: project.bookStructure.chapters.filter(ch => ch.id !== chapterId)
+    };
+    updateProject({ bookStructure: newStructure });
   };
   
-  const archiveCurrentProject = (projectName: string) => {
-      if (!project) return;
-      const updatedProject = { ...project, projectTitle: projectName, lastSaved: new Date().toISOString() };
-      
-      setArchivedProjects(prevArchive => {
-          const existingIndex = prevArchive.findIndex(p => p.id === updatedProject.id);
-          let newArchive;
-          if (existingIndex > -1) {
-              newArchive = [...prevArchive];
-              newArchive[existingIndex] = updatedProject;
-          } else {
-              newArchive = [...prevArchive, updatedProject];
-          }
-          saveArchive(newArchive);
-          return newArchive;
-      });
-      
-      setProject(null);
-      setIsProjectStarted(false);
+  const addSubchapter = (chapterId: string) => {
+    if (!project || !project.bookStructure) return;
+    const newStructure = {
+      ...project.bookStructure,
+      chapters: project.bookStructure.chapters.map(ch => {
+        if (ch.id === chapterId) {
+          return {
+            ...ch,
+            subchapters: [...ch.subchapters, { id: generateId(), title: '', content: '' }]
+          };
+        }
+        return ch;
+      })
+    };
+    updateProject({ bookStructure: newStructure });
+  };
+
+  const deleteSubchapter = (subchapterId: string) => {
+    if (!project || !project.bookStructure) return;
+
+    const newStructure = {
+      ...project.bookStructure,
+      chapters: project.bookStructure.chapters.map(ch => ({
+        ...ch,
+        subchapters: ch.subchapters.filter(sub => sub.id !== subchapterId)
+      }))
+    };
+    updateProject({ bookStructure: newStructure });
   };
   
   const deleteProject = (projectId: string) => {
@@ -143,10 +234,16 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       startNewProject, 
       loadProject,
       updateProject, 
-      updateChapterContent,
-      archiveCurrentProject,
+      updateNodeContent,
+      endCurrentProject,
       deleteProject,
-      endCurrentProject
+      setBookStructure,
+      updateChapterTitle,
+      updateSubchapterTitle,
+      addChapter,
+      deleteChapter,
+      addSubchapter,
+      deleteSubchapter,
     }}>
       {children}
     </ProjectContext.Provider>

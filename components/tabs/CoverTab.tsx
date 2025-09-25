@@ -31,7 +31,7 @@ const CoverTab: React.FC = () => {
       const base64Images = response.generatedImages.map(img => img.image.imageBytes);
       updateProject({ coverOptions: base64Images });
     } catch (err) {
-      console.error("Errore nella generazione delle copertine:", err);
+      console.error("Error generating covers:", err);
       setError("Failed to generate covers. Please try again.");
     } finally {
       setIsLoading(false);

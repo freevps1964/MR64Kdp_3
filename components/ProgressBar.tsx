@@ -13,34 +13,35 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ project }) => {
     if (!project) return 0;
 
     let completedSteps = 0;
-    const totalSteps = 5; // Ricerca, Struttura, Contenuto, Metadati, Copertina
+    const totalSteps = 5; // Research, Structure, Content, Cover, Metadata
 
-    // 1. Ricerca
+    // 1. Research
     if (project.researchData) {
       completedSteps++;
     }
 
-    // 2. Struttura
+    // 2. Structure
     if (project.bookStructure && project.bookStructure.chapters.length > 0) {
       completedSteps++;
     }
     
-    // 3. Contenuto (considerato completo se almeno l'80% dei capitoli ha contenuto)
-    const allChapters = project.bookStructure?.chapters.flatMap(c => [c, ...c.subchapters]) || [];
-    if (allChapters.length > 0) {
-        const contentCount = Object.keys(project.chapterContents || {}).filter(key => project.chapterContents[key].trim() !== '').length;
-        if ((contentCount / allChapters.length) >= 0.8) {
-            completedSteps++;
-        }
+    // 3. Content (complete if all content nodes are written)
+    if (project.bookStructure && project.bookStructure.chapters.length > 0) {
+      const contentNodes = project.bookStructure.chapters.flatMap(chapter =>
+        chapter.subchapters.length > 0 ? chapter.subchapters : [chapter]
+      );
+      if (contentNodes.length > 0 && contentNodes.every(node => node.content?.trim())) {
+        completedSteps++;
+      }
     }
 
-    // 4. Metadati
-    if (project.projectTitle && project.author && project.description) {
+    // 4. Cover
+    if (project.coverImage) {
       completedSteps++;
     }
-
-    // 5. Copertina
-    if (project.coverImage) {
+    
+    // 5. Metadata
+    if (project.projectTitle && project.author && project.description) {
       completedSteps++;
     }
 

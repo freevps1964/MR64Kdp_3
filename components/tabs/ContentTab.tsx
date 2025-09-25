@@ -4,10 +4,11 @@ import { useProject } from '../../hooks/useProject';
 import { generateContentStream } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
+import type { Chapter, SubChapter } from '../../types';
 
 const ContentTab: React.FC = () => {
   const { t } = useLocalization();
-  const { project, updateChapterContent } = useProject();
+  const { project, updateNodeContent } = useProject();
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -16,22 +17,27 @@ const ContentTab: React.FC = () => {
   
   const structure = project?.bookStructure;
 
-  const selectedItem = selectedChapterId
-    ? structure?.chapters.flatMap(c => [c, ...c.subchapters]).find(item => item.id === selectedChapterId)
-    : null;
+  const getSelectedItem = () => {
+    if (!selectedChapterId || !structure) return null;
+    for (const chapter of structure.chapters) {
+      if (chapter.id === selectedChapterId) return chapter;
+      const subchapter = chapter.subchapters.find(sub => sub.id === selectedChapterId);
+      if (subchapter) return subchapter;
+    }
+    return null;
+  };
+
+  const selectedItem = getSelectedItem();
     
-  const parentChapter = selectedChapterId
-    ? structure?.chapters.find(c => c.subchapters.some(s => s.id === selectedChapterId) || c.id === selectedChapterId)
+  const parentChapter = selectedChapterId && structure
+    ? structure.chapters.find(c => c.subchapters.some(s => s.id === selectedChapterId) || c.id === selectedChapterId)
     : null;
 
 
   useEffect(() => {
-    if (selectedChapterId) {
-      setContent(project?.chapterContents[selectedChapterId] || '');
-    } else {
-      setContent('');
-    }
-  }, [selectedChapterId, project?.chapterContents]);
+    const item = getSelectedItem();
+    setContent(item?.content || '');
+  }, [selectedChapterId, structure]);
   
   useEffect(() => {
     // Funzione di pulizia per cancellare il timeout quando il componente si smonta
@@ -54,7 +60,7 @@ const ContentTab: React.FC = () => {
     // Imposta un nuovo timeout per salvare dopo 1 secondo di inattività
     saveTimeoutRef.current = window.setTimeout(() => {
         if (selectedChapterId) {
-            updateChapterContent(selectedChapterId, newContent);
+            updateNodeContent(selectedChapterId, newContent);
             isSavingRef.current = false;
         }
     }, 1000);
@@ -83,7 +89,7 @@ const ContentTab: React.FC = () => {
       handleContentChange(fullText);
 
     } catch (error) {
-      console.error("Errore nella generazione del contenuto:", error);
+      console.error("Error generating content:", error);
       setContent(t('contentTab.error'));
     } finally {
       setIsGenerating(false);

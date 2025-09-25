@@ -12,13 +12,13 @@ function parseJsonFromMarkdown<T>(jsonString: string): T | null {
     const cleanedString = jsonString.replace(/```json\n|```/g, '').trim();
     return JSON.parse(cleanedString) as T;
   } catch (error) {
-    console.error("Errore nell'analisi del JSON:", error, "Stringa originale:", jsonString);
+    console.error("Error parsing JSON:", error, "Original string:", jsonString);
     // Tenta un'analisi più permissiva se la prima fallisce
     try {
         const permissiveClean = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
         return JSON.parse(permissiveClean) as T;
     } catch (permissiveError) {
-        console.error("Tentativo di analisi permissiva fallito:", permissiveError);
+        console.error("Permissive parsing attempt failed:", permissiveError);
         return null;
     }
   }
@@ -51,7 +51,7 @@ export const researchTopic = async (topic: string): Promise<{ result: ResearchRe
 
     return { result: researchData, sources: groundingChunks };
   } catch (error) {
-    console.error("Errore durante la ricerca dell'argomento:", error);
+    console.error("Error during topic research:", error);
     return { result: null, sources: [] };
   }
 };
@@ -102,7 +102,7 @@ export const generateStructure = async (topic: string): Promise<BookStructure | 
     const jsonText = response.text.trim();
     return JSON.parse(jsonText);
   } catch (error) {
-    console.error("Errore nella generazione della struttura:", error);
+    console.error("Error generating structure:", error);
     return null;
   }
 };
@@ -158,7 +158,7 @@ export const generateDescription = async (title: string, structure: BookStructur
         });
         return response.text;
     } catch(error) {
-        console.error("Errore nella generazione della descrizione:", error);
+        console.error("Error generating description:", error);
         return "";
     }
 };

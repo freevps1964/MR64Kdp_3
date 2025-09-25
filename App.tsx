@@ -14,7 +14,7 @@ import type { TabKey } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('research');
-  const { isProjectStarted } = useProject();
+  const { project, isProjectStarted } = useProject();
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -43,7 +43,7 @@ const App: React.FC = () => {
       <main className="p-4 sm:p-6 lg:p-8">
         {isProjectStarted ? (
           <>
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} project={project} />
             <div className="mt-6">
               {renderActiveTab()}
             </div>
