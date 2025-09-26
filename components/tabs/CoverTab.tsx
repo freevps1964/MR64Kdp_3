@@ -58,6 +58,15 @@ const CoverTab: React.FC = () => {
     updateProject({ coverImage: base64Image });
   };
 
+  const handleDownloadCover = (base64Image: string, index: number) => {
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${base64Image}`;
+    link.download = `${project?.projectTitle?.replace(/ /g, '_') || 'cover'}-${index + 1}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Card>
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('coverTab.title')}</h2>
@@ -112,13 +121,22 @@ const CoverTab: React.FC = () => {
                     alt={`Generated cover ${index + 1}`}
                     className={`rounded-lg shadow-lg w-full object-cover aspect-[3/4] ${isSelected ? 'ring-4 ring-brand-accent' : ''}`}
                   />
-                  <button
-                    onClick={() => handleSelectCover(base64Image)}
-                    disabled={isSelected}
-                    className="bg-brand-secondary hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-green-600 disabled:cursor-default"
-                  >
-                    {isSelected ? t('coverTab.selected') : t('coverTab.selectButton')}
-                  </button>
+                   <div className="flex justify-center items-center gap-2">
+                      <button
+                        onClick={() => handleSelectCover(base64Image)}
+                        disabled={isSelected}
+                        className="bg-brand-secondary hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-green-600 disabled:cursor-default"
+                      >
+                        {isSelected ? t('coverTab.selected') : t('coverTab.selectButton')}
+                      </button>
+                       <button
+                        onClick={() => handleDownloadCover(base64Image, index)}
+                        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                        title={t('coverTab.downloadButton')}
+                      >
+                        {t('coverTab.downloadButton')}
+                      </button>
+                  </div>
                 </div>
               );
             })}

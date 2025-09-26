@@ -108,7 +108,7 @@
     "modern": "Modern",
     "minimalist": "Minimalist",
     "previewTitle": "Book Preview",
-    "exportPDF": "Export to PDF (Coming Soon)"
+    "exportPDF": "Export to PDF"
   },
   "coverTab": {
     "title": "Cover Design",
@@ -120,7 +120,8 @@
     "selectButton": "Select this cover",
     "selected": "Selected",
     "generatePrompt": "Generate Prompt with AI",
-    "generatingPrompt": "Generating Prompt..."
+    "generatingPrompt": "Generating Prompt...",
+    "downloadButton": "Download"
   },
   "metadataTab": {
     "title": "Book Metadata",

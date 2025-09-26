@@ -108,7 +108,7 @@
     "modern": "Moderno",
     "minimalist": "Minimalista",
     "previewTitle": "Anteprima Libro",
-    "exportPDF": "Esporta in PDF (Prossimamente)"
+    "exportPDF": "Esporta in PDF"
   },
   "coverTab": {
     "title": "Design della Copertina",
@@ -120,7 +120,8 @@
     "selectButton": "Seleziona questa copertina",
     "selected": "Selezionata",
     "generatePrompt": "Genera Prompt con AI",
-    "generatingPrompt": "Generazione Prompt..."
+    "generatingPrompt": "Generazione Prompt...",
+    "downloadButton": "Scarica"
   },
   "metadataTab": {
     "title": "Metadati del Libro",

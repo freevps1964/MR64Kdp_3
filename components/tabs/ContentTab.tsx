@@ -127,7 +127,7 @@ const ContentTab: React.FC = () => {
                 project.topic,
                 parent.title,
                 isSubchapter ? (node as SubChapter).title : undefined,
-                5000
+                1000
             );
 
             let fullText = '';
