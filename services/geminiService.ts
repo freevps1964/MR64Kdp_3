@@ -188,6 +188,33 @@ export const generateContentStream = (
 };
 
 /**
+ * Genera un prompt per la copertina analizzando i bestseller su Amazon.
+ */
+export const generateCoverPromptFromBestsellers = async (topic: string, title: string): Promise<string> => {
+  const prompt = `Research the current best-selling book covers on Amazon.com for the topic "${topic}". 
+Analyze the common design trends, color palettes, typography styles (e.g., serif, sans-serif, script), and imagery used in the top results.
+Based on this analysis, create a highly detailed and effective prompt for an AI image generator (like Imagen) to design a book cover for a book titled "${title}".
+The prompt should be in English, descriptive, and aim for a commercially successful design that would stand out in its category.
+The output must be only the text of the prompt, without any other introductory text or explanation.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        tools: [{googleSearch: {}}],
+      },
+    });
+    return response.text.trim();
+  } catch (error) {
+    console.error("Error generating cover prompt from bestsellers:", error);
+    // Fallback to a generic but good prompt
+    return `Book cover for a title "${title}" on the topic of "${topic}". Clean, modern, and eye-catching design.`;
+  }
+};
+
+
+/**
  * Genera immagini di copertina per il libro.
  */
 export const generateCoverImages = (prompt: string) => {

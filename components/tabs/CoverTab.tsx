@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateCoverImages } from '../../services/geminiService';
+import { generateCoverImages, generateCoverPromptFromBestsellers } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 
@@ -11,6 +11,7 @@ const CoverTab: React.FC = () => {
   
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,6 +20,21 @@ const CoverTab: React.FC = () => {
         setPrompt(defaultPrompt);
     }
   }, [project?.projectTitle, project?.topic, t]);
+  
+  const handleGeneratePrompt = async () => {
+    if (!project?.topic) return;
+    setIsGeneratingPrompt(true);
+    setError(null);
+    try {
+        const generatedPrompt = await generateCoverPromptFromBestsellers(project.topic, project.projectTitle);
+        setPrompt(generatedPrompt);
+    } catch (err) {
+        console.error("Error generating prompt:", err);
+        setError("Failed to generate prompt. Please try again.");
+    } finally {
+        setIsGeneratingPrompt(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -50,9 +66,19 @@ const CoverTab: React.FC = () => {
       </p>
 
       <div className="space-y-4">
-        <label htmlFor="cover-prompt" className="block font-semibold text-neutral-dark">
-          {t('coverTab.promptLabel')}
-        </label>
+        <div className="flex justify-between items-center">
+            <label htmlFor="cover-prompt" className="block font-semibold text-neutral-dark">
+              {t('coverTab.promptLabel')}
+            </label>
+             <button
+                onClick={handleGeneratePrompt}
+                disabled={isGeneratingPrompt || isLoading}
+                className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50"
+            >
+                {isGeneratingPrompt ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
+                {isGeneratingPrompt ? t('coverTab.generatingPrompt') : t('coverTab.generatePrompt')}
+            </button>
+        </div>
         <textarea
           id="cover-prompt"
           value={prompt}
@@ -62,7 +88,7 @@ const CoverTab: React.FC = () => {
         />
         <button
           onClick={handleGenerate}
-          disabled={isLoading || !prompt}
+          disabled={isLoading || isGeneratingPrompt || !prompt}
           className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
         >
           {isLoading ? <LoadingSpinner /> : t('coverTab.button')}

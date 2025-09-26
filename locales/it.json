@@ -107,7 +107,8 @@
     "classic": "Classico",
     "modern": "Moderno",
     "minimalist": "Minimalista",
-    "comingSoon": "L'anteprima e la generazione del PDF saranno presto disponibili."
+    "previewTitle": "Anteprima Libro",
+    "exportPDF": "Esporta in PDF (Prossimamente)"
   },
   "coverTab": {
     "title": "Design della Copertina",
@@ -117,7 +118,9 @@
     "loading": "Generazione copertine... L'operazione può richiedere fino a un minuto.",
     "resultsTitle": "Copertine Generate",
     "selectButton": "Seleziona questa copertina",
-    "selected": "Selezionata"
+    "selected": "Selezionata",
+    "generatePrompt": "Genera Prompt con AI",
+    "generatingPrompt": "Generazione Prompt..."
   },
   "metadataTab": {
     "title": "Metadati del Libro",

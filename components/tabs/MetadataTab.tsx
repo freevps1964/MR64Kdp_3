@@ -41,7 +41,7 @@ const MetadataTab: React.FC = () => {
     // Salva i dati quando l'utente lascia un campo
     updateProject({
         ...formData,
-        metadataKeywords: formData.metadataKeywords.split(',').map(k => ({ keyword: k.trim() })).filter(k => k.keyword),
+        metadataKeywords: formData.metadataKeywords.split(',').map(k => ({ keyword: k.keyword.trim(), relevance: 0 })).filter(k => k.keyword),
     });
   };
 
@@ -85,7 +85,7 @@ const MetadataTab: React.FC = () => {
             <div className="flex justify-between items-center mb-1">
                  <label htmlFor="description" className="block font-semibold">{t('metadataTab.descriptionLabel')}</label>
                  <button onClick={handleGenerateDescription} disabled={isGenerating} className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50">
-                    {isGenerating ? <LoadingSpinner /> : '✨'}
+                    {isGenerating ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
                     {t('metadataTab.generateDescription')}
                  </button>
             </div>

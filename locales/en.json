@@ -107,7 +107,8 @@
     "classic": "Classic",
     "modern": "Modern",
     "minimalist": "Minimalist",
-    "comingSoon": "PDF preview and generation coming soon."
+    "previewTitle": "Book Preview",
+    "exportPDF": "Export to PDF (Coming Soon)"
   },
   "coverTab": {
     "title": "Cover Design",
@@ -117,7 +118,9 @@
     "loading": "Generating covers... This can take up to a minute.",
     "resultsTitle": "Generated Covers",
     "selectButton": "Select this cover",
-    "selected": "Selected"
+    "selected": "Selected",
+    "generatePrompt": "Generate Prompt with AI",
+    "generatingPrompt": "Generating Prompt..."
   },
   "metadataTab": {
     "title": "Book Metadata",
