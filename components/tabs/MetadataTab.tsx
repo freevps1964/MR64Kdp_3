@@ -2,62 +2,89 @@ import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
-import { generateDescription } from '../../services/geminiService';
+import { fetchAmazonCategories, generateDescription } from '../../services/geminiService';
 import LoadingSpinner from '../icons/LoadingSpinner';
+import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion } from '../../types';
 
 const MetadataTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject } = useProject();
 
-  const [formData, setFormData] = useState({
-    projectTitle: '',
-    subtitle: '',
-    author: '',
-    description: '',
-    metadataKeywords: '',
-    categories: '',
-  });
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isFetchingCategories, setIsFetchingCategories] = useState(false);
+  const [amazonCategories, setAmazonCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    if (project) {
-      setFormData({
-        projectTitle: project.projectTitle || '',
-        subtitle: project.subtitle || '',
-        author: project.author || '',
-        description: project.description || '',
-        metadataKeywords: project.metadataKeywords?.map(k => k.keyword).join(', ') || '',
-        categories: project.categories || '',
-      });
+    if (project && (project.metadataKeywords?.length || 0) === 0 && (project.researchData?.keywords?.length || 0) > 0) {
+        updateProject({ metadataKeywords: project.researchData!.keywords });
     }
-  }, [project]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  }, [project?.researchData, project?.metadataKeywords, updateProject]);
+  
+  const handleFetchCategories = async () => {
+    if (isFetchingCategories) return;
+    setIsFetchingCategories(true);
+    try {
+        const cats = await fetchAmazonCategories();
+        setAmazonCategories(cats);
+    } catch (error) {
+        console.error("Failed to fetch categories:", error);
+    } finally {
+        setIsFetchingCategories(false);
+    }
   };
 
-  const handleBlur = () => {
-    // Salva i dati quando l'utente lascia un campo
-    updateProject({
-        ...formData,
-        metadataKeywords: formData.metadataKeywords.split(',').map(k => ({ keyword: k.keyword.trim(), relevance: 0 })).filter(k => k.keyword),
-    });
+  // Carica le categorie al montaggio del componente per garantire che le selezioni vengano visualizzate
+  useEffect(() => {
+    handleFetchCategories();
+  }, []);
+
+
+  const handleFieldChange = (updates: Partial<Project>) => {
+    if (project) {
+      updateProject(updates);
+    }
+  };
+
+  const handleKeywordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const keywordsArray: Keyword[] = e.target.value
+      .split(',')
+      .map(k => ({ keyword: k.trim(), relevance: 0 }))
+      .filter(k => k.keyword);
+    updateProject({ metadataKeywords: keywordsArray });
+  };
+  
+  const handleCategoriesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => option.value);
+    updateProject({ categories: selectedOptions });
   };
 
   const handleGenerateDescription = async () => {
-    if (!project) return;
-    setIsGenerating(true);
+    if (!project || !project.bookTitle) return;
+    setIsGeneratingDesc(true);
     try {
-        const desc = await generateDescription(project.projectTitle, project.bookStructure);
-        setFormData(prev => ({ ...prev, description: desc }));
+        const desc = await generateDescription(project.bookTitle, project.bookStructure);
         updateProject({ description: desc });
     } catch (error) {
         console.error(error);
     } finally {
-        setIsGenerating(false);
+        setIsGeneratingDesc(false);
     }
   };
+
+  if (!project) return null;
+
+  const researchTitles: TitleSuggestion[] = project.researchData?.titles || [];
+  const researchSubtitles: SubtitleSuggestion[] = project.researchData?.subtitles || [];
+
+  const titleOptions = [...researchTitles];
+  if (project.bookTitle && !titleOptions.some(t => t.title === project.bookTitle)) {
+      titleOptions.unshift({ title: project.bookTitle, relevance: 0 });
+  }
+
+  const subtitleOptions = [...researchSubtitles];
+  if (project.subtitle && !subtitleOptions.some(s => s.subtitle === project.subtitle)) {
+      subtitleOptions.unshift({ subtitle: project.subtitle, relevance: 0 });
+  }
 
   return (
     <Card>
@@ -69,35 +96,94 @@ const MetadataTab: React.FC = () => {
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="projectTitle" className="block font-semibold mb-1">{t('metadataTab.projectTitle')}</label>
-              <input type="text" id="projectTitle" name="projectTitle" value={formData.projectTitle} onChange={handleChange} onBlur={handleBlur} className="w-full p-2 border rounded-md" />
+              <label htmlFor="bookTitle" className="block font-semibold mb-1">{t('metadataTab.bookTitle')}</label>
+              <select
+                id="bookTitle"
+                name="bookTitle"
+                value={project.bookTitle}
+                onChange={(e) => handleFieldChange({ bookTitle: e.target.value })}
+                className="w-full p-2 border rounded-md bg-white"
+              >
+                <option value="">{t('metadataTab.selectTitle')}</option>
+                {titleOptions.map(t => <option key={t.title} value={t.title}>{t.title}</option>)}
+              </select>
             </div>
             <div>
               <label htmlFor="subtitle" className="block font-semibold mb-1">{t('metadataTab.subtitle')}</label>
-              <input type="text" id="subtitle" name="subtitle" value={formData.subtitle} onChange={handleChange} onBlur={handleBlur} className="w-full p-2 border rounded-md" />
+              <select
+                id="subtitle"
+                name="subtitle"
+                value={project.subtitle}
+                onChange={(e) => handleFieldChange({ subtitle: e.target.value })}
+                className="w-full p-2 border rounded-md bg-white"
+              >
+                <option value="">{t('metadataTab.selectSubtitle')}</option>
+                {subtitleOptions.map(s => <option key={s.subtitle} value={s.subtitle}>{s.subtitle}</option>)}
+              </select>
             </div>
         </div>
         <div>
           <label htmlFor="author" className="block font-semibold mb-1">{t('metadataTab.author')}</label>
-          <input type="text" id="author" name="author" value={formData.author} onChange={handleChange} onBlur={handleBlur} className="w-full p-2 border rounded-md" />
+          <input
+            type="text"
+            id="author"
+            name="author"
+            value={project.author}
+            onChange={(e) => handleFieldChange({ author: e.target.value })}
+            className="w-full p-2 border rounded-md"
+          />
         </div>
         <div>
             <div className="flex justify-between items-center mb-1">
                  <label htmlFor="description" className="block font-semibold">{t('metadataTab.descriptionLabel')}</label>
-                 <button onClick={handleGenerateDescription} disabled={isGenerating} className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50">
-                    {isGenerating ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
+                 <button onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50">
+                    {isGeneratingDesc ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
                     {t('metadataTab.generateDescription')}
                  </button>
             </div>
-            <textarea id="description" name="description" value={formData.description} onChange={handleChange} onBlur={handleBlur} rows={6} className="w-full p-2 border rounded-md"></textarea>
+            <textarea
+                id="description"
+                name="description"
+                value={project.description}
+                onChange={(e) => handleFieldChange({ description: e.target.value })}
+                rows={6}
+                className="w-full p-2 border rounded-md"
+            ></textarea>
         </div>
         <div>
           <label htmlFor="metadataKeywords" className="block font-semibold mb-1">{t('metadataTab.kdpKeywords')}</label>
-          <input type="text" id="metadataKeywords" name="metadataKeywords" value={formData.metadataKeywords} onChange={handleChange} onBlur={handleBlur} className="w-full p-2 border rounded-md" />
+          <input
+            type="text"
+            id="metadataKeywords"
+            name="metadataKeywords"
+            value={project.metadataKeywords.map(k => k.keyword).join(', ')}
+            onChange={handleKeywordsChange}
+            className="w-full p-2 border rounded-md"
+          />
         </div>
         <div>
-          <label htmlFor="categories" className="block font-semibold mb-1">{t('metadataTab.categories')}</label>
-          <input type="text" id="categories" name="categories" value={formData.categories} onChange={handleChange} onBlur={handleBlur} className="w-full p-2 border rounded-md" />
+            <div className="flex justify-between items-center mb-1">
+                <label htmlFor="categories" className="block font-semibold">{t('metadataTab.categories')}</label>
+                <button onClick={handleFetchCategories} disabled={isFetchingCategories} className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50">
+                {isFetchingCategories ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '🔄'}
+                {isFetchingCategories ? t('metadataTab.fetchingCategories') : t('metadataTab.fetchCategories')}
+                </button>
+            </div>
+            <select
+                id="categories"
+                name="categories"
+                multiple
+                value={project.categories}
+                onChange={handleCategoriesChange}
+                className="w-full p-2 border rounded-md h-40 bg-white"
+                disabled={isFetchingCategories}
+            >
+                {amazonCategories.length > 0 ? (
+                    amazonCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)
+                ) : (
+                    <option disabled>{isFetchingCategories ? t('metadataTab.fetchingCategories') : 'Nessuna categoria caricata'}</option>
+                )}
+            </select>
         </div>
       </div>
     </Card>

@@ -21,9 +21,9 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
     { key: 'research', label: t('tabs.research'), isEnabled: true },
     { key: 'structure', label: t('tabs.structure'), isEnabled: isResearchComplete },
     { key: 'content', label: t('tabs.content'), isEnabled: isStructureComplete },
+    { key: 'metadata', label: t('tabs.metadata'), isEnabled: isContentComplete },
     { key: 'layout', label: t('tabs.layout'), isEnabled: isContentComplete },
     { key: 'cover', label: t('tabs.cover'), isEnabled: isContentComplete },
-    { key: 'metadata', label: t('tabs.metadata'), isEnabled: isContentComplete },
     { key: 'validation', label: t('tabs.validation'), isEnabled: isContentComplete },
   ];
 

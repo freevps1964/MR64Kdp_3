@@ -99,7 +99,30 @@
     "generateAllButton": "Generate All Content",
     "generatingAll": "Generating all content...",
     "generatingProgress": "Generating: {nodeTitle} ({current}/{total})",
-    "error": "An error occurred while generating content."
+    "error": "An error occurred while generating content.",
+    "options": {
+      "title": "Generation Options",
+      "tone": "Tone of Voice",
+      "audience": "Target Audience",
+      "style": "Writing Style",
+      "tones": {
+        "Informal": "Informal",
+        "Formal": "Formal",
+        "Academic": "Academic",
+        "Persuasive": "Persuasive"
+      },
+      "audiences": {
+        "Beginners": "Beginners",
+        "Experts": "Experts",
+        "General": "General Audience"
+      },
+      "styles": {
+        "Descriptive": "Descriptive",
+        "Narrative": "Narrative",
+        "Expository": "Expository",
+        "Argumentative": "Argumentative"
+      }
+    }
   },
   "layoutTab": {
     "title": "Book Layout",
@@ -126,14 +149,18 @@
   "metadataTab": {
     "title": "Book Metadata",
     "description": "Fill in the essential details for publishing on Amazon KDP. This information will help readers find your book.",
-    "projectTitle": "Project Title",
+    "bookTitle": "Book Title",
     "subtitle": "Subtitle",
     "author": "Author",
     "kdpKeywords": "KDP Keywords (comma-separated)",
-    "categories": "Categories (comma-separated)",
+    "categories": "Categories",
     "descriptionLabel": "Book Description",
     "generateDescription": "Generate Description",
-    "saveButton": "Save Metadata"
+    "saveButton": "Save Metadata",
+    "selectTitle": "--- Select a suggested title ---",
+    "selectSubtitle": "--- Select a suggested subtitle ---",
+    "fetchCategories": "Fetch Amazon Categories",
+    "fetchingCategories": "Fetching..."
   },
   "validationTab": {
     "title": "Validation & Export",

@@ -7,22 +7,34 @@
     <title>MR64Kdp Book - eMMeRReKDP Book Creation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
       .book-preview-container {
         background-color: #f9fafb; /* gray-50 */
         border: 1px solid #e5e7eb; /* gray-200 */
         border-radius: 0.5rem;
-        padding: 1rem;
-        height: 60vh;
+        padding: 2rem;
+        height: 75vh;
         overflow-y: auto;
+        display: flex;
+        justify-content: center;
       }
       .book-page {
         background-color: white;
-        padding: 2rem 1.5rem;
-        max-width: 800px;
-        margin: 0 auto;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        box-sizing: border-box;
+      }
+
+      /* KDP Page Sizes */
+      .size-6x9 .book-page {
+        width: 15.24cm;
+        min-height: 22.86cm;
+        padding: 1.5cm 1.27cm; /* Margins */
+      }
+       .size-7x10 .book-page {
+        width: 17.78cm;
+        min-height: 25.4cm;
+        padding: 1.75cm 1.5cm; /* Margins */
       }
 
       /* Base styles */
@@ -33,7 +45,10 @@
       .chapter-title { font-size: 1.875rem; line-height: 2.25rem; font-weight: 600; margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; }
       .subchapter-container { margin-top: 1.5rem; margin-left: 1rem; }
       .subchapter-title { font-size: 1.25rem; line-height: 1.75rem; font-weight: 600; margin-bottom: 1rem; }
-      .content-block { line-height: 1.75; }
+      .content-block { 
+        font-size: 14pt;
+        line-height: 1.5; 
+      }
        .content-block br {
         content: "";
         display: block;
@@ -42,21 +57,20 @@
 
 
       /* Layout: Classic */
-      .layout-classic .book-page { font-family: 'Times New Roman', Times, serif; }
+      .layout-classic .book-page { font-family: 'EB Garamond', serif; }
       .layout-classic .content-block { text-align: justify; }
 
       /* Layout: Modern */
-      .layout-modern .book-page { font-family: 'Montserrat', sans-serif; }
+      .layout-modern .book-page { font-family: 'Georgia', serif; }
       .layout-modern .chapter-title { border-bottom: 2px solid #1E40AF; color: #1E40AF; }
       .layout-modern .content-block { text-align: left; }
 
       /* Layout: Minimalist */
-      .layout-minimalist .book-page { font-family: 'Montserrat', sans-serif; }
+      .layout-minimalist .book-page { font-family: 'Times New Roman', Times, serif; }
       .layout-minimalist .book-title { font-size: 1.875rem; font-weight: 600; }
       .layout-minimalist .chapter-title { font-size: 1.5rem; border: none; font-weight: 600; }
       .layout-minimalist .subchapter-title { font-size: 1.125rem; font-weight: 600; }
-      .layout-minimalist .content-block { line-height: 1.8; font-size: 0.95rem; }
-      .layout-minimalist .book-page { padding: 3rem 2.5rem; }
+      .layout-minimalist .content-block { line-height: 1.8; font-size: 14pt; }
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

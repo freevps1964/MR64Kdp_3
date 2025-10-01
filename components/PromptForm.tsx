@@ -1,12 +1,13 @@
 import React from 'react';
-import type { Project, LayoutTemplate } from '../types';
+import type { Project, LayoutTemplate, PageSize } from '../types';
 
 interface BookPreviewProps {
   project: Project | null;
   layout: LayoutTemplate;
+  pageSize: PageSize;
 }
 
-const BookPreview: React.FC<BookPreviewProps> = ({ project, layout }) => {
+const BookPreview: React.FC<BookPreviewProps> = ({ project, layout, pageSize }) => {
   if (!project || !project.bookStructure) {
     return (
       <div className="book-preview-container flex items-center justify-center h-full text-neutral-medium">
@@ -16,11 +17,12 @@ const BookPreview: React.FC<BookPreviewProps> = ({ project, layout }) => {
   }
 
   const layoutClass = `layout-${layout.toLowerCase()}`;
+  const sizeClass = `size-${pageSize}`;
 
   return (
-    <div className={`book-preview-container ${layoutClass}`}>
+    <div className={`book-preview-container ${sizeClass} ${layoutClass}`}>
       <div className="book-page">
-        <h1 className="book-title">{project.projectTitle}</h1>
+        <h1 className="book-title">{project.bookTitle || project.projectTitle}</h1>
         {project.subtitle && <h2 className="book-subtitle">{project.subtitle}</h2>}
         {project.author && <p className="book-author">by {project.author}</p>}
 

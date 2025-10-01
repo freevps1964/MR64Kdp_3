@@ -4,7 +4,7 @@ import { useProject } from '../../hooks/useProject';
 import { generateContentStream } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
-import type { Chapter, SubChapter } from '../../types';
+import type { Chapter, SubChapter, ToneOfVoice, TargetAudience, WritingStyle } from '../../types';
 
 const ContentTab: React.FC = () => {
   const { t } = useLocalization();
@@ -13,6 +13,10 @@ const ContentTab: React.FC = () => {
   const [content, setContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<{ running: boolean; current: number; total: number; nodeTitle: string } | null>(null);
+
+  const [tone, setTone] = useState<ToneOfVoice>('Informal');
+  const [audience, setAudience] = useState<TargetAudience>('Beginners');
+  const [style, setStyle] = useState<WritingStyle>('Expository');
 
   const isSavingRef = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -80,7 +84,12 @@ const ContentTab: React.FC = () => {
       const stream = await generateContentStream(
         project.topic, 
         parentChapter.title, 
-        isSubchapter ? selectedItem.title : undefined
+        isSubchapter ? selectedItem.title : undefined,
+        undefined,
+        project.researchData?.keywords,
+        tone,
+        audience,
+        style
       );
 
       let fullText = '';
@@ -127,7 +136,11 @@ const ContentTab: React.FC = () => {
                 project.topic,
                 parent.title,
                 isSubchapter ? (node as SubChapter).title : undefined,
-                1000
+                1000,
+                project.researchData?.keywords,
+                tone,
+                audience,
+                style
             );
 
             let fullText = '';
@@ -150,13 +163,62 @@ const ContentTab: React.FC = () => {
         
         // Add a delay between requests to avoid rate limiting
         if (i < allNodes.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5-second delay
+            await new Promise(resolve => setTimeout(resolve, 10000)); // 10-second delay
         }
     }
     setGenerationStatus(null);
   };
 
   const isBusy = isGenerating || !!generationStatus?.running;
+
+  const GenerationOptions = () => (
+    <div className={`mt-4 p-4 border border-gray-200 rounded-lg bg-neutral-light/50 ${isBusy ? 'opacity-50 pointer-events-none' : ''}`}>
+        <h4 className="font-semibold text-brand-dark mb-3">{t('contentTab.options.title')}</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label htmlFor="tone-select" className="block text-sm font-medium text-gray-700">{t('contentTab.options.tone')}</label>
+                <select 
+                    id="tone-select" 
+                    value={tone} 
+                    onChange={(e) => setTone(e.target.value as ToneOfVoice)}
+                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                >
+                    <option value="Informal">{t('contentTab.options.tones.Informal')}</option>
+                    <option value="Formal">{t('contentTab.options.tones.Formal')}</option>
+                    <option value="Academic">{t('contentTab.options.tones.Academic')}</option>
+                    <option value="Persuasive">{t('contentTab.options.tones.Persuasive')}</option>
+                </select>
+            </div>
+            <div>
+                <label htmlFor="audience-select" className="block text-sm font-medium text-gray-700">{t('contentTab.options.audience')}</label>
+                <select 
+                    id="audience-select" 
+                    value={audience} 
+                    onChange={(e) => setAudience(e.target.value as TargetAudience)}
+                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                >
+                    <option value="Beginners">{t('contentTab.options.audiences.Beginners')}</option>
+                    <option value="Experts">{t('contentTab.options.audiences.Experts')}</option>
+                    <option value="General">{t('contentTab.options.audiences.General')}</option>
+                </select>
+            </div>
+            <div>
+                <label htmlFor="style-select" className="block text-sm font-medium text-gray-700">{t('contentTab.options.style')}</label>
+                <select 
+                    id="style-select" 
+                    value={style} 
+                    onChange={(e) => setStyle(e.target.value as WritingStyle)}
+                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                >
+                    <option value="Descriptive">{t('contentTab.options.styles.Descriptive')}</option>
+                    <option value="Narrative">{t('contentTab.options.styles.Narrative')}</option>
+                    <option value="Expository">{t('contentTab.options.styles.Expository')}</option>
+                    <option value="Argumentative">{t('contentTab.options.styles.Argumentative')}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+  );
 
   return (
     <Card>
@@ -218,7 +280,7 @@ const ContentTab: React.FC = () => {
         <main className="w-full md:w-2/3 lg:w-3/4">
           {selectedChapterId && selectedItem ? (
             <div>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-2">
                 <h3 className="text-xl font-semibold text-brand-primary">{selectedItem.title}</h3>
                 <button
                   onClick={handleGenerate}
@@ -228,11 +290,14 @@ const ContentTab: React.FC = () => {
                   {isGenerating ? <LoadingSpinner /> : '✨ ' + t('contentTab.generateButton')}
                 </button>
               </div>
+              
+              <GenerationOptions />
+
               <textarea
                 value={content}
                 onChange={(e) => handleContentChange(e.target.value)}
                 placeholder={isGenerating ? t('contentTab.generating') : ''}
-                className="w-full h-96 p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
+                className="w-full h-96 p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-4"
                 readOnly={isBusy}
               />
             </div>

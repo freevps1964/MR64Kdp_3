@@ -99,7 +99,30 @@
     "generateAllButton": "Genera Tutto il Contenuto",
     "generatingAll": "Generazione di tutto il contenuto in corso...",
     "generatingProgress": "In generazione: {nodeTitle} ({current}/{total})",
-    "error": "Si è verificato un errore durante la generazione del contenuto."
+    "error": "Si è verificato un errore durante la generazione del contenuto.",
+    "options": {
+      "title": "Opzioni di Generazione",
+      "tone": "Tono di Voce",
+      "audience": "Pubblico di Riferimento",
+      "style": "Stile di Scrittura",
+      "tones": {
+        "Informal": "Informale",
+        "Formal": "Formale",
+        "Academic": "Accademico",
+        "Persuasive": "Persuasivo"
+      },
+      "audiences": {
+        "Beginners": "Principianti",
+        "Experts": "Esperti",
+        "General": "Pubblico Generale"
+      },
+      "styles": {
+        "Descriptive": "Descrittivo",
+        "Narrative": "Narrativo",
+        "Expository": "Espositivo",
+        "Argumentative": "Argomentativo"
+      }
+    }
   },
   "layoutTab": {
     "title": "Layout del Libro",
@@ -126,14 +149,18 @@
   "metadataTab": {
     "title": "Metadati del Libro",
     "description": "Compila i dettagli essenziali per la pubblicazione su Amazon KDP. Queste informazioni aiuteranno i lettori a trovare il tuo libro.",
-    "projectTitle": "Titolo del Progetto",
+    "bookTitle": "Titolo del Libro",
     "subtitle": "Sottotitolo",
     "author": "Autore",
     "kdpKeywords": "Parole Chiave KDP (separate da virgola)",
-    "categories": "Categorie (separate da virgola)",
+    "categories": "Categorie",
     "descriptionLabel": "Descrizione del Libro",
     "generateDescription": "Genera Descrizione",
-    "saveButton": "Salva Metadati"
+    "saveButton": "Salva Metadati",
+    "selectTitle": "--- Seleziona un titolo suggerito ---",
+    "selectSubtitle": "--- Seleziona un sottotitolo suggerito ---",
+    "fetchCategories": "Carica Categorie Amazon",
+    "fetchingCategories": "Caricamento..."
   },
   "validationTab": {
     "title": "Validazione ed Esportazione",

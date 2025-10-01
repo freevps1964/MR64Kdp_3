@@ -114,17 +114,19 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     const newProject: Project = {
       id: generateId(),
       projectTitle: title,
+      bookTitle: '',
       topic: title,
       subtitle: '',
       author: '',
       description: '',
       metadataKeywords: [],
-      categories: '',
+      categories: [],
       researchData: null,
       selectedSources: [],
       bookStructure: null,
       lastSaved: new Date().toISOString(),
       layoutTemplate: 'Classic',
+      pageSize: '6x9',
       coverImage: null,
       coverOptions: [],
     };
@@ -147,24 +149,40 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   };
 
   const updateNodeContent = (nodeId: string, content: string) => {
-    updateProject({
-      bookStructure: project?.bookStructure ? {
-        ...project.bookStructure,
-        chapters: project.bookStructure.chapters.map(ch => {
-          if (ch.id === nodeId) {
-            return { ...ch, content };
-          }
-          const subIndex = ch.subchapters.findIndex(sub => sub.id === nodeId);
-          if (subIndex > -1) {
-            const newSubchapters = [...ch.subchapters];
-            newSubchapters[subIndex] = { ...newSubchapters[subIndex], content };
-            return { ...ch, subchapters: newSubchapters };
-          }
-          return ch;
-        })
-      } : null
+    setProject(currentProject => {
+        if (!currentProject) return null;
+    
+        const newBookStructure = currentProject.bookStructure ? {
+            ...currentProject.bookStructure,
+            chapters: currentProject.bookStructure.chapters.map(ch => {
+                if (ch.id === nodeId) {
+                    return { ...ch, content };
+                }
+                const subIndex = ch.subchapters.findIndex(sub => sub.id === nodeId);
+                if (subIndex > -1) {
+                    const newSubchapters = [...ch.subchapters];
+                    newSubchapters[subIndex] = { ...newSubchapters[subIndex], content };
+                    return { ...ch, subchapters: newSubchapters };
+                }
+                return ch;
+            })
+        } : null;
+        
+        // This is a direct state update, so we can pass a function to updateProject
+        // to handle the async nature and saving to localStorage.
+        const updatedProject = {
+            ...currentProject,
+            bookStructure: newBookStructure
+        };
+        
+        // Use the main updateProject function to ensure saving happens correctly
+        updateProject(updatedProject);
+        
+        // Return the locally updated project to the state
+        return updatedProject;
     });
   };
+
 
   const setBookStructure = (structure: BookStructure) => {
     const hydratedChapters = structure.chapters.map(ch => ({

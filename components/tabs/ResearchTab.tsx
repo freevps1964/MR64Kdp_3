@@ -41,8 +41,15 @@ const ResearchTab: React.FC = () => {
         result.titles.sort((a, b) => b.relevance - a.relevance);
         result.subtitles.sort((a, b) => b.relevance - a.relevance);
         result.keywords.sort((a, b) => b.relevance - a.relevance);
-        result.sources.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0));
-        updateProject({ researchData: result });
+        
+        // Filter sources by relevance and pre-select them
+        const relevantSources = result.sources.filter(s => (s.relevance ?? 0) >= 60);
+        result.sources = relevantSources;
+
+        updateProject({
+           researchData: result,
+           selectedSources: relevantSources,
+        });
       } else {
         throw new Error('No data returned from research.');
       }
@@ -55,7 +62,7 @@ const ResearchTab: React.FC = () => {
   };
 
   const handleSelectTitle = (title: string) => {
-    updateProject({ projectTitle: title });
+    updateProject({ bookTitle: title });
   };
   
   const handleSelectSubtitle = (subtitle: string) => {
@@ -141,7 +148,7 @@ const ResearchTab: React.FC = () => {
               <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.suggestedTitles')}</h3>
               <div className="space-y-2">
                 {project.researchData.titles.map((item, index) => (
-                    <button key={index} onClick={() => handleSelectTitle(item.title)} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.projectTitle === item.title ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
+                    <button key={index} onClick={() => handleSelectTitle(item.title)} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.bookTitle === item.title ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
                         <span>{item.title}</span>
                         <span className="text-xs font-bold text-brand-primary bg-blue-100 px-2 py-1 rounded-full">{item.relevance}%</span>
                     </button>

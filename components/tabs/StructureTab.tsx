@@ -12,6 +12,7 @@ const StructureTab: React.FC = () => {
   const { t } = useLocalization();
   const { 
     project, 
+    updateProject,
     setBookStructure, 
     updateChapterTitle, 
     updateSubchapterTitle,
@@ -33,7 +34,7 @@ const StructureTab: React.FC = () => {
       }
     }
     
-    if (!project?.topic || !project.researchData) {
+    if (!project?.topic || !project.researchData || !project.bookTitle) {
       setError(t('structureTab.error'));
       return;
     }
@@ -41,7 +42,7 @@ const StructureTab: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const structure = await generateStructure(project.topic, project.projectTitle, project.subtitle, project.researchData.keywords);
+      const structure = await generateStructure(project.topic, project.bookTitle, project.subtitle, project.researchData.keywords);
       if (structure) {
         const structureWithIds: BookStructure = {
             chapters: structure.chapters.map((chapter) => ({
@@ -72,11 +73,33 @@ const StructureTab: React.FC = () => {
         {t('structureTab.description')}
       </p>
 
+      {project?.researchData?.titles && project.researchData.titles.length > 0 && (
+        <div className="mb-6">
+          <label htmlFor="bookTitleSelect" className="block text-sm font-medium text-gray-700 mb-1">
+            {t('metadataTab.bookTitle')}
+          </label>
+          <select
+            id="bookTitleSelect"
+            value={project.bookTitle || ''}
+            onChange={(e) => updateProject({ bookTitle: e.target.value })}
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-light focus:border-brand-light bg-white"
+          >
+            <option value="" disabled>{t('metadataTab.selectTitle')}</option>
+            {project.researchData.titles.map((item) => (
+              <option key={item.title} value={item.title}>
+                {item.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+
       {!currentStructure || currentStructure.chapters.length === 0 ? (
         <div className="text-center">
           <button
             onClick={handleGenerateStructure}
-            disabled={isLoading || !project?.topic}
+            disabled={isLoading || !project?.bookTitle}
             className="flex items-center justify-center mx-auto bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
           >
             {isLoading ? <LoadingSpinner /> : t('structureTab.button')}
@@ -138,7 +161,7 @@ const StructureTab: React.FC = () => {
                 <div className="w-full sm:w-auto flex items-center justify-center sm:justify-end gap-4">
                     <button
                         onClick={handleGenerateStructure}
-                        disabled={isLoading || !project?.topic}
+                        disabled={isLoading || !project?.bookTitle}
                         className="flex items-center justify-center bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
                     >
                         {isLoading ? <LoadingSpinner /> : '✨ ' + t('structureTab.button')}

@@ -35,6 +35,10 @@ export interface ResearchResult {
 
 export type Language = 'it' | 'en';
 
+export type ToneOfVoice = 'Informal' | 'Formal' | 'Academic' | 'Persuasive';
+export type TargetAudience = 'Beginners' | 'Experts' | 'General';
+export type WritingStyle = 'Descriptive' | 'Narrative' | 'Expository' | 'Argumentative';
+
 export interface SubChapter {
   id: string;
   title: string;
@@ -53,21 +57,24 @@ export interface BookStructure {
 }
 
 export type LayoutTemplate = 'Classic' | 'Modern' | 'Minimalist';
+export type PageSize = '6x9' | '7x10';
 
 export interface Project {
   id: string;
   projectTitle: string;
+  bookTitle: string;
   topic: string;
   subtitle: string;
   author: string;
   description: string;
   metadataKeywords: Keyword[];
-  categories: string;
+  categories: string[];
   researchData: ResearchResult | null;
   selectedSources: GroundingSource[];
   bookStructure: BookStructure | null;
   lastSaved: string;
   layoutTemplate: LayoutTemplate;
+  pageSize: PageSize;
   coverImage: string | null; // base64 string
   coverOptions: string[]; // array of base64 strings
 }
