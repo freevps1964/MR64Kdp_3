@@ -6,6 +6,8 @@ import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import type { Chapter, SubChapter, ToneOfVoice, TargetAudience, WritingStyle } from '../../types';
 
+const countWords = (text: string) => text?.split(/\s+/).filter(Boolean).length || 0;
+
 const ContentTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateNodeContent } = useProject();
@@ -72,11 +74,13 @@ const ContentTab: React.FC = () => {
     }, 1000);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (isRegeneration = false) => {
     if (!project?.topic || !selectedItem || !parentChapter) return;
 
     setIsGenerating(true);
-    setContent('');
+    if (!isRegeneration) {
+      setContent('');
+    }
     
     const isSubchapter = parentChapter.id !== selectedItem.id;
 
@@ -85,11 +89,12 @@ const ContentTab: React.FC = () => {
         project.topic, 
         parentChapter.title, 
         isSubchapter ? selectedItem.title : undefined,
-        undefined,
+        1000, // Word count requirement
         project.researchData?.keywords,
         tone,
         audience,
-        style
+        style,
+        isRegeneration ? content : undefined
       );
 
       let fullText = '';
@@ -282,13 +287,25 @@ const ContentTab: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-xl font-semibold text-brand-primary">{selectedItem.title}</h3>
-                <button
-                  onClick={handleGenerate}
-                  disabled={isBusy}
-                  className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
-                >
-                  {isGenerating ? <LoadingSpinner /> : '✨ ' + t('contentTab.generateButton')}
-                </button>
+                <div className="flex items-center gap-2">
+                    {content && (
+                      <button
+                        onClick={() => handleGenerate(true)}
+                        disabled={isBusy}
+                        className="flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
+                        title={t('contentTab.regenerateButton')}
+                      >
+                        {isGenerating && content ? <LoadingSpinner /> : '♻️'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleGenerate(false)}
+                      disabled={isBusy}
+                      className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
+                    >
+                      {isGenerating ? <LoadingSpinner /> : '✨ ' + t('contentTab.generateButton')}
+                    </button>
+                </div>
               </div>
               
               <GenerationOptions />
@@ -300,6 +317,9 @@ const ContentTab: React.FC = () => {
                 className="w-full h-96 p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-4"
                 readOnly={isBusy}
               />
+               <div className="text-right text-sm text-neutral-medium mt-2">
+                {t('contentTab.wordCount', { count: countWords(content) })}
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-96 bg-neutral-light rounded-lg border-2 border-dashed">

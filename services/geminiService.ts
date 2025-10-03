@@ -1,5 +1,8 @@
+
+
+
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse } from "@google/genai";
-import type { BookStructure, ResearchResult, Keyword, GroundingSource } from '../types';
+import type { BookStructure, ResearchResult, Keyword, GroundingSource, ContentBlockType } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -75,7 +78,6 @@ const rankSources = async (topic: string, sources: GroundingSource[]): Promise<G
     `;
 
     try {
-        // FIX: Explicitly type the response to avoid 'unknown' type error.
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
@@ -116,18 +118,17 @@ const rankSources = async (topic: string, sources: GroundingSource[]): Promise<G
  * Esegue una ricerca approfondita su un argomento utilizzando Gemini con il grounding di Google Search.
  */
 export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: any[] }> => {
-  const prompt = `Esegui una ricerca approfondita per un libro da pubblicare su Amazon KDP sull'argomento: "${topic}".
-  Fornisci una risposta strutturata in formato JSON con i seguenti campi:
-  - "marketSummary": un'analisi concisa del mercato di riferimento e del potenziale pubblico.
+  const prompt = `Esegui una ricerca approfondita e aggiornata per un libro da pubblicare su Amazon KDP sull'argomento: "${topic}".
+  Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati e le analisi riflettano le informazioni più recenti disponibili:
+  - "marketSummary": un'analisi concisa del mercato di riferimento e del potenziale pubblico, basata su dati attuali.
   - "titles": un array di 5 oggetti, ognuno con "title" (stringa) e "relevance" (un numero da 0 a 100 che indica la pertinenza).
   - "subtitles": un array di 5 oggetti, ognuno con "subtitle" (stringa) e "relevance" (numero da 0 a 100).
-  - "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere altamente performanti per Amazon KDP, concentrandosi su un alto intento di acquisto, redditività commerciale e un forte potenziale di conversione. Includi un mix di parole chiave a coda corta e a coda lunga.
+  - "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere altamente performanti per Amazon KDP, concentrandosi su un alto intento di acquisto, redditività commerciale e un forte potenziale di conversione, basate sulle tendenze attuali. Includi un mix di parole chiave a coda corta e a coda lunga.
   
   Ordina internamente ogni array in base alla pertinenza, dal più alto al più basso.
   Assicurati che l'output sia un oggetto JSON valido.`;
 
   try {
-    // FIX: Explicitly type the response to avoid 'unknown' type error.
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -136,9 +137,7 @@ export const researchTopic = async (topic: string): Promise<{ result: ResearchRe
       },
     }));
 
-    // FIX: Explicitly type the response to avoid 'unknown' type error.
     const researchData = parseJsonFromMarkdown<ResearchResult>(response.text);
-    // FIX: Explicitly type the response to avoid 'unknown' type error.
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     
     if (researchData) {
@@ -164,7 +163,6 @@ La struttura deve seguire rigorosamente i seguenti requisiti:
 I titoli dei capitoli e dei sottocapitoli devono essere pertinenti, coprire in modo esauriente l'argomento e includere in modo naturale le seguenti parole chiave per massimizzare la visibilità e le vendite su Amazon: ${keywordList}.`;
   
   try {
-    // FIX: Explicitly type the response to avoid 'unknown' type error.
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -221,7 +219,7 @@ export const generateContentStream = (
   tone?: string,
   audience?: string,
   style?: string,
-// FIX: Add explicit return type for better type inference.
+  existingContent?: string
 ): Promise<AsyncGenerator<GenerateContentResponse>> => {
   const keywordList = keywords && keywords.length > 0 ? keywords.map(k => k.keyword).join(', ') : '';
   
@@ -231,12 +229,20 @@ export const generateContentStream = (
     style && `- Stile di scrittura: ${style}`
   ].filter(Boolean).join('\n');
 
-  const prompt = `Scrivi il contenuto per il libro sull'argomento "${topic}".
+  const wordCountInstruction = wordCount 
+    ? `REQUISITO FONDAMENTALE: Il contenuto di questa sezione DEVE essere di almeno ${wordCount} parole. Scrivi un testo completo, dettagliato e approfondito. Non fornire un breve riassunto. Approfondisci ogni punto per assicurarti che il requisito del conteggio parole sia soddisfatto.`
+    : '';
+
+  const regenerationInstruction = existingContent 
+    ? `Migliora, espandi e riscrivi il seguente testo per renderlo più coinvolgente, dettagliato e di alta qualità. Assicurati che la nuova versione sia coerente con le linee guida fornite e che soddisfi il requisito del conteggio parole. Testo originale da migliorare:\n---\n${existingContent}\n---\n`
+    : `Scrivi il contenuto per il libro sull'argomento "${topic}".`;
+
+  const prompt = `${regenerationInstruction}
 Sezione corrente: Capitolo "${chapterTitle}" ${subchapterTitle ? `- Sottocapitolo "${subchapterTitle}"` : ''}.
 ${writingGuidelines ? `\nAderisci alle seguenti linee guida di scrittura:\n${writingGuidelines}` : ''}
-Scrivi in modo chiaro, informativo e coinvolgente.
+Scrivi in modo chiaro, informativo e coinvolgente. Assicurati che tutte le informazioni fornite siano attuali, verificate e accurate alla data odierna.
 ${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave nel testo per migliorare l'ottimizzazione SEO: ${keywordList}.` : ''}
-${wordCount ? `Scrivi un contenuto estremamente dettagliato, approfondito e completo, di almeno ${wordCount} parole.` : ''}
+${wordCountInstruction}
 Formatta il testo con paragrafi ben definiti. Non includere il titolo del capitolo o del sottocapitolo nel testo generato.`;
 
   return withRetry(() => ai.models.generateContentStream({
@@ -263,7 +269,6 @@ The prompt must be in English, descriptive, and aim for a commercially successfu
 The output must be only the text of the prompt, without any other introductory text or explanation.`;
 
   try {
-    // FIX: Explicitly type the response to avoid 'unknown' type error.
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -282,7 +287,6 @@ The output must be only the text of the prompt, without any other introductory t
 /**
  * Genera immagini di copertina per il libro.
  */
-// FIX: Add explicit return type for better type inference.
 export const generateCoverImages = (prompt: string): Promise<GenerateImagesResponse> => {
     return withRetry(() => ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
@@ -306,7 +310,6 @@ export const generateDescription = async (title: string, structure: BookStructur
     Evita di usare markdown o formattazione speciale.`;
 
     try {
-        // FIX: Explicitly type the response to avoid 'unknown' type error.
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt
@@ -327,7 +330,6 @@ export const fetchAmazonCategories = async (): Promise<string[]> => {
   Do not include sub-categories. The output must be only the JSON array.`;
 
   try {
-    // FIX: Explicitly type the response to avoid 'unknown' type error.
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -340,13 +342,123 @@ export const fetchAmazonCategories = async (): Promise<string[]> => {
       },
     }));
 
-    // Con responseMimeType: "application/json", la risposta dovrebbe essere una stringa JSON valida.
     const categories = JSON.parse(response.text.trim()) as string[];
-    // Ordina alfabeticamente per una visualizzazione coerente
     return categories?.sort() || [];
   } catch (error) {
     console.error("Error fetching Amazon categories:", error);
-    // Restituisce un elenco predefinito in caso di errore per garantire la funzionalità
     return ["Arts & Photography", "Biographies & Memoirs", "Business & Money", "Children's Books", "Comics & Graphic Novels", "Computers & Technology", "Cookbooks, Food & Wine", "Crafts, Hobbies & Home", "Education & Teaching", "Engineering & Transportation", "Health, Fitness & Dieting", "History", "Humor & Entertainment", "Law", "Lesbian, Gay, Bisexual & Transgender Books", "Literature & Fiction", "Medical Books", "Mystery, Thriller & Suspense", "Parenting & Relationships", "Politics & Social Sciences", "Reference", "Religion & Spirituality", "Romance", "Science & Math", "Science Fiction & Fantasy", "Self-Help", "Sports & Outdoors", "Teen & Young Adult", "Test Preparation", "Travel"];
   }
+};
+
+/**
+ * Genera un prompt per un blocco di contenuto (ricetta/esercizio).
+ */
+export const generateContentBlockPrompt = async (topic: string, type: ContentBlockType): Promise<string> => {
+    const prompt = `Based on a book about "${topic}", generate a short, creative, and descriptive prompt for creating a ${type}. The prompt should be a single sentence that can be used to generate the full ${type} content. For example, if the topic is "Healthy Italian Cooking" and the type is "recipe", a good prompt would be "A light and healthy version of classic lasagna with zucchini instead of pasta." The output must be only the text of the prompt.`;
+    
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt
+        }));
+        return response.text.trim();
+    } catch (error) {
+        console.error(`Error generating ${type} prompt:`, error);
+        return "";
+    }
+};
+
+
+/**
+ * Genera il testo per uno o più blocchi di contenuto (ricetta/esercizio).
+ */
+export const generateContentBlockText = async (
+    topic: string, 
+    description: string, 
+    type: ContentBlockType,
+    count: number = 1
+): Promise<{ title: string; textContent: string; imagePrompt: string }[] | null> => {
+    
+    const recipeProperties = {
+      description: { type: Type.STRING, description: "A captivating summary of the recipe." },
+      ingredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of ingredients." },
+      instructions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Step-by-step instructions." },
+    };
+    
+    const exerciseProperties = {
+      description: { type: Type.STRING, description: "A summary of the exercise and its benefits." },
+      muscles: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Muscles involved." },
+      instructions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Step-by-step instructions for proper form." },
+    };
+
+    const itemProperties = type === 'recipe' ? recipeProperties : exerciseProperties;
+    
+    const prompt = `Based on the book topic "${topic}", generate ${count} unique ${type}(s) related to "${description}".
+    For each, provide a unique "title", a detailed and visually descriptive "imagePrompt" in English, suitable for a photorealistic AI image generator. Describe the final dish or exercise position, including details on lighting, composition, and background. For example: 'A close-up, photorealistic shot of a stack of fluffy, golden-brown protein pancakes, topped with fresh blueberries and a drizzle of maple syrup, on a clean white plate, with bright morning light.', and the content details.
+    Respond with a JSON array of objects, even if generating only one item.`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { 
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                           title: { type: Type.STRING },
+                           imagePrompt: { type: Type.STRING },
+                           ...itemProperties
+                        },
+                        required: ["title", "imagePrompt", ...Object.keys(itemProperties)]
+                    }
+                }
+            }
+        }));
+        
+        const results = JSON.parse(response.text.trim());
+
+        return results.map((item: any) => {
+            let formattedText = `${item.description}\n\n`;
+            if (type === 'recipe') {
+                formattedText += `INGREDIENTI:\n- ${item.ingredients.join('\n- ')}\n\nISTRUZIONI:\n${item.instructions.map((step: string, i: number) => `${i + 1}. ${step}`).join('\n')}`;
+            } else {
+                formattedText += `MUSCOLI COINVOLTI:\n- ${item.muscles.join('\n- ')}\n\nISTRUZIONI:\n${item.instructions.map((step: string, i: number) => `${i + 1}. ${step}`).join('\n')}`;
+            }
+            return {
+                title: item.title,
+                textContent: formattedText,
+                imagePrompt: item.imagePrompt
+            };
+        });
+
+    } catch (error) {
+        console.error(`Error generating ${type} text:`, error);
+        return null;
+    }
+};
+
+/**
+ * Genera un'immagine per un blocco di contenuto (ricetta/esercizio).
+ */
+export const generateContentBlockImage = async (description: string): Promise<string | null> => {
+    const prompt = `A photorealistic, high-quality photograph for a book. The image must clearly represent: "${description}". Style: Bright, clean, professional lighting with a minimalist or plain white background. The subject should be in sharp focus.`;
+    
+    try {
+        const response: GenerateImagesResponse = await withRetry(() => ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: prompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/png',
+              aspectRatio: '4:3',
+            },
+        }));
+        return response.generatedImages[0].image.imageBytes;
+    } catch (error) {
+        console.error("Error generating content block image:", error);
+        return null;
+    }
 };

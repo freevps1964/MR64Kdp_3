@@ -4,12 +4,15 @@ import { useProject } from '../hooks/useProject';
 import LanguageSelector from './LanguageSelector';
 import ProgressBar from './ProgressBar';
 import UserMenu from './UserMenu';
+import { useToast } from '../hooks/useToast';
 
 const Header: React.FC = () => {
   const { t } = useLocalization();
-  const { project, updateProject } = useProject();
+  const { project, updateProject, endCurrentProject } = useProject();
+  const { showToast } = useToast();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editableTitle, setEditableTitle] = useState('');
+  const [isGlowing, setIsGlowing] = useState(false);
 
   useEffect(() => {
     if (project) {
@@ -37,6 +40,9 @@ const Header: React.FC = () => {
   
   const handleSaveProject = () => {
     updateProject({}); // This will update the 'lastSaved' timestamp and save the project
+    showToast(t('toast.projectSaved'), 'success');
+    setIsGlowing(true);
+    setTimeout(() => setIsGlowing(false), 3000); // Glow for 3 seconds
   };
 
   const lastSavedText = useMemo(() => {
@@ -51,6 +57,15 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-brand-primary text-white shadow-md sticky top-0 z-20">
+       <style>{`
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 2px #F59E0B; }
+          50% { box-shadow: 0 0 12px #F59E0B, 0 0 6px #F59E0B; }
+        }
+        .glow-effect {
+          animation: glow 1.5s ease-in-out 2;
+        }
+      `}</style>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
@@ -95,6 +110,12 @@ const Header: React.FC = () => {
                   className="bg-brand-light hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md text-sm transition-colors"
                 >
                   {t('header.saveProject')}
+                </button>
+                 <button 
+                  onClick={endCurrentProject}
+                  className={`bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors ${isGlowing ? 'glow-effect' : ''}`}
+                >
+                  {t('header.closeProject')}
                 </button>
               </div>
             )}

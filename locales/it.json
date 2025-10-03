@@ -1,3 +1,4 @@
+
 {
   "header": {
     "title": "MR64Kdp Book",
@@ -30,11 +31,15 @@
     "research": "Ricerca",
     "structure": "Struttura",
     "content": "Contenuti",
+    "recipes": "Ricette & Esercizi",
     "layout": "Layout",
     "cover": "Copertina",
     "metadata": "Metadati",
     "validation": "Validazione",
     "disabledTooltip": "Completa i passaggi precedenti per sbloccare"
+  },
+  "toast": {
+    "projectSaved": "Progetto salvato con successo!"
   },
   "welcome": {
     "title": "Benvenuto in MR64Kdp Book",
@@ -86,13 +91,16 @@
     "unsavedChanges": "Generando una nuova struttura sovrascriverai quella attuale. Continuare?",
     "editTitlePlaceholder": "Inserisci il titolo...",
     "deleteChapterTitle": "Elimina Capitolo",
-    "deleteSubchapterTitle": "Elimina Sottocapitolo"
+    "deleteSubchapterTitle": "Elimina Sottocapitolo",
+    "subtitleLabel": "Sottotitolo (Opzionale)"
   },
   "contentTab": {
     "title": "Creazione Contenuti",
     "description": "Seleziona un capitolo o sottocapitolo dalla lista per scrivere o generare il suo contenuto con l'assistenza dell'IA.",
     "placeholder": "Seleziona un capitolo per iniziare...",
     "generateButton": "Genera Contenuto",
+    "regenerateButton": "Rigenera Contenuto",
+    "wordCount": "Conteggio Parole: {count}",
     "saveButton": "Salva Contenuto",
     "generating": "Generazione in corso...",
     "saving": "Salvataggio...",
@@ -144,7 +152,8 @@
     "selected": "Selezionata",
     "generatePrompt": "Genera Prompt con AI",
     "generatingPrompt": "Generazione Prompt...",
-    "downloadButton": "Scarica"
+    "downloadButton": "Scarica",
+    "favoritesTitle": "Copertine Preferite"
   },
   "metadataTab": {
     "title": "Metadati del Libro",
@@ -152,6 +161,7 @@
     "bookTitle": "Titolo del Libro",
     "subtitle": "Sottotitolo",
     "author": "Autore",
+    "authorArchiveHint": "Gli autori salvati appariranno qui",
     "kdpKeywords": "Parole Chiave KDP (separate da virgola)",
     "categories": "Categorie",
     "descriptionLabel": "Descrizione del Libro",
@@ -171,5 +181,26 @@
     "item3": "È stata selezionata una copertina.",
     "item4": "È stato scelto un layout.",
     "exportButton": "Esporta PDF Pronto per la Stampa (Prossimamente)"
+  },
+  "recipesTab": {
+    "title": "Ricette & Esercizi",
+    "description": "Genera contenuti specifici come ricette o esercizi, completi di testo e immagini, basati sull'argomento del tuo libro.",
+    "newBlock": "Nuovo Blocco",
+    "selectType": "Seleziona il tipo di contenuto:",
+    "recipe": "Ricetta",
+    "exercise": "Esercizio",
+    "descriptionPlaceholder": "Descrivi la ricetta o l'esercizio che vuoi creare...\nEs: 'Pancake proteici con mirtilli' o 'Piegamenti sulle braccia per principianti'",
+    "generateButton": "Genera",
+    "generating": "Generazione in corso...",
+    "saveButton": "Salva Blocco",
+    "deleteButton": "Elimina Blocco",
+    "editTitle": "Modifica Titolo",
+    "selectBlock": "Seleziona un blocco da modificare o creane uno nuovo.",
+    "generatedText": "Testo Generato",
+    "generatedImage": "Immagine Generata",
+    "generatePrompt": "Genera Prompt con AI",
+    "generatingPrompt": "Generazione...",
+    "itemCount": "Numero di elementi",
+    "generatingItem": "Generazione {current} di {total}: {title}..."
   }
 }

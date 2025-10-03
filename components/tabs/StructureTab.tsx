@@ -73,26 +73,49 @@ const StructureTab: React.FC = () => {
         {t('structureTab.description')}
       </p>
 
-      {project?.researchData?.titles && project.researchData.titles.length > 0 && (
-        <div className="mb-6">
-          <label htmlFor="bookTitleSelect" className="block text-sm font-medium text-gray-700 mb-1">
-            {t('metadataTab.bookTitle')}
-          </label>
-          <select
-            id="bookTitleSelect"
-            value={project.bookTitle || ''}
-            onChange={(e) => updateProject({ bookTitle: e.target.value })}
-            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-light focus:border-brand-light bg-white"
-          >
-            <option value="" disabled>{t('metadataTab.selectTitle')}</option>
-            {project.researchData.titles.map((item) => (
-              <option key={item.title} value={item.title}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {project?.researchData?.titles && project.researchData.titles.length > 0 && (
+          <div>
+            <label htmlFor="bookTitleSelect" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('metadataTab.bookTitle')}
+            </label>
+            <select
+              id="bookTitleSelect"
+              value={project.bookTitle || ''}
+              onChange={(e) => updateProject({ bookTitle: e.target.value, subtitle: '' })}
+              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-light focus:border-brand-light bg-white"
+            >
+              <option value="" disabled>{t('metadataTab.selectTitle')}</option>
+              {project.researchData.titles.map((item) => (
+                <option key={item.title} value={item.title}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {project?.researchData?.subtitles && project.researchData.subtitles.length > 0 && (
+          <div>
+            <label htmlFor="bookSubtitleSelect" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('structureTab.subtitleLabel')}
+            </label>
+            <select
+              id="bookSubtitleSelect"
+              value={project.subtitle || ''}
+              onChange={(e) => updateProject({ subtitle: e.target.value })}
+              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-light focus:border-brand-light bg-white"
+            >
+              <option value="">{t('metadataTab.selectSubtitle')}</option>
+              {project.researchData.subtitles.map((item) => (
+                <option key={item.subtitle} value={item.subtitle}>
+                  {item.subtitle}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
 
       {!currentStructure || currentStructure.chapters.length === 0 ? (

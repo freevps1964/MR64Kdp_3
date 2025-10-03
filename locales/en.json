@@ -1,3 +1,4 @@
+
 {
   "header": {
     "title": "MR64Kdp Book",
@@ -30,11 +31,15 @@
     "research": "Research",
     "structure": "Structure",
     "content": "Content",
+    "recipes": "Recipes & Exercises",
     "layout": "Layout",
     "cover": "Cover",
     "metadata": "Metadata",
     "validation": "Validation",
     "disabledTooltip": "Complete previous steps to unlock"
+  },
+  "toast": {
+    "projectSaved": "Project saved successfully!"
   },
   "welcome": {
     "title": "Welcome to MR64Kdp Book",
@@ -86,13 +91,16 @@
     "unsavedChanges": "Generating a new structure will overwrite the current one. Continue?",
     "editTitlePlaceholder": "Enter title...",
     "deleteChapterTitle": "Delete Chapter",
-    "deleteSubchapterTitle": "Delete Subchapter"
+    "deleteSubchapterTitle": "Delete Subchapter",
+    "subtitleLabel": "Subtitle (Optional)"
   },
   "contentTab": {
     "title": "Content Creation",
     "description": "Select a chapter or subchapter from the list to write or generate its content with AI assistance.",
     "placeholder": "Select a chapter to begin...",
     "generateButton": "Generate Content",
+    "regenerateButton": "Regenerate Content",
+    "wordCount": "Word Count: {count}",
     "saveButton": "Save Content",
     "generating": "Generating...",
     "saving": "Saving...",
@@ -144,7 +152,8 @@
     "selected": "Selected",
     "generatePrompt": "Generate Prompt with AI",
     "generatingPrompt": "Generating Prompt...",
-    "downloadButton": "Download"
+    "downloadButton": "Download",
+    "favoritesTitle": "Favorite Covers"
   },
   "metadataTab": {
     "title": "Book Metadata",
@@ -152,6 +161,7 @@
     "bookTitle": "Book Title",
     "subtitle": "Subtitle",
     "author": "Author",
+    "authorArchiveHint": "Saved authors will appear here",
     "kdpKeywords": "KDP Keywords (comma-separated)",
     "categories": "Categories",
     "descriptionLabel": "Book Description",
@@ -171,5 +181,26 @@
     "item3": "A cover has been selected.",
     "item4": "Layout has been chosen.",
     "exportButton": "Export Print-Ready PDF (Coming Soon)"
+  },
+  "recipesTab": {
+    "title": "Recipes & Exercises",
+    "description": "Generate specific content like recipes or exercises, complete with text and images, based on your book's topic.",
+    "newBlock": "New Block",
+    "selectType": "Select content type:",
+    "recipe": "Recipe",
+    "exercise": "Exercise",
+    "descriptionPlaceholder": "Describe the recipe or exercise you want to create...\ne.g., 'High-protein pancakes with blueberries' or 'Push-ups for beginners'",
+    "generateButton": "Generate",
+    "generating": "Generating...",
+    "saveButton": "Save Block",
+    "deleteButton": "Delete Block",
+    "editTitle": "Edit Title",
+    "selectBlock": "Select a block to edit or create a new one.",
+    "generatedText": "Generated Text",
+    "generatedImage": "Generated Image",
+    "generatePrompt": "Generate Prompt with AI",
+    "generatingPrompt": "Generating...",
+    "itemCount": "Number of items",
+    "generatingItem": "Generating {current} of {total}: {title}..."
   }
 }

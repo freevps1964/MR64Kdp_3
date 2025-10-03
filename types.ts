@@ -1,6 +1,6 @@
 import type { GenerateContentResponse } from "@google/genai";
 
-export type TabKey = 'research' | 'structure' | 'content' | 'layout' | 'cover' | 'metadata' | 'validation';
+export type TabKey = 'research' | 'structure' | 'content' | 'recipes' | 'layout' | 'cover' | 'metadata' | 'validation';
 
 export interface GroundingSource {
   web?: {
@@ -59,6 +59,18 @@ export interface BookStructure {
 export type LayoutTemplate = 'Classic' | 'Modern' | 'Minimalist';
 export type PageSize = '6x9' | '7x10';
 
+export type ContentBlockType = 'recipe' | 'exercise';
+
+export interface ContentBlock {
+  id: string;
+  type: ContentBlockType;
+  title: string; // From user description, can be edited
+  description: string; // User's input prompt
+  textContent: string; // Generated text (steps, ingredients, etc.)
+  image: string | null; // Generated base64 image
+}
+
+
 export interface Project {
   id: string;
   projectTitle: string;
@@ -66,6 +78,7 @@ export interface Project {
   topic: string;
   subtitle: string;
   author: string;
+  authorsArchive: string[];
   description: string;
   metadataKeywords: Keyword[];
   categories: string[];
@@ -77,4 +90,6 @@ export interface Project {
   pageSize: PageSize;
   coverImage: string | null; // base64 string
   coverOptions: string[]; // array of base64 strings
+  archivedCovers: string[]; // New: array of selected base64 strings
+  contentBlocks: ContentBlock[]; // New: for recipes/exercises
 }

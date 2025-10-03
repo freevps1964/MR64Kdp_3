@@ -8,7 +8,7 @@ import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion } from '../.
 
 const MetadataTab: React.FC = () => {
   const { t } = useLocalization();
-  const { project, updateProject } = useProject();
+  const { project, updateProject, addAuthorToArchive } = useProject();
 
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
@@ -128,10 +128,18 @@ const MetadataTab: React.FC = () => {
             type="text"
             id="author"
             name="author"
+            list="authors-list"
             value={project.author}
             onChange={(e) => handleFieldChange({ author: e.target.value })}
+            onBlur={(e) => addAuthorToArchive(e.target.value)}
             className="w-full p-2 border rounded-md"
+            placeholder={t('metadataTab.authorArchiveHint')}
           />
+           <datalist id="authors-list">
+            {(project.authorsArchive || []).map(author => (
+                <option key={author} value={author} />
+            ))}
+          </datalist>
         </div>
         <div>
             <div className="flex justify-between items-center mb-1">

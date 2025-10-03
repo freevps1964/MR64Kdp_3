@@ -188,7 +188,14 @@ const CoverTab: React.FC = () => {
   };
   
   const handleSelectCover = (base64Image: string) => {
-    updateProject({ coverImage: base64Image });
+    if (!project) return;
+    const currentArchived = project.archivedCovers || [];
+    const isArchived = currentArchived.includes(base64Image);
+    
+    updateProject({ 
+        coverImage: base64Image,
+        archivedCovers: isArchived ? currentArchived : [...currentArchived, base64Image]
+    });
   };
 
   const handleDownloadCover = (base64Image: string, index: number) => {
@@ -299,6 +306,26 @@ const CoverTab: React.FC = () => {
               );
             })}
           </div>
+        </div>
+      )}
+       {project && project.archivedCovers.length > 0 && (
+        <div className="mt-12 pt-6 border-t">
+            <h3 className="text-xl font-semibold text-brand-dark mb-4">{t('coverTab.favoritesTitle')}</h3>
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                 {project.archivedCovers.map((base64Image, index) => {
+                    const imageUrl = `data:image/png;base64,${base64Image}`;
+                    const isSelected = project.coverImage === base64Image;
+                    return (
+                        <button key={index} onClick={() => handleSelectCover(base64Image)} className="relative group">
+                            <img 
+                                src={imageUrl}
+                                alt={`Archived cover ${index + 1}`}
+                                className={`rounded-md shadow-md w-full object-cover aspect-[3/4] transition-all ${isSelected ? 'ring-4 ring-brand-accent' : 'group-hover:ring-2 group-hover:ring-brand-light'}`}
+                            />
+                        </button>
+                    )
+                 })}
+             </div>
         </div>
       )}
     </Card>

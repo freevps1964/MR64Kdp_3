@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { Project, BookStructure, Chapter } from '../types';
+import { Project, BookStructure, Chapter, ContentBlock, ContentBlockType } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
 export interface ProjectContextType {
@@ -13,7 +13,7 @@ export interface ProjectContextType {
   endCurrentProject: () => void;
   deleteProject: (projectId: string) => void;
   
-  // New specific structure methods
+  // Chapter/structure methods
   setBookStructure: (structure: BookStructure) => void;
   updateChapterTitle: (chapterId: string, title: string) => void;
   updateSubchapterTitle: (subchapterId: string, title: string) => void;
@@ -21,6 +21,14 @@ export interface ProjectContextType {
   deleteChapter: (chapterId: string) => void;
   addSubchapter: (chapterId: string) => void;
   deleteSubchapter: (subchapterId: string) => void;
+
+  // Content Block (Recipes/Exercises) methods
+  addContentBlock: (block: Omit<ContentBlock, 'id'>) => void;
+  updateContentBlock: (block: ContentBlock) => void;
+  deleteContentBlock: (blockId: string) => void;
+  
+  // Author Archive methods
+  addAuthorToArchive: (author: string) => void;
 }
 
 
@@ -32,6 +40,31 @@ interface ProjectProviderProps {
 
 const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 9)}`;
 const ARCHIVE_KEY_PREFIX = 'kdp-projects-archive';
+const AUTHORS_ARCHIVE_KEY_PREFIX = 'kdp-authors-archive';
+
+
+// Helper function to save a "lean" version of the project archive to localStorage.
+// This omits potentially large fields like 'coverOptions' to prevent exceeding storage quotas.
+const saveArchiveToLocalStorage = (archive: Project[], archiveKey: string) => {
+    try {
+        const leanArchive = archive.map(p => {
+            const { coverOptions, ...rest } = p; // Omit coverOptions from persisted data
+            return rest;
+        });
+        localStorage.setItem(archiveKey, JSON.stringify(leanArchive));
+    } catch (e: any) {
+        if (e.name === 'QuotaExceededError') {
+            console.error("LocalStorage quota exceeded. Could not save project changes.", e);
+            // Inform the user with a more helpful message
+            alert("Error: Could not save changes. The browser's local storage is full. Please delete old or unused projects to free up space.");
+        } else {
+            console.error("Failed to save to localStorage:", e);
+            // Throw other errors to be handled elsewhere if necessary
+            throw e;
+        }
+    }
+};
+
 
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) => {
   const { user, isAuthEnabled } = useAuth();
@@ -51,6 +84,13 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     // No key is returned, preventing access to any project data.
     return null;
   }, [user, isAuthEnabled]);
+  
+  const getAuthorsArchiveKey = useCallback(() => {
+    if (user) return `${AUTHORS_ARCHIVE_KEY_PREFIX}-${user.uid}`;
+    if (!isAuthEnabled) return `${AUTHORS_ARCHIVE_KEY_PREFIX}-guest`;
+    return null;
+  }, [user, isAuthEnabled]);
+
 
   useEffect(() => {
     const archiveKey = getArchiveKey();
@@ -60,7 +100,12 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
           try {
             const parsedArchive = JSON.parse(savedArchive);
             if (Array.isArray(parsedArchive)) {
-              setArchivedProjects(parsedArchive);
+              // Hydrate lean project objects with transient fields like coverOptions
+              const hydratedArchive = parsedArchive.map((p: Omit<Project, 'coverOptions'>) => ({
+                ...p,
+                coverOptions: [], // Initialize as empty array on load
+              }));
+              setArchivedProjects(hydratedArchive);
             }
           } catch (error) {
             console.error("Error parsing project archive:", error);
@@ -99,7 +144,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
         } else {
           newArchive = [...prevArchive, updatedProject];
         }
-        localStorage.setItem(archiveKey, JSON.stringify(newArchive));
+        saveArchiveToLocalStorage(newArchive, archiveKey);
         return newArchive;
       });
 
@@ -110,6 +155,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const startNewProject = (title: string) => {
     const archiveKey = getArchiveKey();
     if (!archiveKey) return;
+    
+    const authorsArchiveKey = getAuthorsArchiveKey();
+    const savedAuthors = authorsArchiveKey ? localStorage.getItem(authorsArchiveKey) : null;
+    const initialAuthors = savedAuthors ? JSON.parse(savedAuthors) : [];
       
     const newProject: Project = {
       id: generateId(),
@@ -118,6 +167,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       topic: title,
       subtitle: '',
       author: '',
+      authorsArchive: initialAuthors,
       description: '',
       metadataKeywords: [],
       categories: [],
@@ -129,12 +179,14 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       pageSize: '6x9',
       coverImage: null,
       coverOptions: [],
+      archivedCovers: [],
+      contentBlocks: [],
     };
     // Directly set and save the new project
     setProject(newProject);
     setArchivedProjects(prev => {
         const newArchive = [...prev, newProject];
-        localStorage.setItem(archiveKey, JSON.stringify(newArchive));
+        saveArchiveToLocalStorage(newArchive, archiveKey);
         return newArchive;
     });
     setIsProjectStarted(true);
@@ -264,13 +316,47 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     updateProject({ bookStructure: newStructure });
   };
   
+  const addContentBlock = (block: Omit<ContentBlock, 'id'>) => {
+    if (!project) return;
+    const newBlock = { ...block, id: generateId() };
+    updateProject({ contentBlocks: [...project.contentBlocks, newBlock] });
+  };
+  
+  const updateContentBlock = (block: ContentBlock) => {
+      if (!project) return;
+      const newBlocks = project.contentBlocks.map(b => b.id === block.id ? block : b);
+      updateProject({ contentBlocks: newBlocks });
+  };
+
+  const deleteContentBlock = (blockId: string) => {
+    if (!project) return;
+    const newBlocks = project.contentBlocks.filter(b => b.id !== blockId);
+    updateProject({ contentBlocks: newBlocks });
+  };
+  
+  const addAuthorToArchive = (author: string) => {
+    if (!project || !author.trim()) return;
+
+    const authorsArchiveKey = getAuthorsArchiveKey();
+    if (!authorsArchiveKey) return;
+
+    const trimmedAuthor = author.trim();
+    const currentArchive = project.authorsArchive || [];
+    
+    if (!currentArchive.includes(trimmedAuthor)) {
+        const newArchive = [...currentArchive, trimmedAuthor];
+        updateProject({ authorsArchive: newArchive });
+        localStorage.setItem(authorsArchiveKey, JSON.stringify(newArchive));
+    }
+  };
+
   const deleteProject = (projectId: string) => {
       const archiveKey = getArchiveKey();
       if (!archiveKey) return;
       
       setArchivedProjects(prevArchive => {
           const newArchive = prevArchive.filter(p => p.id !== projectId);
-          localStorage.setItem(archiveKey, JSON.stringify(newArchive));
+          saveArchiveToLocalStorage(newArchive, archiveKey);
           return newArchive;
       });
   };
@@ -298,6 +384,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       deleteChapter,
       addSubchapter,
       deleteSubchapter,
+      addContentBlock,
+      updateContentBlock,
+      deleteContentBlock,
+      addAuthorToArchive,
     }}>
       {children}
     </ProjectContext.Provider>
