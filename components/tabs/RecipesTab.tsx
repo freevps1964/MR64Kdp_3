@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -63,37 +62,58 @@ const RecipesTab: React.FC = () => {
     if (!project?.topic || !currentBlock?.description || !currentBlock.type) return;
 
     setIsLoading(true);
-    
+    setGenerationProgress(null); // Reset on new generation
+
     // Bulk generation for new blocks
     if (selectedBlockId === 'new') {
         setGenerationProgress({ current: 0, total: numberOfItems, text: t('recipesTab.generating') });
         try {
-            const results = await generateContentBlockText(project.topic, currentBlock.description, currentBlock.type, numberOfItems);
-            if (results) {
-                for (let i = 0; i < results.length; i++) {
-                    const item = results[i];
-                    setGenerationProgress({ current: i + 1, total: results.length, text: t('recipesTab.generatingItem', { current: i + 1, total: results.length, title: item.title }) });
+            for (let i = 0; i < numberOfItems; i++) {
+                const itemNumber = i + 1;
+                const uniqueDescription = numberOfItems > 1 ? `${currentBlock.description} (variation ${itemNumber})` : currentBlock.description;
+
+                // Update progress for the current item
+                 setGenerationProgress({ 
+                    current: itemNumber, 
+                    total: numberOfItems, 
+                    text: t('recipesTab.generatingItem', { current: itemNumber, total: numberOfItems, title: '...' })
+                });
+
+                // Generate text content for one item
+                const textResults = await generateContentBlockText(project.topic, uniqueDescription, currentBlock.type, 1);
+
+                if (textResults && textResults.length > 0) {
+                    const item = textResults[0];
+                    // Update progress text with the actual title
+                    setGenerationProgress(prev => ({ ...prev!, text: t('recipesTab.generatingItem', { current: itemNumber, total: numberOfItems, title: item.title }) }));
                     
+                    // Generate image for the item
                     const imageResult = await generateContentBlockImage(item.imagePrompt);
 
+                    // Add the complete block to the project
                     addContentBlock({
                         type: currentBlock.type,
                         title: item.title,
-                        description: item.imagePrompt,
+                        description: currentBlock.description, // Store the original user prompt for reference
                         textContent: item.textContent,
                         image: imageResult
                     });
-                     // Add a delay to avoid overwhelming the API
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Add a delay between API calls to avoid rate limiting
+                    if (i < numberOfItems - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                } else {
+                    console.warn(`Could not generate content for item ${itemNumber}. Skipping.`);
                 }
             }
         } catch (error) {
             console.error("Error during bulk generation:", error);
         } finally {
             setGenerationProgress(null);
-            setSelectedBlockId(null);
+            setSelectedBlockId(null); // Return to the grid view after completion
         }
-    } else { // Single regeneration for existing block
+    } else { // Single regeneration for an existing block
         setCurrentBlock(prev => ({ ...prev, textContent: '', image: null }));
         try {
             const results = await generateContentBlockText(project.topic, currentBlock.description, currentBlock.type, 1);
@@ -103,6 +123,7 @@ const RecipesTab: React.FC = () => {
                 setCurrentBlock(prev => ({
                     ...prev,
                     title: item.title,
+                    // Note: 'description' is the user's prompt and should not be overwritten here.
                     textContent: item.textContent,
                     image: imageResult
                 }));
@@ -128,7 +149,7 @@ const RecipesTab: React.FC = () => {
     }
   };
 
-  const isBusy = isLoading || isGeneratingPrompt;
+  const isBusy = isLoading || isGeneratingPrompt || !!generationProgress;
 
   return (
     <Card>
@@ -231,7 +252,7 @@ const RecipesTab: React.FC = () => {
                 disabled={isBusy || !currentBlock.description}
                 className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
               >
-                {isLoading ? <LoadingSpinner /> : `✨ ${t('recipesTab.generateButton')}`}
+                {isLoading || generationProgress ? <LoadingSpinner /> : `✨ ${t('recipesTab.generateButton')}`}
               </button>
               
               {isLoading && selectedBlockId !== 'new' && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
