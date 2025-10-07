@@ -1,7 +1,8 @@
 
 {
   "header": {
-    "title": "MR64Kdp Book",
+    "title": "BookForge AI",
+    "subtitle": "Dove si diventa maestri di Amazon KDP",
     "closeProject": "Chiudi Progetto",
     "saveProject": "Salva Progetto",
     "projectSaved": "Progetto Salvato",
@@ -42,8 +43,8 @@
     "projectSaved": "Progetto salvato con successo!"
   },
   "welcome": {
-    "title": "Benvenuto in MR64Kdp Book",
-    "description": "Il tuo assistente AI per il self-publishing su Amazon KDP. Dalla ricerca dell'argomento al PDF finale, siamo con te in ogni passo.",
+    "title": "Benvenuto in BookForge AI",
+    "description": "Dove si diventa maestri di Amazon KDP. Il tuo assistente AI per il self-publishing su Amazon KDP, dalla ricerca dell'argomento al PDF finale, siamo con te in ogni passo.",
     "startProject": "Inizia un Nuovo Progetto",
     "promptNewProjectName": "Inserisci un nome per il tuo nuovo progetto:",
     "starting": "Inizio...",
@@ -201,6 +202,9 @@
     "generatePrompt": "Genera Prompt con AI",
     "generatingPrompt": "Generazione...",
     "itemCount": "Numero di elementi",
-    "generatingItem": "Generazione {current} di {total}: {title}..."
+    "generatingItem": "Generazione {current} di {total}: {title}...",
+    "blockOf": "Blocco {current} di {total}",
+    "prevBlock": "Precedente",
+    "nextBlock": "Successivo"
   }
 }

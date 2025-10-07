@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateContentBlockText, generateContentBlockImage, generateContentBlockPrompt } from '../../services/geminiService';
+import { generateContentBlockText, generateContentBlockPrompt } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import PlusIcon from '../icons/PlusIcon';
@@ -18,8 +17,23 @@ const RecipesTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [numberOfItems, setNumberOfItems] = useState(1);
-  const [generationProgress, setGenerationProgress] = useState<{ current: number; total: number; text: string } | null>(null);
+  const [generationProgress, setGenerationProgress] = useState<{ current: number; total: number; title: string } | null>(null);
+  const generationMeta = useRef<{ initialCount: number } | null>(null);
   
+  useEffect(() => {
+    // Effect to select the first generated item after a bulk creation
+    if (generationMeta.current && project) {
+      const { initialCount } = generationMeta.current;
+      if (project.contentBlocks.length > initialCount) {
+        const firstNewBlock = project.contentBlocks[initialCount];
+        if (firstNewBlock) {
+          setSelectedBlockId(firstNewBlock.id);
+        }
+        generationMeta.current = null; // Reset the trigger
+      }
+    }
+  }, [project?.contentBlocks]);
+
   useEffect(() => {
     if (selectedBlockId === 'new') {
         setCurrentBlock({
@@ -27,7 +41,6 @@ const RecipesTab: React.FC = () => {
             title: '',
             description: '',
             textContent: '',
-            image: null
         });
     } else if (selectedBlockId) {
         const block = project?.contentBlocks.find(b => b.id === selectedBlockId);
@@ -62,70 +75,57 @@ const RecipesTab: React.FC = () => {
     if (!project?.topic || !currentBlock?.description || !currentBlock.type) return;
 
     setIsLoading(true);
-    setGenerationProgress(null); // Reset on new generation
 
-    // Bulk generation for new blocks
     if (selectedBlockId === 'new') {
-        setGenerationProgress({ current: 0, total: numberOfItems, text: t('recipesTab.generating') });
+        generationMeta.current = { initialCount: project.contentBlocks.length };
+        setGenerationProgress({ current: 0, total: numberOfItems, title: '' });
+        const generatedTitles: string[] = [];
         try {
             for (let i = 0; i < numberOfItems; i++) {
-                const itemNumber = i + 1;
-                const uniqueDescription = numberOfItems > 1 ? `${currentBlock.description} (variation ${itemNumber})` : currentBlock.description;
+                setGenerationProgress(prev => ({ ...prev!, current: i + 1, title: '' }));
+                const generatedItems = await generateContentBlockText(
+                    project.topic,
+                    currentBlock.description,
+                    currentBlock.type,
+                    1,
+                    generatedTitles
+                );
 
-                // Update progress for the current item
-                 setGenerationProgress({ 
-                    current: itemNumber, 
-                    total: numberOfItems, 
-                    text: t('recipesTab.generatingItem', { current: itemNumber, total: numberOfItems, title: '...' })
-                });
-
-                // Generate text content for one item
-                const textResults = await generateContentBlockText(project.topic, uniqueDescription, currentBlock.type, 1);
-
-                if (textResults && textResults.length > 0) {
-                    const item = textResults[0];
-                    // Update progress text with the actual title
-                    setGenerationProgress(prev => ({ ...prev!, text: t('recipesTab.generatingItem', { current: itemNumber, total: numberOfItems, title: item.title }) }));
-                    
-                    // Generate image for the item
-                    const imageResult = await generateContentBlockImage(item.imagePrompt);
-
-                    // Add the complete block to the project
+                if (generatedItems && generatedItems.length > 0) {
+                    const item = generatedItems[0];
+                    setGenerationProgress(prev => ({ ...prev!, title: item.title }));
                     addContentBlock({
-                        type: currentBlock.type,
+                        type: currentBlock.type!,
                         title: item.title,
-                        description: currentBlock.description, // Store the original user prompt for reference
+                        description: currentBlock.description!,
                         textContent: item.textContent,
-                        image: imageResult
                     });
-                    
-                    // Add a delay between API calls to avoid rate limiting
-                    if (i < numberOfItems - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
+                    generatedTitles.push(item.title);
                 } else {
-                    console.warn(`Could not generate content for item ${itemNumber}. Skipping.`);
+                    console.warn(`Failed to generate item ${i + 1}/${numberOfItems}. Stopping.`);
+                    break;
+                }
+                
+                if (i < numberOfItems - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             }
         } catch (error) {
             console.error("Error during bulk generation:", error);
+            generationMeta.current = null;
         } finally {
             setGenerationProgress(null);
-            setSelectedBlockId(null); // Return to the grid view after completion
         }
-    } else { // Single regeneration for an existing block
-        setCurrentBlock(prev => ({ ...prev, textContent: '', image: null }));
+    } else {
+        setCurrentBlock(prev => ({ ...prev, textContent: '' }));
         try {
             const results = await generateContentBlockText(project.topic, currentBlock.description, currentBlock.type, 1);
             if (results && results.length > 0) {
                 const item = results[0];
-                const imageResult = await generateContentBlockImage(item.imagePrompt);
                 setCurrentBlock(prev => ({
                     ...prev,
                     title: item.title,
-                    // Note: 'description' is the user's prompt and should not be overwritten here.
                     textContent: item.textContent,
-                    image: imageResult
                 }));
             }
         } catch (error) {
@@ -149,6 +149,18 @@ const RecipesTab: React.FC = () => {
     }
   };
 
+  const contentBlocks = project?.contentBlocks || [];
+  const currentIndex = contentBlocks.findIndex(b => b.id === selectedBlockId);
+  const totalBlocks = contentBlocks.length;
+
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    if (currentIndex === -1 || totalBlocks <= 1) return;
+    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex >= 0 && newIndex < totalBlocks) {
+      setSelectedBlockId(contentBlocks[newIndex].id);
+    }
+  };
+
   const isBusy = isLoading || isGeneratingPrompt || !!generationProgress;
 
   return (
@@ -157,15 +169,6 @@ const RecipesTab: React.FC = () => {
         <h2 className="text-2xl font-bold text-brand-dark">{t('recipesTab.title')}</h2>
         <p className="text-neutral-medium mt-1">{t('recipesTab.description')}</p>
       </div>
-
-       {generationProgress && (
-        <div className="my-4 p-3 bg-blue-100 border border-blue-300 rounded-md text-center animate-fade-in">
-            <p className="font-semibold text-blue-800">{generationProgress.text}</p>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-linear" style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }}></div>
-            </div>
-        </div>
-      )}
 
       <div className="flex flex-col md:flex-row gap-6">
         <aside className="w-full md:w-1/3 lg:w-1/4 p-4 bg-neutral-light rounded-lg border">
@@ -192,6 +195,28 @@ const RecipesTab: React.FC = () => {
         <main className="w-full md:w-2/3 lg:w-3/4">
           {currentBlock ? (
             <div className="space-y-4 animate-fade-in">
+              {selectedBlockId && selectedBlockId !== 'new' && totalBlocks > 1 && currentIndex > -1 && (
+                  <div className="flex items-center justify-between p-2 bg-neutral-light rounded-md mb-4 border">
+                    <button
+                      onClick={() => handleNavigate('prev')}
+                      disabled={currentIndex === 0}
+                      className="px-4 py-1 text-sm font-semibold bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      &larr; {t('recipesTab.prevBlock')}
+                    </button>
+                    <span className="font-semibold text-sm text-neutral-dark">
+                      {t('recipesTab.blockOf', { current: currentIndex + 1, total: totalBlocks })}
+                    </span>
+                    <button
+                      onClick={() => handleNavigate('next')}
+                      disabled={currentIndex === totalBlocks - 1}
+                      className="px-4 py-1 text-sm font-semibold bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('recipesTab.nextBlock')} &rarr;
+                    </button>
+                  </div>
+                )}
+
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-grow">
                   <label className="block text-sm font-medium text-gray-700">{t('recipesTab.selectType')}</label>
@@ -252,12 +277,27 @@ const RecipesTab: React.FC = () => {
                 disabled={isBusy || !currentBlock.description}
                 className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
               >
-                {isLoading || generationProgress ? <LoadingSpinner /> : `✨ ${t('recipesTab.generateButton')}`}
+                {isLoading ? <LoadingSpinner /> : `✨ ${t('recipesTab.generateButton')}`}
               </button>
               
-              {isLoading && selectedBlockId !== 'new' && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
+              {generationProgress && (
+                <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-md text-center animate-fade-in">
+                    <p className="font-semibold text-blue-800">
+                        {t('recipesTab.generating')} {generationProgress.current} / {generationProgress.total}
+                    </p>
+                    {generationProgress.title && <p className="text-sm text-blue-700 h-5 truncate">✅ {generationProgress.title}</p>}
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                        <div 
+                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-linear" 
+                        style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }}>
+                        </div>
+                    </div>
+                </div>
+              )}
 
-              {(currentBlock.textContent || currentBlock.image) && (
+              {isLoading && !generationProgress && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
+
+              {currentBlock.textContent && (
                 <div className="mt-4 space-y-4 pt-4 border-t">
                   <div>
                     <label className="block font-semibold">{t('recipesTab.editTitle')}</label>
@@ -276,20 +316,6 @@ const RecipesTab: React.FC = () => {
                       rows={10}
                       className="w-full p-2 border border-gray-300 rounded-md whitespace-pre-wrap"
                     />
-                  </div>
-                  <div>
-                    <label className="block font-semibold">{t('recipesTab.generatedImage')}</label>
-                    {currentBlock.image ? (
-                        <img
-                            src={`data:image/png;base64,${currentBlock.image}`}
-                            alt={currentBlock.title}
-                            className="mt-2 rounded-lg shadow-md border w-full max-w-sm"
-                        />
-                    ) : (
-                        <div className="mt-2 h-48 w-full max-w-sm bg-gray-200 rounded-lg flex items-center justify-center">
-                            <p className="text-neutral-medium">No image generated.</p>
-                        </div>
-                    )}
                   </div>
                    <div className="flex gap-4 pt-4 border-t">
                     <button
@@ -321,14 +347,12 @@ const RecipesTab: React.FC = () => {
                                 onClick={() => setSelectedBlockId(block.id)}
                                 className="border rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:ring-2 hover:ring-brand-light transition-all text-left"
                             >
-                                {block.image ? (
-                                    <img src={`data:image/png;base64,${block.image}`} alt={block.title} className="w-full h-40 object-cover" />
-                                ) : (
-                                    <div className="w-full h-40 bg-gray-200 flex items-center justify-center">
-                                        <span className="text-neutral-medium text-sm">No Image</span>
-                                    </div>
-                                )}
-                                <div className="p-4">
+                                <div className="w-full h-40 bg-neutral-light/50 p-4 flex flex-col justify-start text-clip overflow-hidden">
+                                  <p className="text-sm text-neutral-dark italic" style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 6, overflow: 'hidden' }}>
+                                    {block.textContent}
+                                  </p>
+                                </div>
+                                <div className="p-4 border-t bg-white">
                                     <h4 className="font-semibold text-brand-dark truncate">{block.title}</h4>
                                     <p className="text-sm text-neutral-medium capitalize">{t(`recipesTab.${block.type}`)}</p>
                                 </div>

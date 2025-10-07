@@ -1,6 +1,3 @@
-
-
-
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse } from "@google/genai";
 import type { BookStructure, ResearchResult, Keyword, GroundingSource, ContentBlockType } from '../types';
 
@@ -376,8 +373,9 @@ export const generateContentBlockText = async (
     topic: string, 
     description: string, 
     type: ContentBlockType,
-    count: number = 1
-): Promise<{ title: string; textContent: string; imagePrompt: string }[] | null> => {
+    count: number = 1,
+    existingTitles: string[] = []
+): Promise<{ title: string; textContent: string }[] | null> => {
     
     const recipeProperties = {
       description: { type: Type.STRING, description: "A captivating summary of the recipe." },
@@ -393,9 +391,14 @@ export const generateContentBlockText = async (
 
     const itemProperties = type === 'recipe' ? recipeProperties : exerciseProperties;
     
-    const prompt = `Based on the book topic "${topic}", generate ${count} unique ${type}(s) related to "${description}".
-    For each, provide a unique "title", a detailed and visually descriptive "imagePrompt" in English, suitable for a photorealistic AI image generator. Describe the final dish or exercise position, including details on lighting, composition, and background. For example: 'A close-up, photorealistic shot of a stack of fluffy, golden-brown protein pancakes, topped with fresh blueberries and a drizzle of maple syrup, on a clean white plate, with bright morning light.', and the content details.
-    Respond with a JSON array of objects, even if generating only one item.`;
+    const uniquenessInstruction = existingTitles.length > 0
+      ? `IMPORTANTE: Evita di generare ${type} con i seguenti titoli, poiché esistono già: ${existingTitles.join(', ')}.`
+      : '';
+
+    const prompt = `Basato sull'argomento del libro "${topic}", genera ${count} ${type} unici relativi a "${description}".
+    Per ognuno, fornisci un "title" univoco e i dettagli del contenuto.
+    ${uniquenessInstruction}
+    Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -409,10 +412,9 @@ export const generateContentBlockText = async (
                         type: Type.OBJECT,
                         properties: {
                            title: { type: Type.STRING },
-                           imagePrompt: { type: Type.STRING },
                            ...itemProperties
                         },
-                        required: ["title", "imagePrompt", ...Object.keys(itemProperties)]
+                        required: ["title", ...Object.keys(itemProperties)]
                     }
                 }
             }
@@ -430,35 +432,11 @@ export const generateContentBlockText = async (
             return {
                 title: item.title,
                 textContent: formattedText,
-                imagePrompt: item.imagePrompt
             };
         });
 
     } catch (error) {
         console.error(`Error generating ${type} text:`, error);
-        return null;
-    }
-};
-
-/**
- * Genera un'immagine per un blocco di contenuto (ricetta/esercizio).
- */
-export const generateContentBlockImage = async (description: string): Promise<string | null> => {
-    const prompt = `A photorealistic, high-quality photograph for a book. The image must clearly represent: "${description}". Style: Bright, clean, professional lighting with a minimalist or plain white background. The subject should be in sharp focus.`;
-    
-    try {
-        const response: GenerateImagesResponse = await withRetry(() => ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: prompt,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/png',
-              aspectRatio: '4:3',
-            },
-        }));
-        return response.generatedImages[0].image.imageBytes;
-    } catch (error) {
-        console.error("Error generating content block image:", error);
         return null;
     }
 };

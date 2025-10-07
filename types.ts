@@ -67,7 +67,6 @@ export interface ContentBlock {
   title: string; // From user description, can be edited
   description: string; // User's input prompt
   textContent: string; // Generated text (steps, ingredients, etc.)
-  image: string | null; // Generated base64 image
 }
 
 
