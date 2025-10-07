@@ -67,12 +67,18 @@ const rankSources = async (topic: string, sources: GroundingSource[]): Promise<G
     }
     const sourcesToRank = sources.map(s => ({ uri: s.web?.uri, title: s.web?.title })).filter(s => s.uri && s.title);
 
-    const prompt = `Dato l'argomento di un libro "${topic}", classifica le seguenti fonti web in base alla loro pertinenza per la scrittura del libro. Fornisci un punteggio di pertinenza da 0 a 100 per ciascuna.
-    Rispondi con un array JSON di oggetti. Ogni oggetto deve contenere "uri", "title" e "relevance".
+    const prompt = `Dato l'argomento di un libro "${topic}", analizza e classifica le seguenti fonti web. L'obiettivo è identificare le fonti più **affidabili e autorevoli** per la scrittura di un libro di alta qualità.
 
-    Fonti da classificare:
-    ${JSON.stringify(sourcesToRank)}
-    `;
+Per ogni fonte, fornisci un punteggio di "relevance" da 0 a 100 basato sui seguenti criteri, in ordine di importanza:
+1.  **Affidabilità e Autorevolezza (Peso maggiore)**: Dai la priorità a fonti accademiche, governative, articoli di testate giornalistiche verificate, pubblicazioni di settore e libri di autori riconosciuti. Penalizza fortemente forum, blog personali di bassa qualità, social media e fonti non verificate.
+2.  **Pertinenza**: Quanto è strettamente correlata la fonte all'argomento "${topic}".
+3.  **Aggiornamento**: La fonte è recente e riflette le informazioni più attuali?
+
+Rispondi con un array JSON di oggetti. Ogni oggetto deve contenere "uri", "title" e "relevance".
+
+Fonti da classificare:
+${JSON.stringify(sourcesToRank)}
+`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -115,15 +121,16 @@ const rankSources = async (topic: string, sources: GroundingSource[]): Promise<G
  * Esegue una ricerca approfondita su un argomento utilizzando Gemini con il grounding di Google Search.
  */
 export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: any[] }> => {
-  const prompt = `Esegui una ricerca approfondita e aggiornata per un libro da pubblicare su Amazon KDP sull'argomento: "${topic}".
-  Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati e le analisi riflettano le informazioni più recenti disponibili:
-  - "marketSummary": un'analisi concisa del mercato di riferimento e del potenziale pubblico, basata su dati attuali.
-  - "titles": un array di 5 oggetti, ognuno con "title" (stringa) e "relevance" (un numero da 0 a 100 che indica la pertinenza).
-  - "subtitles": un array di 5 oggetti, ognuno con "subtitle" (stringa) e "relevance" (numero da 0 a 100).
-  - "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere altamente performanti per Amazon KDP, concentrandosi su un alto intento di acquisto, redditività commerciale e un forte potenziale di conversione, basate sulle tendenze attuali. Includi un mix di parole chiave a coda corta e a coda lunga.
-  
-  Ordina internamente ogni array in base alla pertinenza, dal più alto al più basso.
-  Assicurati che l'output sia un oggetto JSON valido.`;
+  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita e aggiornata per un libro sull'argomento: "${topic}".
+L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati riflettano le informazioni più recenti:
+
+- "marketSummary": un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze attuali.
+- "titles": un array di 5 oggetti titolo. Ogni oggetto deve avere "title" (stringa) e "relevance" (numero da 0 a 100). I titoli devono essere **altamente performanti e ad altissima conversione**. Devono essere accattivanti, chiari, promettere un beneficio specifico al lettore e ottimizzati per la ricerca su Amazon.
+- "subtitles": un array di 5 oggetti sottotitolo. Ogni oggetto deve avere "subtitle" (stringa) e "relevance" (numero da 0 a 100). I sottotitoli devono essere **altamente performanti e ad altissima conversione**. Devono espandere il titolo, specificare il pubblico di destinazione (es. "per principianti"), menzionare i benefici chiave e contenere parole chiave pertinenti.
+- "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere le più performanti per Amazon KDP, con alto intento di acquisto, redditività e potenziale di conversione, basate sulle tendenze attuali. Includi un mix di parole chiave a coda corta e a coda lunga.
+
+Ordina internamente ogni array in base alla pertinenza, dal più alto al più basso.
+Assicurati che l'output sia un oggetto JSON valido.`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
