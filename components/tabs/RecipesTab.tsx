@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import { generateContentBlockText, generateContentBlockPrompt } from '../../services/geminiService';
@@ -10,30 +11,16 @@ import type { ContentBlock, ContentBlockType } from '../../types';
 
 const RecipesTab: React.FC = () => {
   const { t } = useLocalization();
-  const { project, addContentBlock, updateContentBlock, deleteContentBlock } = useProject();
+  const { project, updateProject, updateContentBlock, deleteContentBlock } = useProject();
   
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [currentBlock, setCurrentBlock] = useState<Partial<ContentBlock> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [numberOfItems, setNumberOfItems] = useState(1);
-  const [generationProgress, setGenerationProgress] = useState<{ current: number; total: number; title: string } | null>(null);
-  const generationMeta = useRef<{ initialCount: number } | null>(null);
-  
-  useEffect(() => {
-    // Effect to select the first generated item after a bulk creation
-    if (generationMeta.current && project) {
-      const { initialCount } = generationMeta.current;
-      if (project.contentBlocks.length > initialCount) {
-        const firstNewBlock = project.contentBlocks[initialCount];
-        if (firstNewBlock) {
-          setSelectedBlockId(firstNewBlock.id);
-        }
-        generationMeta.current = null; // Reset the trigger
-      }
-    }
-  }, [project?.contentBlocks]);
 
+  const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 9)}`;
+  
   useEffect(() => {
     if (selectedBlockId === 'new') {
         setCurrentBlock({
@@ -75,64 +62,56 @@ const RecipesTab: React.FC = () => {
     if (!project?.topic || !currentBlock?.description || !currentBlock.type) return;
 
     setIsLoading(true);
+    
+    try {
+        const itemsToGenerate = selectedBlockId === 'new' ? numberOfItems : 1;
+        const existingTitles = project.contentBlocks
+            .filter(b => b.id !== selectedBlockId) // Exclude current block if regenerating
+            .map(b => b.title);
 
-    if (selectedBlockId === 'new') {
-        generationMeta.current = { initialCount: project.contentBlocks.length };
-        setGenerationProgress({ current: 0, total: numberOfItems, title: '' });
-        const generatedTitles: string[] = [];
-        try {
-            for (let i = 0; i < numberOfItems; i++) {
-                setGenerationProgress(prev => ({ ...prev!, current: i + 1, title: '' }));
-                const generatedItems = await generateContentBlockText(
-                    project.topic,
-                    currentBlock.description,
-                    currentBlock.type,
-                    1,
-                    generatedTitles
-                );
+        const generatedItems = await generateContentBlockText(
+            project.topic,
+            currentBlock.description,
+            currentBlock.type,
+            itemsToGenerate,
+            existingTitles
+        );
 
-                if (generatedItems && generatedItems.length > 0) {
-                    const item = generatedItems[0];
-                    setGenerationProgress(prev => ({ ...prev!, title: item.title }));
-                    addContentBlock({
-                        type: currentBlock.type!,
-                        title: item.title,
-                        description: currentBlock.description!,
-                        textContent: item.textContent,
-                    });
-                    generatedTitles.push(item.title);
-                } else {
-                    console.warn(`Failed to generate item ${i + 1}/${numberOfItems}. Stopping.`);
-                    break;
-                }
-                
-                if (i < numberOfItems - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-            }
-        } catch (error) {
-            console.error("Error during bulk generation:", error);
-            generationMeta.current = null;
-        } finally {
-            setGenerationProgress(null);
-        }
-    } else {
-        setCurrentBlock(prev => ({ ...prev, textContent: '' }));
-        try {
-            const results = await generateContentBlockText(project.topic, currentBlock.description, currentBlock.type, 1);
-            if (results && results.length > 0) {
-                const item = results[0];
-                setCurrentBlock(prev => ({
-                    ...prev,
+        if (generatedItems && generatedItems.length > 0) {
+            if (selectedBlockId === 'new') {
+                const newBlocks = generatedItems.map(item => ({
+                    id: generateId(),
+                    type: currentBlock.type!,
                     title: item.title,
+                    description: currentBlock.description!,
                     textContent: item.textContent,
                 }));
+                // Single update with all new blocks
+                updateProject({ contentBlocks: [...(project.contentBlocks || []), ...newBlocks] });
+                // Automatically select the first newly created block
+                if (newBlocks.length > 0) {
+                    setSelectedBlockId(newBlocks[0].id);
+                }
+            } else { // Regeneration
+                const item = generatedItems[0];
+                const updatedBlock: ContentBlock = {
+                    ...(currentBlock as ContentBlock),
+                    id: selectedBlockId!,
+                    title: item.title,
+                    textContent: item.textContent,
+                };
+                updateContentBlock(updatedBlock);
+                setCurrentBlock(updatedBlock);
             }
-        } catch (error) {
-            console.error("Error regenerating content block:", error);
+        } else {
+             console.warn('AI generation returned no items.');
         }
+
+    } catch (error) {
+        console.error("Error generating content block:", error);
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   };
   
   const handleSave = () => {
@@ -161,7 +140,7 @@ const RecipesTab: React.FC = () => {
     }
   };
 
-  const isBusy = isLoading || isGeneratingPrompt || !!generationProgress;
+  const isBusy = isLoading || isGeneratingPrompt;
 
   return (
     <Card>
@@ -280,22 +259,7 @@ const RecipesTab: React.FC = () => {
                 {isLoading ? <LoadingSpinner /> : `✨ ${t('recipesTab.generateButton')}`}
               </button>
               
-              {generationProgress && (
-                <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-md text-center animate-fade-in">
-                    <p className="font-semibold text-blue-800">
-                        {t('recipesTab.generating')} {generationProgress.current} / {generationProgress.total}
-                    </p>
-                    {generationProgress.title && <p className="text-sm text-blue-700 h-5 truncate">✅ {generationProgress.title}</p>}
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                        <div 
-                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-linear" 
-                        style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }}>
-                        </div>
-                    </div>
-                </div>
-              )}
-
-              {isLoading && !generationProgress && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
+              {isLoading && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
 
               {currentBlock.textContent && (
                 <div className="mt-4 space-y-4 pt-4 border-t">

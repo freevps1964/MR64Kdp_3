@@ -37,6 +37,7 @@
     "cover": "Copertina",
     "metadata": "Metadati",
     "validation": "Validazione",
+    "archive": "Archivio",
     "disabledTooltip": "Completa i passaggi precedenti per sbloccare"
   },
   "toast": {
@@ -154,7 +155,9 @@
     "generatePrompt": "Genera Prompt con AI",
     "generatingPrompt": "Generazione Prompt...",
     "downloadButton": "Scarica",
-    "favoritesTitle": "Copertine Preferite"
+    "favoritesTitle": "Copertine Preferite",
+    "saveButton": "Salva",
+    "savedButton": "Salvato"
   },
   "metadataTab": {
     "title": "Metadati del Libro",
@@ -168,6 +171,7 @@
     "descriptionLabel": "Descrizione del Libro",
     "generateDescription": "Genera Descrizione",
     "saveButton": "Salva Metadati",
+    "saveSuccess": "Metadati salvati con successo!",
     "selectTitle": "--- Seleziona un titolo suggerito ---",
     "selectSubtitle": "--- Seleziona un sottotitolo suggerito ---",
     "fetchCategories": "Carica Categorie Amazon",
@@ -206,5 +210,21 @@
     "blockOf": "Blocco {current} di {total}",
     "prevBlock": "Precedente",
     "nextBlock": "Successivo"
+  },
+  "archiveTab": {
+    "title": "Archivio del Progetto",
+    "description": "Una raccolta di tutte le risorse generate e selezionate per il tuo progetto.",
+    "metadataTitle": "Metadati Finali",
+    "bookTitle": "Titolo del Libro",
+    "subtitle": "Sottotitolo",
+    "author": "Autore",
+    "descriptionLabel": "Descrizione",
+    "categories": "Categorie",
+    "suggestionsTitle": "Suggerimenti Generati",
+    "suggestedTitles": "Titoli",
+    "suggestedSubtitles": "Sottotitoli",
+    "coversTitle": "Copertine e Prompt Preferiti",
+    "noCovers": "Nessuna copertina preferita salvata.",
+    "promptLabel": "Prompt utilizzati"
   }
 }

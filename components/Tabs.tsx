@@ -26,6 +26,7 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
     { key: 'layout', label: t('tabs.layout'), isEnabled: isContentComplete },
     { key: 'cover', label: t('tabs.cover'), isEnabled: isContentComplete },
     { key: 'validation', label: t('tabs.validation'), isEnabled: isContentComplete },
+    { key: 'archive', label: t('tabs.archive'), isEnabled: isResearchComplete },
   ];
 
   const handleTabClick = (tab: { key: TabKey, isEnabled: boolean }) => {

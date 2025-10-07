@@ -1,6 +1,6 @@
 import type { GenerateContentResponse } from "@google/genai";
 
-export type TabKey = 'research' | 'structure' | 'content' | 'recipes' | 'layout' | 'cover' | 'metadata' | 'validation';
+export type TabKey = 'research' | 'structure' | 'content' | 'recipes' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive';
 
 export interface GroundingSource {
   web?: {
@@ -79,6 +79,7 @@ export interface Project {
   author: string;
   authorsArchive: string[];
   description: string;
+  descriptionsArchive: string[];
   metadataKeywords: Keyword[];
   categories: string[];
   researchData: ResearchResult | null;
@@ -89,6 +90,7 @@ export interface Project {
   pageSize: PageSize;
   coverImage: string | null; // base64 string
   coverOptions: string[]; // array of base64 strings
+  coverPrompts: string[];
   archivedCovers: string[]; // New: array of selected base64 strings
   contentBlocks: ContentBlock[]; // New: for recipes/exercises
 }

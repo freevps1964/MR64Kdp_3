@@ -262,7 +262,8 @@ export const generateCoverPromptFromBestsellers = async (
 Analyze common design trends, color palettes, typography styles (e.g., serif, sans-serif, bold, minimalist), and imagery used in the top results.
 Based on this analysis, create a highly detailed and effective prompt for an AI image generator (like Imagen) to design a book cover for a book titled "${title}".
 The prompt should incorporate concepts from the following keywords: ${keywordList}.
-The prompt must be in English, descriptive, and aim for a commercially successful design that would stand out. Emphasize visual elements, mood, and composition. For example: "A minimalist book cover with a deep blue background. In the center, a stylized, golden line art of a brain with interconnected nodes. The title '${title}' is in a clean, white, sans-serif font at the top. The overall mood is intelligent, modern, and professional."
+The prompt must be in English, descriptive, and aim for a commercially successful design that would stand out. Emphasize visual elements, mood, and composition. Ensure the prompt describes a design with significant clear or uncluttered space at the top (for the title and subtitle) and bottom (for the author's name) to prevent text from obscuring key visual elements.
+For example: "A minimalist book cover with a deep blue background. In the center, a stylized, golden line art of a brain with interconnected nodes, leaving the top third and bottom fifth of the cover empty. The title '${title}' is in a clean, white, sans-serif font at the top. The overall mood is intelligent, modern, and professional."
 The output must be only the text of the prompt, without any other introductory text or explanation.`;
 
   try {

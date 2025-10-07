@@ -169,6 +169,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       author: '',
       authorsArchive: initialAuthors,
       description: '',
+      descriptionsArchive: [],
       metadataKeywords: [],
       categories: [],
       researchData: null,
@@ -179,6 +180,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       pageSize: '6x9',
       coverImage: null,
       coverOptions: [],
+      coverPrompts: [],
       archivedCovers: [],
       contentBlocks: [],
     };

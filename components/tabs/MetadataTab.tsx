@@ -5,10 +5,12 @@ import Card from '../common/Card';
 import { fetchAmazonCategories, generateDescription } from '../../services/geminiService';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion } from '../../types';
+import { useToast } from '../../hooks/useToast';
 
 const MetadataTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject, addAuthorToArchive } = useProject();
+  const { showToast } = useToast();
 
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
@@ -63,12 +65,28 @@ const MetadataTab: React.FC = () => {
     setIsGeneratingDesc(true);
     try {
         const desc = await generateDescription(project.bookTitle, project.bookStructure);
-        updateProject({ description: desc });
+        const newArchive = project.descriptionsArchive.includes(desc) 
+            ? project.descriptionsArchive 
+            : [...project.descriptionsArchive, desc];
+        updateProject({ description: desc, descriptionsArchive: newArchive });
     } catch (error) {
         console.error(error);
     } finally {
         setIsGeneratingDesc(false);
     }
+  };
+  
+  const handleSaveMetadata = () => {
+    if (!project) return;
+    if (project.author) {
+      addAuthorToArchive(project.author);
+    }
+    if (project.description && !project.descriptionsArchive.includes(project.description)) {
+        updateProject({ descriptionsArchive: [...project.descriptionsArchive, project.description] });
+    } else {
+        updateProject({}); // This forces a save with a new timestamp
+    }
+    showToast(t('metadataTab.saveSuccess'), 'success');
   };
 
   if (!project) return null;
@@ -192,6 +210,15 @@ const MetadataTab: React.FC = () => {
                     <option disabled>{isFetchingCategories ? t('metadataTab.fetchingCategories') : 'Nessuna categoria caricata'}</option>
                 )}
             </select>
+        </div>
+
+        <div className="mt-8 pt-6 border-t text-right">
+            <button
+            onClick={handleSaveMetadata}
+            className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-6 rounded-md transition-colors shadow"
+            >
+            {t('metadataTab.saveButton')}
+            </button>
         </div>
       </div>
     </Card>

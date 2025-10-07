@@ -14,6 +14,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import type { TabKey } from './types';
 import { useAuth } from './hooks/useAuth';
 import LoginScreen from './components/LoginScreen';
+import ArchiveTab from './components/tabs/ArchiveTab';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('research');
@@ -38,6 +39,8 @@ const App: React.FC = () => {
         return <MetadataTab />;
       case 'validation':
         return <ValidationTab />;
+      case 'archive':
+        return <ArchiveTab />;
       default:
         return <ResearchTab />;
     }

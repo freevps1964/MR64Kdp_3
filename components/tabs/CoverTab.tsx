@@ -1,9 +1,38 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import { generateCoverImages, generateCoverPromptFromBestsellers } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
+
+/**
+ * Comprime un'immagine fornita come data URL in formato JPEG.
+ * @param dataUrl L'URL dei dati dell'immagine (es. 'data:image/png;base64,...').
+ * @param quality La qualità del JPEG (0.0 - 1.0). Il default è 0.75.
+ * @returns Una Promise che si risolve con il nuovo data URL dell'immagine compressa in JPEG.
+ */
+const compressImage = (dataUrl: string, quality = 0.75): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject('Impossibile ottenere il contesto del canvas');
+            }
+            ctx.drawImage(img, 0, 0);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedDataUrl);
+        };
+        img.onerror = (err) => reject(err);
+        img.src = dataUrl;
+    });
+};
+
 
 const CoverTab: React.FC = () => {
   const { t } = useLocalization();
@@ -90,6 +119,7 @@ const CoverTab: React.FC = () => {
 
         const margin = canvasWidth * 0.1;
         const contentWidth = canvasWidth - margin * 2;
+        const topZoneEndY = canvasHeight * 0.6; // Max Y for title/subtitle block
 
         // Disegna il Titolo
         const title = project.bookTitle.toUpperCase();
@@ -102,14 +132,15 @@ const CoverTab: React.FC = () => {
         const titleY = canvasHeight * 0.15;
         const subtitleY = wrapText(ctx, title, canvasWidth / 2, titleY, contentWidth, titleFontSize * 1.1);
         
-        // Disegna il Sottotitolo (se esiste)
-        if (project.subtitle) {
+        // Disegna il Sottotitolo (se esiste e c'è spazio)
+        if (project.subtitle && subtitleY < topZoneEndY) {
             let subtitleFontSize = 40;
             ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
             while (ctx.measureText(project.subtitle).width > contentWidth && subtitleFontSize > 15) {
                 subtitleFontSize -= 2;
                 ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
             }
+            // Non disegnarlo se il blocco del titolo è già troppo basso
             wrapText(ctx, project.subtitle, canvasWidth / 2, subtitleY, contentWidth, subtitleFontSize * 1.2);
         }
 
@@ -166,17 +197,20 @@ const CoverTab: React.FC = () => {
       const response = await generateCoverImages(prompt);
       const base64Images = response.generatedImages.map(img => img.image.imageBytes);
       
-      // Aggiungi testo a ciascuna immagine generata
       const coversWithText = await Promise.all(
           base64Images.map(base64 => addTextToImage(base64))
       );
+      
+      const compressedCovers = await Promise.all(
+        coversWithText.map(pngDataUrl => compressImage(pngDataUrl))
+      );
 
-      // Rimuovi il prefisso data URL prima di salvare nello stato
-      const finalCovers = coversWithText.map(dataUrl => dataUrl.replace('data:image/png;base64,', ''));
+      const newPrompts = project?.coverPrompts?.includes(prompt) ? project.coverPrompts : [...(project?.coverPrompts || []), prompt];
 
       updateProject({ 
-          coverOptions: finalCovers,
-          coverImage: finalCovers[0] || null // Seleziona la prima copertina per impostazione predefinita
+          coverOptions: compressedCovers,
+          coverImage: compressedCovers[0] || null,
+          coverPrompts: newPrompts
       });
 
     } catch (err) {
@@ -187,21 +221,25 @@ const CoverTab: React.FC = () => {
     }
   };
   
-  const handleSelectCover = (base64Image: string) => {
+  const handleSelectCover = (dataUrl: string) => {
+    updateProject({ coverImage: dataUrl });
+  };
+  
+  const handleSaveCover = (dataUrl: string) => {
     if (!project) return;
     const currentArchived = project.archivedCovers || [];
-    const isArchived = currentArchived.includes(base64Image);
-    
-    updateProject({ 
-        coverImage: base64Image,
-        archivedCovers: isArchived ? currentArchived : [...currentArchived, base64Image]
-    });
+    if (!currentArchived.includes(dataUrl)) {
+        updateProject({ archivedCovers: [...currentArchived, dataUrl] });
+    }
   };
 
-  const handleDownloadCover = (base64Image: string, index: number) => {
+
+  const handleDownloadCover = (dataUrl: string, index: number) => {
+    const mimeType = dataUrl.match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const extension = mimeType.split('/')[1] || 'jpg';
     const link = document.createElement('a');
-    link.href = `data:image/png;base64,${base64Image}`;
-    link.download = `${project?.projectTitle?.replace(/ /g, '_') || 'cover'}-${index + 1}.png`;
+    link.href = dataUrl;
+    link.download = `${project?.projectTitle?.replace(/ /g, '_') || 'cover'}-${index + 1}.${extension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -276,26 +314,33 @@ const CoverTab: React.FC = () => {
         <div className="mt-8">
           <h3 className="text-xl font-semibold text-brand-dark mb-4">{t('coverTab.resultsTitle')}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {project.coverOptions.map((base64Image, index) => {
-              const imageUrl = `data:image/png;base64,${base64Image}`;
-              const isSelected = project.coverImage === base64Image;
+            {project.coverOptions.map((dataUrl, index) => {
+              const isSelected = project.coverImage === dataUrl;
+              const isArchived = project.archivedCovers.includes(dataUrl);
               return (
                 <div key={index} className="text-center space-y-3">
                   <img 
-                    src={imageUrl} 
+                    src={dataUrl} 
                     alt={`Generated cover ${index + 1}`}
                     className={`rounded-lg shadow-lg w-full object-cover aspect-[3/4] ${isSelected ? 'ring-4 ring-brand-accent' : ''}`}
                   />
                    <div className="flex justify-center items-center gap-2">
                       <button
-                        onClick={() => handleSelectCover(base64Image)}
+                        onClick={() => handleSelectCover(dataUrl)}
                         disabled={isSelected}
                         className="bg-brand-secondary hover:bg-brand-dark text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-green-600 disabled:cursor-default"
                       >
                         {isSelected ? t('coverTab.selected') : t('coverTab.selectButton')}
                       </button>
                        <button
-                        onClick={() => handleDownloadCover(base64Image, index)}
+                        onClick={() => handleSaveCover(dataUrl)}
+                        disabled={isArchived}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+                      >
+                        {isArchived ? t('coverTab.savedButton') : t('coverTab.saveButton')}
+                      </button>
+                       <button
+                        onClick={() => handleDownloadCover(dataUrl, index)}
                         className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
                         title={t('coverTab.downloadButton')}
                       >
@@ -312,13 +357,12 @@ const CoverTab: React.FC = () => {
         <div className="mt-12 pt-6 border-t">
             <h3 className="text-xl font-semibold text-brand-dark mb-4">{t('coverTab.favoritesTitle')}</h3>
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                 {project.archivedCovers.map((base64Image, index) => {
-                    const imageUrl = `data:image/png;base64,${base64Image}`;
-                    const isSelected = project.coverImage === base64Image;
+                 {project.archivedCovers.map((dataUrl, index) => {
+                    const isSelected = project.coverImage === dataUrl;
                     return (
-                        <button key={index} onClick={() => handleSelectCover(base64Image)} className="relative group">
+                        <button key={index} onClick={() => handleSelectCover(dataUrl)} className="relative group">
                             <img 
-                                src={imageUrl}
+                                src={dataUrl}
                                 alt={`Archived cover ${index + 1}`}
                                 className={`rounded-md shadow-md w-full object-cover aspect-[3/4] transition-all ${isSelected ? 'ring-4 ring-brand-accent' : 'group-hover:ring-2 group-hover:ring-brand-light'}`}
                             />
