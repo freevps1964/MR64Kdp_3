@@ -234,26 +234,26 @@ export const generateContentStream = (
     ? `Migliora, espandi e riscrivi il seguente testo per renderlo più coinvolgente, dettagliato e di alta qualità. Assicurati che la nuova versione sia coerente con le linee guida fornite e che soddisfi il requisito del conteggio parole. Testo originale da migliorare:\n---\n${existingContent}\n---\n`
     : `Scrivi il contenuto per il libro sull'argomento "${topic}".`;
 
-  const prompt = `Sei un autore esperto e ghostwriter specializzato nella creazione di libri bestseller per Amazon KDP. Il tuo compito è scrivere un contenuto di altissima qualità.
+  const prompt = `AGISCI COME un autore di bestseller per KDP e un ghostwriter di fama mondiale. La tua missione è scrivere una sezione di capitolo della massima qualità possibile, estremamente coinvolgente e che fornisca un valore immenso al lettore. Questo contenuto DEVE essere degno di un bestseller.
 ${regenerationInstruction}
 Sezione corrente: Capitolo "${chapterTitle}" ${subchapterTitle ? `- Sottocapitolo "${subchapterTitle}"` : ''}.
 
 Linee Guida Fondamentali:
-1.  **Qualità Superiore**: Scrivi in modo professionale, chiaro e informativo. La qualità deve essere paragonabile a quella di un bestseller.
-2.  **Stile Coinvolgente**: Utilizza tecniche di storytelling dove appropriato. Varia la lunghezza e la struttura delle frasi per creare un ritmo di lettura piacevole. Assicura un flusso logico e transizioni fluide tra i paragrafi.
-3.  **Tono Autorevole e Accessibile**: Mantieni un tono esperto ma comprensibile per il pubblico di destinazione specificato.
-4.  **Praticità**: Includi esempi pratici, aneddoti o casi studio per illustrare i punti chiave, rendendo il contenuto più concreto e facilmente comprensibile.
-5.  **Accuratezza**: Assicurati che tutte le informazioni fornite siano attuali, verificate e accurate.
-6.  **SEO**: ${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave: ${keywordList}.` : 'Scrivi in modo naturale senza forzare parole chiave.'}
+1.  **Qualità da Bestseller**: Scrivi in modo professionale, chiaro e informativo. Il livello deve essere impeccabile, paragonabile a un libro leader nel suo settore.
+2.  **Stile Coinvolgente e Magnetico**: Usa tecniche di storytelling per catturare l'attenzione. Varia la struttura delle frasi per creare un ritmo di lettura dinamico. Garantisci un flusso logico e transizioni impeccabili tra i paragrafi.
+3.  **Tono Autorevole ma Accessibile**: Posizionati come un esperto, ma spiega concetti complessi in modo semplice e comprensibile per il pubblico di destinazione.
+4.  **Valore Pratico Immenso**: Fornisci esempi pratici, strategie attuabili, aneddoti o casi studio che il lettore possa applicare nella propria vita. Il contenuto deve essere utile e trasformazionale.
+5.  **Accuratezza Assoluta**: Verifica che tutte le informazioni siano aggiornate, corrette e supportate da fonti attendibili se necessario.
+6.  **Ottimizzazione per KDP**: ${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave per massimizzare la visibilità: ${keywordList}.` : 'Scrivi in modo naturale senza forzare parole chiave.'}
 
 ${writingGuidelines ? `\nSegui anche queste specifiche aggiuntive:\n${writingGuidelines}` : ''}
 
 ${wordCountInstruction}
 
 Output:
-- Fornisci solo il testo del contenuto.
-- Non includere il titolo del capitolo o del sottocapitolo.
-- Formatta il testo in paragrafi ben definiti per una facile leggibilità.`;
+- Fornisci solo il testo del contenuto, senza alcuna introduzione o preambolo.
+- Non includere il titolo del capitolo o del sottocapitolo nel testo.
+- Formatta il testo in paragrafi ben strutturati per una leggibilità ottimale.`;
 
   return withRetry(() => ai.models.generateContentStream({
     model: "gemini-2.5-flash",

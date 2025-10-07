@@ -14,7 +14,7 @@ const ValidationTab: React.FC = () => {
   const { project } = useProject();
   const [isExporting, setIsExporting] = useState(false);
 
-  const isMetadataComplete = !!(project?.projectTitle && project?.author && project?.description);
+  const isMetadataComplete = !!(project?.bookTitle && project?.author && project?.description);
   
   let areAllChaptersWritten = false;
   if (project?.bookStructure && project.bookStructure.chapters.length > 0) {

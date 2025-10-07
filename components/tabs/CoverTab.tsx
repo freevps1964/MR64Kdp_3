@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -259,19 +258,10 @@ const CoverTab: React.FC = () => {
     setIsRefining(true);
     setError(null);
     try {
-        // Step 1: Edit the visual part of the cover (without text)
-        const originalBaseImage = project.coverOptions.find(opt => opt === project.coverImage);
-        if (!originalBaseImage) {
-            throw new Error("Original image not found for refinement.");
-        }
-        
-        const refinedImageBase64 = await editCoverImage(originalBaseImage, refinePrompt);
+        const refinedImageBase64 = await editCoverImage(project.coverImage, refinePrompt);
         
         if (refinedImageBase64) {
-            // Step 2: Add text to the newly refined image
-            const refinedImageWithText = await addTextToImage(refinedImageBase64);
-            // Step 3: Compress the final image
-            const compressedRefinedImage = await compressImage(refinedImageWithText);
+            const compressedRefinedImage = await compressImage(refinedImageBase64);
             
             const newCoverOptions = project.coverOptions.map(opt =>
                 opt === project.coverImage ? compressedRefinedImage : opt
