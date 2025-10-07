@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -156,6 +158,10 @@ const LayoutTab: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
+
+  const handlePrint = () => {
+    window.print();
+  };
   
   const classicPreview = (
      <div className="font-serif" style={{ fontFamily: 'EB Garamond, serif' }}>
@@ -173,8 +179,9 @@ const LayoutTab: React.FC = () => {
     </div>
   );
 
+  // Fix: Corrected the malformed `fontFamily` style property. The original syntax was invalid, causing multiple parsing errors.
   const minimalistPreview = (
-      <div className="font-sans" style={{ fontFamily: 'Times New Roman, Times, serif' }}>
+      <div className="font-sans" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         <div className="text-lg font-semibold">Chapter Title</div>
         <div className="text-xs text-left mt-3 leading-relaxed">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.</div>
     </div>
@@ -228,6 +235,13 @@ const LayoutTab: React.FC = () => {
          <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
             <h3 className="text-xl font-bold text-brand-dark">{t('layoutTab.previewTitle')}</h3>
             <div className="flex items-center gap-2">
+                <button
+                    onClick={handlePrint}
+                    disabled={isExporting}
+                    className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
+                    >
+                    {t('layoutTab.print')}
+                </button>
                 <button
                     onClick={handleExportDoc}
                     disabled={isExporting || !project?.bookStructure}

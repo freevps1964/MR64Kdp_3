@@ -74,14 +74,17 @@ export interface Project {
   id: string;
   projectTitle: string;
   bookTitle: string;
+  titlesArchive: string[];
   topic: string;
   subtitle: string;
+  subtitlesArchive: string[];
   author: string;
   authorsArchive: string[];
   description: string;
   descriptionsArchive: string[];
   metadataKeywords: Keyword[];
   categories: string[];
+  categoriesArchive: string[][];
   researchData: ResearchResult | null;
   selectedSources: GroundingSource[];
   bookStructure: BookStructure | null;

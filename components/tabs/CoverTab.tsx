@@ -1,9 +1,10 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateCoverImages, generateCoverPromptFromBestsellers } from '../../services/geminiService';
+import { generateCoverImages, generateCoverPromptFromBestsellers, editCoverImage } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 
@@ -42,6 +43,9 @@ const CoverTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [refinePrompt, setRefinePrompt] = useState('');
+  const [isRefining, setIsRefining] = useState(false);
 
   const isMetadataComplete = !!(project?.bookTitle && project?.subtitle && project?.author && project?.categories && project?.categories.length > 0);
 
@@ -89,72 +93,77 @@ const CoverTab: React.FC = () => {
    */
   const addTextToImage = (base64Image: string): Promise<string> => {
     return new Promise((resolve, reject) => {
-      if (!project) {
-        return reject("Dati del progetto non disponibili");
-      }
-
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const canvasWidth = 1200; // Larghezza ad alta risoluzione
-        const canvasHeight = 1600; // Altezza (rapporto 3:4)
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          return reject('Impossibile ottenere il contesto del canvas');
+        if (!project) {
+            return reject("Dati del progetto non disponibili");
         }
 
-        // Disegna l'immagine generata come sfondo
-        ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const canvasWidth = 1200; // Larghezza ad alta risoluzione
+            const canvasHeight = 1600; // Altezza (rapporto 3:4)
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
 
-        // Stili del testo (bianco con ombra per la leggibilità)
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-
-        const margin = canvasWidth * 0.1;
-        const contentWidth = canvasWidth - margin * 2;
-        const topZoneEndY = canvasHeight * 0.6; // Max Y for title/subtitle block
-
-        // Disegna il Titolo
-        const title = project.bookTitle.toUpperCase();
-        let titleFontSize = 100;
-        ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
-        while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
-            titleFontSize -= 5;
-            ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
-        }
-        const titleY = canvasHeight * 0.15;
-        const subtitleY = wrapText(ctx, title, canvasWidth / 2, titleY, contentWidth, titleFontSize * 1.1);
-        
-        // Disegna il Sottotitolo (se esiste e c'è spazio)
-        if (project.subtitle && subtitleY < topZoneEndY) {
-            let subtitleFontSize = 40;
-            ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
-            while (ctx.measureText(project.subtitle).width > contentWidth && subtitleFontSize > 15) {
-                subtitleFontSize -= 2;
-                ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject('Impossibile ottenere il contesto del canvas');
             }
-            // Non disegnarlo se il blocco del titolo è già troppo basso
-            wrapText(ctx, project.subtitle, canvasWidth / 2, subtitleY, contentWidth, subtitleFontSize * 1.2);
-        }
 
-        // Disegna l'Autore in basso
-        if (project.author) {
-            ctx.font = `600 48px 'Montserrat', sans-serif`;
-            const authorY = canvasHeight * 0.9;
-            ctx.fillText(project.author, canvasWidth / 2, authorY);
-        }
-        
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = (err) => reject(err);
-      img.src = `data:image/png;base64,${base64Image}`;
+            // Disegna l'immagine generata come sfondo
+            ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+
+            // Stili del testo (bianco con ombra per la leggibilità)
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
+            const margin = canvasWidth * 0.1;
+            const contentWidth = canvasWidth - margin * 2;
+            let currentY = canvasHeight * 0.15; // Cursore Y iniziale
+
+            // Disegna il Titolo
+            const title = project.bookTitle.toUpperCase();
+            let titleFontSize = 100;
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+            while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
+                titleFontSize -= 5;
+                ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+            }
+            currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
+
+            // Aggiungi spazio prima del sottotitolo
+            currentY += titleFontSize * 0.5;
+
+            // Disegna il Sottotitolo (se esiste)
+            if (project.subtitle) {
+                let subtitleFontSize = 45;
+                ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+                while (ctx.measureText(project.subtitle).width > contentWidth && subtitleFontSize > 15) {
+                    subtitleFontSize -= 2;
+                    ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+                }
+                wrapText(ctx, project.subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
+            }
+
+            // Disegna l'Autore in basso a destra
+            if (project.author) {
+                ctx.textAlign = 'right';
+                ctx.font = `600 48px 'Montserrat', sans-serif`;
+                const authorY = canvasHeight - 60; // Posizione fissa dal basso
+                const authorX = canvasWidth - 60; // Posizione fissa da destra
+                ctx.fillText(project.author, authorX, authorY);
+            }
+            
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = (err) => reject(err);
+        // Assicura che l'immagine base64 abbia il prefisso corretto
+        const src = base64Image.startsWith('data:') ? base64Image : `data:image/png;base64,${base64Image}`;
+        img.src = src;
     });
   };
 
@@ -197,9 +206,8 @@ const CoverTab: React.FC = () => {
       const response = await generateCoverImages(prompt);
       const base64Images = response.generatedImages.map(img => img.image.imageBytes);
       
-      const coversWithText = await Promise.all(
-          base64Images.map(base64 => addTextToImage(base64))
-      );
+      const coversWithTextPromises = base64Images.map(base64 => addTextToImage(base64));
+      const coversWithText = await Promise.all(coversWithTextPromises);
       
       const compressedCovers = await Promise.all(
         coversWithText.map(pngDataUrl => compressImage(pngDataUrl))
@@ -244,6 +252,48 @@ const CoverTab: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  const handleRefineImage = async () => {
+    if (!project?.coverImage || !refinePrompt.trim()) return;
+
+    setIsRefining(true);
+    setError(null);
+    try {
+        // Step 1: Edit the visual part of the cover (without text)
+        const originalBaseImage = project.coverOptions.find(opt => opt === project.coverImage);
+        if (!originalBaseImage) {
+            throw new Error("Original image not found for refinement.");
+        }
+        
+        const refinedImageBase64 = await editCoverImage(originalBaseImage, refinePrompt);
+        
+        if (refinedImageBase64) {
+            // Step 2: Add text to the newly refined image
+            const refinedImageWithText = await addTextToImage(refinedImageBase64);
+            // Step 3: Compress the final image
+            const compressedRefinedImage = await compressImage(refinedImageWithText);
+            
+            const newCoverOptions = project.coverOptions.map(opt =>
+                opt === project.coverImage ? compressedRefinedImage : opt
+            );
+            
+            updateProject({
+                coverImage: compressedRefinedImage,
+                coverOptions: newCoverOptions,
+            });
+            setRefinePrompt('');
+
+        } else {
+            setError(t('coverTab.refineError'));
+        }
+    } catch (err) {
+        console.error("Error refining cover:", err);
+        setError("An error occurred while refining the cover.");
+    } finally {
+        setIsRefining(false);
+    }
+};
+
 
   return (
     <Card>
@@ -353,6 +403,38 @@ const CoverTab: React.FC = () => {
           </div>
         </div>
       )}
+
+       {project?.coverImage && (
+        <div className="mt-10 pt-6 border-t animate-fade-in">
+            <h3 className="text-xl font-semibold text-brand-dark mb-4">{t('coverTab.refineCoverTitle')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-4 bg-neutral-light/50 rounded-lg">
+                <div>
+                    <img src={project.coverImage} alt="Selected cover" className="rounded-lg shadow-lg w-full object-cover aspect-[3/4]" />
+                </div>
+                <div className="space-y-4">
+                    <label htmlFor="refine-prompt" className="block font-semibold text-neutral-dark">
+                        {t('coverTab.refinePromptLabel')}
+                    </label>
+                    <textarea
+                        id="refine-prompt"
+                        value={refinePrompt}
+                        onChange={(e) => setRefinePrompt(e.target.value)}
+                        rows={4}
+                        placeholder={t('coverTab.refinePromptPlaceholder')}
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
+                    />
+                    <button
+                        onClick={handleRefineImage}
+                        disabled={isRefining || !refinePrompt.trim()}
+                        className="flex items-center justify-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-2 px-6 rounded-md transition-colors shadow disabled:opacity-50"
+                    >
+                        {isRefining ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-dark" /> : `✨ ${t('coverTab.refineButton')}`}
+                    </button>
+                </div>
+            </div>
+        </div>
+        )}
+
        {project && project.archivedCovers.length > 0 && (
         <div className="mt-12 pt-6 border-t">
             <h3 className="text-xl font-semibold text-brand-dark mb-4">{t('coverTab.favoritesTitle')}</h3>

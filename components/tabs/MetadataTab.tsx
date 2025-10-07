@@ -78,14 +78,28 @@ const MetadataTab: React.FC = () => {
   
   const handleSaveMetadata = () => {
     if (!project) return;
-    if (project.author) {
-      addAuthorToArchive(project.author);
+    
+    addAuthorToArchive(project.author);
+
+    const updates: Partial<Project> = {};
+
+    if (project.bookTitle && !project.titlesArchive.includes(project.bookTitle)) {
+        updates.titlesArchive = [...project.titlesArchive, project.bookTitle];
+    }
+    if (project.subtitle && !project.subtitlesArchive.includes(project.subtitle)) {
+        updates.subtitlesArchive = [...project.subtitlesArchive, project.subtitle];
     }
     if (project.description && !project.descriptionsArchive.includes(project.description)) {
-        updateProject({ descriptionsArchive: [...project.descriptionsArchive, project.description] });
-    } else {
-        updateProject({}); // This forces a save with a new timestamp
+        updates.descriptionsArchive = [...project.descriptionsArchive, project.description];
     }
+    
+    const categoriesString = JSON.stringify(project.categories.slice().sort());
+    const isCategoriesInArchive = project.categoriesArchive.some(c => JSON.stringify(c.slice().sort()) === categoriesString);
+    if (project.categories.length > 0 && !isCategoriesInArchive) {
+        updates.categoriesArchive = [...project.categoriesArchive, project.categories];
+    }
+
+    updateProject(updates);
     showToast(t('metadataTab.saveSuccess'), 'success');
   };
 

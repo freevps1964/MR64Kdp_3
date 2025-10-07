@@ -141,7 +141,9 @@
     "modern": "Moderno",
     "minimalist": "Minimalista",
     "previewTitle": "Anteprima Libro",
-    "exportPDF": "Esporta in PDF"
+    "exportPDF": "Esporta in PDF",
+    "print": "Stampa",
+    "appendix": "Appendice"
   },
   "coverTab": {
     "title": "Design della Copertina",
@@ -157,7 +159,12 @@
     "downloadButton": "Scarica",
     "favoritesTitle": "Copertine Preferite",
     "saveButton": "Salva",
-    "savedButton": "Salvato"
+    "savedButton": "Salvato",
+    "refineCoverTitle": "Migliora Copertina Selezionata",
+    "refinePromptLabel": "Prompt di Miglioramento",
+    "refinePromptPlaceholder": "Es. Cambia lo sfondo in blu scuro, rendi il testo dorato...",
+    "refineButton": "Migliora con AI",
+    "refineError": "Impossibile migliorare l'immagine. Prova un prompt diverso."
   },
   "metadataTab": {
     "title": "Metadati del Libro",
@@ -185,7 +192,7 @@
     "item2": "I metadati sono completi (Titolo, Autore, Descrizione).",
     "item3": "È stata selezionata una copertina.",
     "item4": "È stato scelto un layout.",
-    "exportButton": "Esporta PDF Pronto per la Stampa (Prossimamente)"
+    "exportButton": "Esporta PDF Pronto per la Stampa"
   },
   "recipesTab": {
     "title": "Ricette & Esercizi",
@@ -213,18 +220,17 @@
   },
   "archiveTab": {
     "title": "Archivio del Progetto",
-    "description": "Una raccolta di tutte le risorse generate e selezionate per il tuo progetto.",
-    "metadataTitle": "Metadati Finali",
-    "bookTitle": "Titolo del Libro",
-    "subtitle": "Sottotitolo",
-    "author": "Autore",
-    "descriptionLabel": "Descrizione",
-    "categories": "Categorie",
-    "suggestionsTitle": "Suggerimenti Generati",
-    "suggestedTitles": "Titoli",
-    "suggestedSubtitles": "Sottotitoli",
-    "coversTitle": "Copertine e Prompt Preferiti",
+    "description": "Una raccolta di tutte le risorse generate e selezionate. Clicca su 'Usa' per applicare un elemento archiviato al tuo progetto corrente.",
+    "useButton": "Usa",
+    "authorsTitle": "Autori Archiviati",
+    "titlesTitle": "Titoli Archiviati",
+    "subtitlesTitle": "Sottotitoli Archiviati",
+    "descriptionsTitle": "Descrizioni Archiviate",
+    "categoriesTitle": "Set di Categorie Archiviati",
+    "coversTitle": "Copertine Archiviate",
+    "noItems": "Nessun elemento archiviato.",
     "noCovers": "Nessuna copertina preferita salvata.",
-    "promptLabel": "Prompt utilizzati"
+    "promptLabel": "Prompt utilizzati",
+    "promptsTitle": "Prompt Copertine Utilizzati"
   }
 }

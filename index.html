@@ -71,6 +71,37 @@
       .layout-minimalist .chapter-title { font-size: 1.5rem; border: none; font-weight: 600; }
       .layout-minimalist .subchapter-title { font-size: 1.125rem; font-weight: 600; }
       .layout-minimalist .content-block { line-height: 1.8; font-size: 14pt; }
+
+      /* Print Styles */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        .book-preview-container, .book-preview-container * {
+          visibility: visible;
+        }
+        .book-preview-container {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: auto;
+          padding: 0;
+          margin: 0;
+          border: none;
+          overflow: visible; /* Changed from auto/scroll to visible */
+        }
+        .book-page {
+          box-shadow: none;
+          margin: 0 auto; /* Center the page on the print sheet */
+          page-break-after: always; /* Ensure each .book-page gets a new print page, might need adjustment based on final structure */
+          min-height: 0;
+        }
+        .chapter-container, .appendix-container {
+          page-break-before: always;
+        }
+      }
+
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

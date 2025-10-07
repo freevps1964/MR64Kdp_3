@@ -141,7 +141,9 @@
     "modern": "Modern",
     "minimalist": "Minimalist",
     "previewTitle": "Book Preview",
-    "exportPDF": "Export to PDF"
+    "exportPDF": "Export to PDF",
+    "print": "Print",
+    "appendix": "Appendix"
   },
   "coverTab": {
     "title": "Cover Design",
@@ -157,7 +159,12 @@
     "downloadButton": "Download",
     "favoritesTitle": "Favorite Covers",
     "saveButton": "Save",
-    "savedButton": "Saved"
+    "savedButton": "Saved",
+    "refineCoverTitle": "Refine Selected Cover",
+    "refinePromptLabel": "Refinement Prompt",
+    "refinePromptPlaceholder": "e.g., Change the background to dark blue, make the text gold...",
+    "refineButton": "Refine with AI",
+    "refineError": "Failed to refine the image. Please try a different prompt."
   },
   "metadataTab": {
     "title": "Book Metadata",
@@ -185,7 +192,7 @@
     "item2": "Metadata is complete (Title, Author, Description).",
     "item3": "A cover has been selected.",
     "item4": "Layout has been chosen.",
-    "exportButton": "Export Print-Ready PDF (Coming Soon)"
+    "exportButton": "Export Print-Ready PDF"
   },
   "recipesTab": {
     "title": "Recipes & Exercises",
@@ -213,18 +220,17 @@
   },
   "archiveTab": {
     "title": "Project Archive",
-    "description": "A collection of all generated and selected assets for your project.",
-    "metadataTitle": "Final Metadata",
-    "bookTitle": "Book Title",
-    "subtitle": "Subtitle",
-    "author": "Author",
-    "descriptionLabel": "Description",
-    "categories": "Categories",
-    "suggestionsTitle": "Generated Suggestions",
-    "suggestedTitles": "Titles",
-    "suggestedSubtitles": "Subtitles",
-    "coversTitle": "Favorite Covers & Prompts",
+    "description": "A collection of all generated and selected assets for your project. Click 'Use' to apply an archived item to your current project.",
+    "useButton": "Use",
+    "authorsTitle": "Archived Authors",
+    "titlesTitle": "Archived Titles",
+    "subtitlesTitle": "Archived Subtitles",
+    "descriptionsTitle": "Archived Descriptions",
+    "categoriesTitle": "Archived Category Sets",
+    "coversTitle": "Archived Covers",
+    "noItems": "No items archived yet.",
     "noCovers": "No favorite covers saved yet.",
-    "promptLabel": "Prompt used"
+    "promptLabel": "Prompt used",
+    "promptsTitle": "Cover Prompts Used"
   }
 }

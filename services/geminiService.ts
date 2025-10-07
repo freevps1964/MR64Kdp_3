@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse, Modality } from "@google/genai";
 import type { BookStructure, ResearchResult, Keyword, GroundingSource, ContentBlockType } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -234,13 +234,26 @@ export const generateContentStream = (
     ? `Migliora, espandi e riscrivi il seguente testo per renderlo più coinvolgente, dettagliato e di alta qualità. Assicurati che la nuova versione sia coerente con le linee guida fornite e che soddisfi il requisito del conteggio parole. Testo originale da migliorare:\n---\n${existingContent}\n---\n`
     : `Scrivi il contenuto per il libro sull'argomento "${topic}".`;
 
-  const prompt = `${regenerationInstruction}
+  const prompt = `Sei un autore esperto e ghostwriter specializzato nella creazione di libri bestseller per Amazon KDP. Il tuo compito è scrivere un contenuto di altissima qualità.
+${regenerationInstruction}
 Sezione corrente: Capitolo "${chapterTitle}" ${subchapterTitle ? `- Sottocapitolo "${subchapterTitle}"` : ''}.
-${writingGuidelines ? `\nAderisci alle seguenti linee guida di scrittura:\n${writingGuidelines}` : ''}
-Scrivi in modo chiaro, informativo e coinvolgente. Assicurati che tutte le informazioni fornite siano attuali, verificate e accurate alla data odierna.
-${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave nel testo per migliorare l'ottimizzazione SEO: ${keywordList}.` : ''}
+
+Linee Guida Fondamentali:
+1.  **Qualità Superiore**: Scrivi in modo professionale, chiaro e informativo. La qualità deve essere paragonabile a quella di un bestseller.
+2.  **Stile Coinvolgente**: Utilizza tecniche di storytelling dove appropriato. Varia la lunghezza e la struttura delle frasi per creare un ritmo di lettura piacevole. Assicura un flusso logico e transizioni fluide tra i paragrafi.
+3.  **Tono Autorevole e Accessibile**: Mantieni un tono esperto ma comprensibile per il pubblico di destinazione specificato.
+4.  **Praticità**: Includi esempi pratici, aneddoti o casi studio per illustrare i punti chiave, rendendo il contenuto più concreto e facilmente comprensibile.
+5.  **Accuratezza**: Assicurati che tutte le informazioni fornite siano attuali, verificate e accurate.
+6.  **SEO**: ${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave: ${keywordList}.` : 'Scrivi in modo naturale senza forzare parole chiave.'}
+
+${writingGuidelines ? `\nSegui anche queste specifiche aggiuntive:\n${writingGuidelines}` : ''}
+
 ${wordCountInstruction}
-Formatta il testo con paragrafi ben definiti. Non includere il titolo del capitolo o del sottocapitolo nel testo generato.`;
+
+Output:
+- Fornisci solo il testo del contenuto.
+- Non includere il titolo del capitolo o del sottocapitolo.
+- Formatta il testo in paragrafi ben definiti per una facile leggibilità.`;
 
   return withRetry(() => ai.models.generateContentStream({
     model: "gemini-2.5-flash",
@@ -296,6 +309,45 @@ export const generateCoverImages = (prompt: string): Promise<GenerateImagesRespo
         },
     }));
 };
+
+/**
+ * Modifica un'immagine di copertina esistente utilizzando un prompt di testo.
+ */
+const dataUrlToBase64 = (dataUrl: string) => dataUrl.split(',')[1];
+
+export const editCoverImage = async (base64ImageDataUrl: string, prompt: string): Promise<string | null> => {
+    const imagePart = {
+        inlineData: {
+            data: dataUrlToBase64(base64ImageDataUrl),
+            mimeType: 'image/jpeg', // Le immagini compresse sono JPEG
+        },
+    };
+    const textPart = { text: prompt };
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [imagePart, textPart]
+            },
+            config: {
+                responseModalities: [Modality.IMAGE, Modality.TEXT],
+            },
+        }));
+        
+        const imageResponsePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+        if (imageResponsePart?.inlineData) {
+            // L'output di Nano Banana è PNG
+            return `data:image/png;base64,${imageResponsePart.inlineData.data}`;
+        }
+        console.warn("Nessuna parte immagine trovata nella risposta di modifica della copertina.");
+        return null;
+    } catch(error) {
+        console.error("Errore durante la modifica dell'immagine di copertina:", error);
+        return null;
+    }
+};
+
 
 /**
  * Genera una descrizione del libro per i metadati KDP.
