@@ -35,9 +35,9 @@ export interface ResearchResult {
 
 export type Language = 'it' | 'en';
 
-export type ToneOfVoice = 'Informal' | 'Formal' | 'Academic' | 'Persuasive';
+export type ToneOfVoice = 'Informal' | 'Formal' | 'Academic' | 'Persuasive' | 'Empathetic' | 'Humorous' | 'Professional' | 'Enthusiastic';
 export type TargetAudience = 'Beginners' | 'Experts' | 'General';
-export type WritingStyle = 'Descriptive' | 'Narrative' | 'Expository' | 'Argumentative';
+export type WritingStyle = 'Descriptive' | 'Narrative' | 'Expository' | 'Argumentative' | 'Poetic' | 'Technical' | 'Conversational' | 'Journalistic';
 
 export interface SubChapter {
   id: string;
@@ -96,4 +96,5 @@ export interface Project {
   coverPrompts: string[];
   archivedCovers: string[]; // New: array of selected base64 strings
   contentBlocks: ContentBlock[]; // New: for recipes/exercises
+  coverBonusCount: number;
 }

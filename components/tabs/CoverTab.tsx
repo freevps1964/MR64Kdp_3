@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -114,47 +113,119 @@ const CoverTab: React.FC = () => {
 
             // Stili del testo (bianco con ombra per la leggibilità)
             ctx.fillStyle = 'white';
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+            ctx.textAlign = 'center';
 
             const margin = canvasWidth * 0.1;
             const contentWidth = canvasWidth - margin * 2;
             let currentY = canvasHeight * 0.15; // Cursore Y iniziale
 
-            // Disegna il Titolo
-            const title = project.bookTitle.toUpperCase();
-            let titleFontSize = 100;
-            ctx.textAlign = 'center';
-            ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
-            while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
-                titleFontSize -= 5;
+            // --- Draw Title ---
+            if (project.bookTitle) {
+                const title = project.bookTitle.toUpperCase();
+                let titleFontSize = 100;
                 ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+                // Shrink font size until title fits within content width
+                while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
+                    titleFontSize -= 5;
+                    ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+                }
+                currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
             }
-            currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
 
             // Aggiungi spazio prima del sottotitolo
-            currentY += titleFontSize * 0.5;
-
-            // Disegna il Sottotitolo (se esiste)
+            currentY += 20;
+            
+            // --- Draw Subtitle (if it exists) ---
             if (project.subtitle) {
                 let subtitleFontSize = 45;
                 ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+                 // Shrink font size until subtitle fits within content width
                 while (ctx.measureText(project.subtitle).width > contentWidth && subtitleFontSize > 15) {
                     subtitleFontSize -= 2;
                     ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
                 }
-                wrapText(ctx, project.subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
+                currentY = wrapText(ctx, project.subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
             }
 
-            // Disegna l'Autore in basso a destra
+            // --- Draw Author (bottom-right) ---
             if (project.author) {
                 ctx.textAlign = 'right';
                 ctx.font = `600 48px 'Montserrat', sans-serif`;
                 const authorY = canvasHeight - 60; // Posizione fissa dal basso
                 const authorX = canvasWidth - 60; // Posizione fissa da destra
                 ctx.fillText(project.author, authorX, authorY);
+            }
+            
+            // --- Draw Bonus Sticker (bottom-left) ---
+            if (project.coverBonusCount && project.coverBonusCount > 0) {
+                // Reset shadow for sticker drawing
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = 5;
+                ctx.shadowOffsetY = 5;
+
+                const bonusNumber = project.coverBonusCount.toString();
+                const bonusText = t('coverTab.bonusText').toUpperCase();
+
+                // Calculate required text dimensions
+                ctx.font = `bold 100px 'Montserrat', sans-serif`;
+                const numberMetrics = ctx.measureText(bonusNumber);
+                ctx.font = `bold 32px 'Montserrat', sans-serif`;
+                const textMetrics = ctx.measureText(bonusText);
+                
+                const textWidth = Math.max(numberMetrics.width, textMetrics.width);
+                const textHeight = 100 + 32 + 20; // font sizes + spacing
+                
+                const stickerPadding = 60;
+                const stickerRadius = (Math.max(textWidth, textHeight) / 2) + stickerPadding;
+
+                const stickerMargin = 50;
+                const stickerCenterX = stickerRadius + stickerMargin;
+                const stickerCenterY = canvasHeight - stickerRadius - stickerMargin;
+
+                const drawStar = (cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) => {
+                    let rot = Math.PI / 2 * 3;
+                    let x = cx;
+                    let y = cy;
+                    let step = Math.PI / spikes;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - outerRadius);
+                    for (let i = 0; i < spikes; i++) {
+                        x = cx + Math.cos(rot) * outerRadius;
+                        y = cy + Math.sin(rot) * outerRadius;
+                        ctx.lineTo(x, y);
+                        rot += step;
+                        x = cx + Math.cos(rot) * innerRadius;
+                        y = cy + Math.sin(rot) * innerRadius;
+                        ctx.lineTo(x, y);
+                        rot += step;
+                    }
+                    ctx.lineTo(cx, cy - outerRadius);
+                    ctx.closePath();
+                };
+                
+                // Draw star shape
+                ctx.fillStyle = '#FFD700'; // Gold color
+                drawStar(stickerCenterX, stickerCenterY, 12, stickerRadius, stickerRadius * 0.6);
+                ctx.fill();
+                
+                // --- Draw text inside sticker ---
+                ctx.shadowColor = 'transparent'; // No shadow for text on sticker
+                ctx.fillStyle = '#000000';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+            
+                // Draw bonus count
+                ctx.font = `bold 100px 'Montserrat', sans-serif`;
+                ctx.fillText(bonusNumber, stickerCenterX, stickerCenterY - 25);
+                
+                // Draw bonus text
+                ctx.font = `bold 32px 'Montserrat', sans-serif`;
+                ctx.fillText(bonusText, stickerCenterX, stickerCenterY + 45);
             }
             
             resolve(canvas.toDataURL('image/png'));
@@ -202,16 +273,30 @@ const CoverTab: React.FC = () => {
     updateProject({ coverOptions: [], coverImage: null });
 
     try {
+      // Step 1: Generate base images from the prompt
       const response = await generateCoverImages(prompt);
       const base64Images = response.generatedImages.map(img => img.image.imageBytes);
       
+      // Step 2: Add titles, author, and sticker to the base images
       const coversWithTextPromises = base64Images.map(base64 => addTextToImage(base64));
       const coversWithText = await Promise.all(coversWithTextPromises);
       
+      // Step 3: Enhance each generated cover with an AI refinement pass
+      const enhancementPrompt = "Enhance the quality of this book cover. Improve sharpness, colors, and lighting to make it more professional and visually appealing, but DO NOT change, add, or remove any text or its position.";
+      const refinedCoversPromises = coversWithText.map(coverDataUrl => 
+         editCoverImage(coverDataUrl, enhancementPrompt)
+      );
+      const refinedCoverResults = await Promise.all(refinedCoversPromises);
+      
+      // Use the refined image if the enhancement was successful, otherwise fall back to the original
+      const finalCovers = coversWithText.map((originalCover, index) => refinedCoverResults[index] || originalCover);
+
+      // Step 4: Compress the final images to JPEG for optimized file size
       const compressedCovers = await Promise.all(
-        coversWithText.map(pngDataUrl => compressImage(pngDataUrl))
+        finalCovers.map(pngDataUrl => compressImage(pngDataUrl))
       );
 
+      // Step 5: Save the results to the project state
       const newPrompts = project?.coverPrompts?.includes(prompt) ? project.coverPrompts : [...(project?.coverPrompts || []), prompt];
 
       updateProject({ 
@@ -318,26 +403,45 @@ const CoverTab: React.FC = () => {
 
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-            <label htmlFor="cover-prompt" className="block font-semibold text-neutral-dark">
-              {t('coverTab.promptLabel')}
-            </label>
-             <button
-                onClick={handleGeneratePrompt}
-                disabled={isGeneratingPrompt || isLoading || !isMetadataComplete}
-                className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isGeneratingPrompt ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
-                {isGeneratingPrompt ? t('coverTab.generatingPrompt') : t('coverTab.generatePrompt')}
-            </button>
+        <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-grow">
+                <div className="flex justify-between items-center">
+                    <label htmlFor="cover-prompt" className="block font-semibold text-neutral-dark">
+                    {t('coverTab.promptLabel')}
+                    </label>
+                    <button
+                        onClick={handleGeneratePrompt}
+                        disabled={isGeneratingPrompt || isLoading || !isMetadataComplete}
+                        className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingPrompt ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
+                        {isGeneratingPrompt ? t('coverTab.generatingPrompt') : t('coverTab.generatePrompt')}
+                    </button>
+                </div>
+                <textarea
+                id="cover-prompt"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-1"
+                />
+            </div>
+            <div className="flex-shrink-0">
+                <label htmlFor="bonus-count" className="block font-semibold text-neutral-dark mb-1">
+                    {t('coverTab.bonusCountLabel')}
+                </label>
+                <select
+                    id="bonus-count"
+                    value={project?.coverBonusCount || 0}
+                    onChange={(e) => updateProject({ coverBonusCount: parseInt(e.target.value, 10) })}
+                    className="p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white w-full"
+                >
+                    {[...Array(11).keys()].map(i => (
+                        <option key={i} value={i}>{i}</option>
+                    ))}
+                </select>
+            </div>
         </div>
-        <textarea
-          id="cover-prompt"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
-        />
         <button
           onClick={handleGenerate}
           disabled={isLoading || isGeneratingPrompt || !prompt || !isMetadataComplete}

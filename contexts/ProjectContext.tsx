@@ -186,6 +186,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       coverPrompts: [],
       archivedCovers: [],
       contentBlocks: [],
+      coverBonusCount: 0,
     };
     // Directly set and save the new project
     setProject(newProject);

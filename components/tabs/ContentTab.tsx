@@ -192,6 +192,10 @@ const ContentTab: React.FC = () => {
                     <option value="Formal">{t('contentTab.options.tones.Formal')}</option>
                     <option value="Academic">{t('contentTab.options.tones.Academic')}</option>
                     <option value="Persuasive">{t('contentTab.options.tones.Persuasive')}</option>
+                    <option value="Empathetic">{t('contentTab.options.tones.Empathetic')}</option>
+                    <option value="Humorous">{t('contentTab.options.tones.Humorous')}</option>
+                    <option value="Professional">{t('contentTab.options.tones.Professional')}</option>
+                    <option value="Enthusiastic">{t('contentTab.options.tones.Enthusiastic')}</option>
                 </select>
             </div>
             <div>
@@ -219,6 +223,10 @@ const ContentTab: React.FC = () => {
                     <option value="Narrative">{t('contentTab.options.styles.Narrative')}</option>
                     <option value="Expository">{t('contentTab.options.styles.Expository')}</option>
                     <option value="Argumentative">{t('contentTab.options.styles.Argumentative')}</option>
+                    <option value="Poetic">{t('contentTab.options.styles.Poetic')}</option>
+                    <option value="Technical">{t('contentTab.options.styles.Technical')}</option>
+                    <option value="Conversational">{t('contentTab.options.styles.Conversational')}</option>
+                    <option value="Journalistic">{t('contentTab.options.styles.Journalistic')}</option>
                 </select>
             </div>
         </div>

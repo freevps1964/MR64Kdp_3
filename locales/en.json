@@ -119,7 +119,11 @@
         "Informal": "Informal",
         "Formal": "Formal",
         "Academic": "Academic",
-        "Persuasive": "Persuasive"
+        "Persuasive": "Persuasive",
+        "Empathetic": "Empathetic",
+        "Humorous": "Humorous",
+        "Professional": "Professional",
+        "Enthusiastic": "Enthusiastic"
       },
       "audiences": {
         "Beginners": "Beginners",
@@ -130,7 +134,11 @@
         "Descriptive": "Descriptive",
         "Narrative": "Narrative",
         "Expository": "Expository",
-        "Argumentative": "Argumentative"
+        "Argumentative": "Argumentative",
+        "Poetic": "Poetic",
+        "Technical": "Technical",
+        "Conversational": "Conversational",
+        "Journalistic": "Journalistic"
       }
     }
   },
@@ -164,7 +172,9 @@
     "refinePromptLabel": "Refinement Prompt",
     "refinePromptPlaceholder": "e.g., Change the background to dark blue, make the text gold...",
     "refineButton": "Refine with AI",
-    "refineError": "Failed to refine the image. Please try a different prompt."
+    "refineError": "Failed to refine the image. Please try a different prompt.",
+    "bonusCountLabel": "Number of Bonuses",
+    "bonusText": "INCREDIBLE BONUSES"
   },
   "metadataTab": {
     "title": "Book Metadata",

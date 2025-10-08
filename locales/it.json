@@ -119,7 +119,11 @@
         "Informal": "Informale",
         "Formal": "Formale",
         "Academic": "Accademico",
-        "Persuasive": "Persuasivo"
+        "Persuasive": "Persuasivo",
+        "Empathetic": "Empatico",
+        "Humorous": "Umoristico",
+        "Professional": "Professionale",
+        "Enthusiastic": "Entusiasta"
       },
       "audiences": {
         "Beginners": "Principianti",
@@ -130,7 +134,11 @@
         "Descriptive": "Descrittivo",
         "Narrative": "Narrativo",
         "Expository": "Espositivo",
-        "Argumentative": "Argomentativo"
+        "Argumentative": "Argomentativo",
+        "Poetic": "Poetico",
+        "Technical": "Tecnico",
+        "Conversational": "Conversazionale",
+        "Journalistic": "Giornalistico"
       }
     }
   },
@@ -164,7 +172,9 @@
     "refinePromptLabel": "Prompt di Miglioramento",
     "refinePromptPlaceholder": "Es. Cambia lo sfondo in blu scuro, rendi il testo dorato...",
     "refineButton": "Migliora con AI",
-    "refineError": "Impossibile migliorare l'immagine. Prova un prompt diverso."
+    "refineError": "Impossibile migliorare l'immagine. Prova un prompt diverso.",
+    "bonusCountLabel": "Numero di Bonus",
+    "bonusText": "BONUS INCREDIBILI"
   },
   "metadataTab": {
     "title": "Metadati del Libro",

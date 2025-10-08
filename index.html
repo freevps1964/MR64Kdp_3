@@ -74,6 +74,11 @@
 
       /* Print Styles */
       @media print {
+        body {
+            /* Ensures colors are printed in browsers that support it */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
         body * {
           visibility: hidden;
         }
@@ -89,16 +94,23 @@
           padding: 0;
           margin: 0;
           border: none;
-          overflow: visible; /* Changed from auto/scroll to visible */
+          overflow: visible;
         }
         .book-page {
           box-shadow: none;
-          margin: 0 auto; /* Center the page on the print sheet */
-          page-break-after: always; /* Ensure each .book-page gets a new print page, might need adjustment based on final structure */
-          min-height: 0;
+          margin: 0 auto; /* Center the page content */
+          min-height: 0; /* Override screen style */
+          /* Removed page-break-after: always; to avoid a blank page at the end */
         }
         .chapter-container, .appendix-container {
-          page-break-before: always;
+          page-break-before: always; /* Each chapter starts on a new page */
+        }
+        .book-title, .chapter-title, .subchapter-title {
+            page-break-after: avoid; /* Prevent titles from being separated from their content */
+        }
+        .content-block, p {
+            orphans: 3; /* Minimum lines at the end of a page for a broken paragraph */
+            widows: 3; /* Minimum lines at the start of a page for a broken paragraph */
         }
       }
 
