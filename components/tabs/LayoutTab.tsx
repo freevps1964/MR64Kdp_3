@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -7,9 +5,6 @@ import Card from '../common/Card';
 import type { LayoutTemplate, PageSize } from '../../types';
 import BookPreview from '../PromptForm';
 import LoadingSpinner from '../icons/LoadingSpinner';
-
-declare const html2canvas: any;
-declare const jspdf: any;
 
 const LayoutTemplateCard: React.FC<{
   name: LayoutTemplate;
@@ -40,6 +35,7 @@ const LayoutTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject } = useProject();
   const [isExporting, setIsExporting] = useState(false);
+  const [showFullRender, setShowFullRender] = useState(false);
 
   const templates: { name: LayoutTemplate, description: string }[] = [
     { name: 'Classic', description: t('layoutTab.classic') },
@@ -51,117 +47,188 @@ const LayoutTab: React.FC = () => {
     updateProject({ layoutTemplate: template });
   };
   
-  const handleExportPDF = async () => {
-    const previewElement = document.querySelector('.book-page');
-    if (!previewElement || !project) return;
-
-    setIsExporting(true);
-    try {
-      const canvas = await html2canvas(previewElement as HTMLElement, {
-        scale: 2,
-        useCORS: true,
-        scrollY: 0,
-        windowWidth: (previewElement as HTMLElement).scrollWidth,
-        windowHeight: (previewElement as HTMLElement).scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      const { jsPDF } = jspdf;
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'px',
-        format: 'a4',
-        hotfixes: ['px_scaling'],
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      const ratio = pdfWidth / imgWidth;
-      const scaledImgHeight = imgHeight * ratio;
-
-      let heightLeft = scaledImgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledImgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft >= 0) {
-        position = -heightLeft;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledImgHeight);
-        heightLeft -= pdfHeight;
-      }
-      
-      pdf.save(`${project.projectTitle || 'book'}.pdf`);
-    } catch (error) {
-      console.error("Error exporting PDF:", error);
-      alert("An error occurred while exporting the PDF. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportDoc = () => {
-    if (!project) return;
-    const bookPageElement = document.querySelector('.book-page');
-    if (!bookPageElement) return;
-
-    const layout = project.layoutTemplate;
-    const font = layout === 'Classic' ? "'EB Garamond', serif" :
-                 layout === 'Modern' ? "'Georgia', serif" :
-                 "'Times New Roman', Times, serif";
-
-    const styles = `
-        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap');
-        body {
-            font-family: ${font};
-            font-size: 14pt;
-            line-height: 1.5;
-            margin: 1.27cm;
+  const waitForLibraries = (timeout = 5000): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        const checkLibs = () => {
+            if ((window as any).html2canvas && (window as any).jspdf) {
+                return true;
+            }
+            return false;
         }
-        .book-title { font-size: 2.25rem; text-align: center; }
-        .book-subtitle { font-size: 1.25rem; text-align: center; color: #6b7280; }
-        .book-author { text-align: center; font-style: italic; margin-bottom: 3rem; }
-        .chapter-container { margin-top: 2.5rem; page-break-before: always; }
-        .chapter-title { font-size: 1.875rem; font-weight: 600; margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; }
-        .subchapter-container { margin-top: 1.5rem; margin-left: 1rem; }
-        .subchapter-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; }
-        .content-block { line-height: 1.5; font-size: 14pt; }
-        .content-block br { content: ""; display: block; margin-bottom: 1rem; }
-    `;
 
-    const htmlString = `
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>${project.projectTitle}</title>
-                <style>${styles}</style>
-            </head>
-            <body>
-                ${bookPageElement.innerHTML}
-            </body>
-        </html>
-    `;
+        if (checkLibs()) {
+            return resolve();
+        }
 
-    const blob = new Blob([htmlString], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${project.projectTitle || 'book'}.doc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+        const startTime = Date.now();
+        const intervalId = setInterval(() => {
+            if (checkLibs()) {
+                clearInterval(intervalId);
+                return resolve();
+            }
+            if (Date.now() - startTime > timeout) {
+                clearInterval(intervalId);
+                return reject(new Error("PDF generation libraries failed to load."));
+            }
+        }, 200);
+    });
 };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportPDF = async () => {
+    if (!project) return;
+    
+    setIsExporting(true);
+    setShowFullRender(true);
+
+    setTimeout(async () => {
+        try {
+            await waitForLibraries();
+
+            const { html2canvas } = window as any;
+            const { jsPDF } = (window as any).jspdf;
+
+            const fullBookContainer = document.getElementById('full-book-render-for-export');
+            if (!fullBookContainer) {
+                throw new Error("Full book render container not found.");
+            }
+
+            const pages = fullBookContainer.querySelectorAll('.book-page');
+            if (pages.length === 0) {
+                throw new Error("No pages found to export.");
+            }
+
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'pt',
+                format: project.pageSize === '6x9' ? [432, 648] : [504, 720],
+            });
+
+            for (let i = 0; i < pages.length; i++) {
+                const page = pages[i] as HTMLElement;
+                const canvas = await html2canvas(page, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    width: page.offsetWidth,
+                    height: page.offsetHeight,
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            }
+
+            pdf.save(`${project.projectTitle || 'book'}.pdf`);
+
+        } catch (error: any) {
+            console.error("Error exporting PDF:", error);
+            alert(`An error occurred while exporting the PDF: ${error.message}`);
+        } finally {
+            setIsExporting(false);
+            setShowFullRender(false);
+        }
+    }, 200);
   };
+
+    const handleExportDoc = () => {
+        if (!project || !project.bookStructure) return;
+
+        const layout = project.layoutTemplate;
+        const font = layout === 'Classic' ? "'EB Garamond', serif" :
+                     layout === 'Modern' ? "'Georgia', serif" :
+                     "'Times New Roman', Times, serif";
+
+        const styles = `
+            @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&display=swap');
+            body {
+                font-family: ${font};
+                font-size: 14pt;
+                line-height: 1.5;
+                margin: 1.27cm;
+            }
+            .book-title { font-size: 20pt; font-weight: bold; text-align: center; }
+            .book-subtitle { font-size: 12pt; font-weight: bold; font-style: italic; text-align: center; color: #6b7280; }
+            .book-author { text-align: center; font-style: italic; margin-bottom: 3rem; }
+            .chapter-container { margin-top: 2.5rem; page-break-before: always; }
+            .chapter-title { font-size: 16pt; font-weight: bold; margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; }
+            .subchapter-container { margin-top: 1.5rem; margin-left: 1rem; }
+            .subchapter-title { font-size: 14pt; font-weight: bold; margin-bottom: 1rem; }
+            .content-block { line-height: 1.5; font-size: 14pt; }
+            .content-block br { content: ""; display: block; margin-bottom: 1rem; }
+        `;
+
+        const sanitize = (html: string) => (html || '').replace(/\n/g, '<br />');
+
+        let bodyContent = `
+            <div>
+                <h1 class="book-title">${project.bookTitle || project.projectTitle}</h1>
+                ${project.subtitle ? `<p class="book-subtitle">${project.subtitle}</p>` : ''}
+                ${project.author ? `<p class="book-author">by ${project.author}</p>` : ''}
+            </div>
+        `;
+
+        project.bookStructure.chapters.forEach(chapter => {
+            bodyContent += `
+                <div class="chapter-container">
+                    <h2 class="chapter-title">${chapter.title}</h2>
+                    ${chapter.content ? `<div class="content-block">${sanitize(chapter.content)}</div>` : ''}
+                    
+                    ${chapter.subchapters.map(subchapter => `
+                        <div class="subchapter-container">
+                            <h3 class="subchapter-title">${subchapter.title}</h3>
+                            ${subchapter.content ? `<div class="content-block">${sanitize(subchapter.content)}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        });
+
+        if (project.contentBlocks && project.contentBlocks.length > 0) {
+            bodyContent += `
+                <div class="chapter-container">
+                    <h2 class="chapter-title">${t('layoutTab.appendix')}</h2>
+                    ${project.contentBlocks.map(block => `
+                        <div class="subchapter-container">
+                            <h3 class="subchapter-title">${block.title}</h3>
+                            ${block.imageUrl ? `<img src="${block.imageUrl}" alt="${block.title}" style="display: block; margin: 1.5rem auto; max-width: 80%; border: 1px solid #cccccc; padding: 5px;" />` : ''}
+                            <div class="content-block">${sanitize(block.textContent)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        const htmlString = `
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>${project.projectTitle}</title>
+                    <style>${styles}</style>
+                </head>
+                <body>
+                    ${bodyContent}
+                </body>
+            </html>
+        `;
+
+        const blob = new Blob([htmlString], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${project.projectTitle || 'book'}.doc`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
   
   const classicPreview = (
      <div className="font-serif" style={{ fontFamily: 'EB Garamond, serif' }}>
@@ -236,13 +303,6 @@ const LayoutTab: React.FC = () => {
             <h3 className="text-xl font-bold text-brand-dark">{t('layoutTab.previewTitle')}</h3>
             <div className="flex items-center gap-2">
                 <button
-                    onClick={handlePrint}
-                    disabled={isExporting}
-                    className="flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
-                    >
-                    {t('layoutTab.print')}
-                </button>
-                <button
                     onClick={handleExportDoc}
                     disabled={isExporting || !project?.bookStructure}
                     className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
@@ -270,6 +330,17 @@ const LayoutTab: React.FC = () => {
             pageSize={selectedPageSize}
          />
       </div>
+      
+      {showFullRender && project && (
+          <div id="full-book-render-for-export">
+              <BookPreview 
+                  project={project} 
+                  layout={project.layoutTemplate}
+                  pageSize={project.pageSize}
+                  renderAllPages={true}
+              />
+          </div>
+      )}
     </Card>
   );
 };

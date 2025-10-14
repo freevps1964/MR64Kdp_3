@@ -1,8 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateContentBlockText, generateContentBlockPrompt } from '../../services/geminiService';
+import { generateContentBlockText, generateContentBlockPrompt, generateContentBlockImage } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import PlusIcon from '../icons/PlusIcon';
@@ -11,13 +13,15 @@ import type { ContentBlock, ContentBlockType } from '../../types';
 
 const RecipesTab: React.FC = () => {
   const { t } = useLocalization();
-  const { project, updateProject, updateContentBlock, deleteContentBlock } = useProject();
+  const { project, updateProject, addContentBlock, updateContentBlock, deleteContentBlock } = useProject();
   
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [currentBlock, setCurrentBlock] = useState<Partial<ContentBlock> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [numberOfItems, setNumberOfItems] = useState(1);
+  const prevBlockCountRef = useRef(project?.contentBlocks.length || 0);
 
   const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 9)}`;
   
@@ -28,6 +32,7 @@ const RecipesTab: React.FC = () => {
             title: '',
             description: '',
             textContent: '',
+            imageUrl: null,
         });
     } else if (selectedBlockId) {
         const block = project?.contentBlocks.find(b => b.id === selectedBlockId);
@@ -36,6 +41,18 @@ const RecipesTab: React.FC = () => {
         setCurrentBlock(null);
     }
   }, [selectedBlockId, project?.contentBlocks]);
+
+  useEffect(() => {
+      const currentBlockCount = project?.contentBlocks.length || 0;
+      if (selectedBlockId === 'new' && currentBlockCount > prevBlockCountRef.current) {
+          const lastBlock = project.contentBlocks[project.contentBlocks.length - 1];
+          if (lastBlock) {
+              setSelectedBlockId(lastBlock.id);
+          }
+      }
+      prevBlockCountRef.current = currentBlockCount;
+  }, [project?.contentBlocks, selectedBlockId]);
+
 
   const handleFieldChange = (field: keyof ContentBlock, value: string) => {
     if (currentBlock) {
@@ -79,12 +96,13 @@ const RecipesTab: React.FC = () => {
 
         if (generatedItems && generatedItems.length > 0) {
             if (selectedBlockId === 'new') {
-                const newBlocks = generatedItems.map(item => ({
+                const newBlocks: ContentBlock[] = generatedItems.map(item => ({
                     id: generateId(),
                     type: currentBlock.type!,
                     title: item.title,
                     description: currentBlock.description!,
                     textContent: item.textContent,
+                    imageUrl: null,
                 }));
                 // Single update with all new blocks
                 updateProject({ contentBlocks: [...(project.contentBlocks || []), ...newBlocks] });
@@ -114,10 +132,32 @@ const RecipesTab: React.FC = () => {
     }
   };
   
+  const handleGenerateImage = async () => {
+    if (!project?.topic || !currentBlock?.title || !currentBlock.type) return;
+    
+    setIsGeneratingImage(true);
+    try {
+        const imageUrl = await generateContentBlockImage(currentBlock.title, currentBlock.type);
+        if (imageUrl && currentBlock.id) {
+            const updatedBlock = { ...currentBlock, id: currentBlock.id, imageUrl } as ContentBlock;
+            updateContentBlock(updatedBlock);
+            setCurrentBlock(updatedBlock);
+        }
+    } catch (error) {
+        console.error("Error generating image:", error);
+    } finally {
+        setIsGeneratingImage(false);
+    }
+  };
+
   const handleSave = () => {
     if (!currentBlock || !currentBlock.type || !currentBlock.title) return;
+
     if (currentBlock.id) {
         updateContentBlock(currentBlock as ContentBlock);
+    } else {
+        const { id, ...newBlockData } = currentBlock;
+        addContentBlock(newBlockData as Omit<ContentBlock, 'id'>);
     }
   };
   
@@ -140,7 +180,7 @@ const RecipesTab: React.FC = () => {
     }
   };
 
-  const isBusy = isLoading || isGeneratingPrompt;
+  const isBusy = isLoading || isGeneratingPrompt || isGeneratingImage;
 
   return (
     <Card>
@@ -261,30 +301,55 @@ const RecipesTab: React.FC = () => {
               
               {isLoading && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
 
-              {currentBlock.textContent && (
                 <div className="mt-4 space-y-4 pt-4 border-t">
-                  <div>
-                    <label className="block font-semibold">{t('recipesTab.editTitle')}</label>
-                    <input
-                      type="text"
-                      value={currentBlock.title}
-                      onChange={e => handleFieldChange('title', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold">{t('recipesTab.generatedText')}</label>
-                    <textarea
-                      value={currentBlock.textContent}
-                      onChange={e => handleFieldChange('textContent', e.target.value)}
-                      rows={10}
-                      className="w-full p-2 border border-gray-300 rounded-md whitespace-pre-wrap"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block font-semibold">{t('recipesTab.editTitle')}</label>
+                            <input
+                            type="text"
+                            value={currentBlock.title}
+                            onChange={e => handleFieldChange('title', e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded-md"
+                            />
+                        </div>
+                        <div>
+                            <label className="block font-semibold">{t('recipesTab.generatedText')}</label>
+                            <textarea
+                            value={currentBlock.textContent}
+                            onChange={e => handleFieldChange('textContent', e.target.value)}
+                            rows={10}
+                            className="w-full p-2 border border-gray-300 rounded-md whitespace-pre-wrap"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block font-semibold">{t('recipesTab.generatedImage')}</label>
+                        <div className="mt-1 w-full aspect-square border border-gray-300 rounded-md flex items-center justify-center bg-neutral-light/50 relative overflow-hidden">
+                            {isGeneratingImage ? (
+                            <div className="flex flex-col items-center gap-2">
+                                <LoadingSpinner className="h-8 w-8 text-brand-primary" />
+                                <p className="text-sm text-neutral-medium">{t('recipesTab.generatingImage')}</p>
+                            </div>
+                            ) : currentBlock.imageUrl ? (
+                            <img src={currentBlock.imageUrl} alt={currentBlock.title} className="w-full h-full object-cover" />
+                            ) : (
+                            <p className="text-neutral-medium text-sm px-4 text-center">{t('recipesTab.noImage')}</p>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleGenerateImage}
+                            disabled={isBusy || !currentBlock.id}
+                            className="mt-2 w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
+                        >
+                            {isGeneratingImage ? <LoadingSpinner /> : (currentBlock.imageUrl ? `✨ ${t('recipesTab.regenerateImage')}` : `✨ ${t('recipesTab.generateImage')}`)}
+                        </button>
+                    </div>
                   </div>
                    <div className="flex gap-4 pt-4 border-t">
                     <button
                         onClick={handleSave}
-                        disabled={!currentBlock.title || selectedBlockId === 'new'}
+                        disabled={isBusy || !currentBlock.title}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
                     >
                        {t('recipesTab.saveButton')}
@@ -299,7 +364,6 @@ const RecipesTab: React.FC = () => {
                     )}
                 </div>
                 </div>
-              )}
             </div>
             ) : project && project.contentBlocks.length > 0 ? (
                 <div className="animate-fade-in">

@@ -23,8 +23,8 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
     { key: 'content', label: t('tabs.content'), isEnabled: isStructureComplete },
     { key: 'recipes', label: t('tabs.recipes'), isEnabled: isStructureComplete },
     { key: 'metadata', label: t('tabs.metadata'), isEnabled: isContentComplete },
-    { key: 'layout', label: t('tabs.layout'), isEnabled: isContentComplete },
     { key: 'cover', label: t('tabs.cover'), isEnabled: isContentComplete },
+    { key: 'layout', label: t('tabs.layout'), isEnabled: isContentComplete },
     { key: 'validation', label: t('tabs.validation'), isEnabled: isContentComplete },
     { key: 'archive', label: t('tabs.archive'), isEnabled: isResearchComplete },
   ];

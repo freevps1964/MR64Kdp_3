@@ -19,6 +19,7 @@ const ContentTab: React.FC = () => {
   const [tone, setTone] = useState<ToneOfVoice>('Informal');
   const [audience, setAudience] = useState<TargetAudience>('Beginners');
   const [style, setStyle] = useState<WritingStyle>('Expository');
+  const [wordCount, setWordCount] = useState<number>(1000);
 
   const isSavingRef = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -89,7 +90,7 @@ const ContentTab: React.FC = () => {
         project.topic, 
         parentChapter.title, 
         isSubchapter ? selectedItem.title : undefined,
-        1000, // Word count requirement
+        wordCount,
         project.researchData?.keywords,
         tone,
         audience,
@@ -141,7 +142,7 @@ const ContentTab: React.FC = () => {
                 project.topic,
                 parent.title,
                 isSubchapter ? (node as SubChapter).title : undefined,
-                1000,
+                wordCount,
                 project.researchData?.keywords,
                 tone,
                 audience,
@@ -179,7 +180,7 @@ const ContentTab: React.FC = () => {
   const GenerationOptions = () => (
     <div className={`mt-4 p-4 border border-gray-200 rounded-lg bg-neutral-light/50 ${isBusy ? 'opacity-50 pointer-events-none' : ''}`}>
         <h4 className="font-semibold text-brand-dark mb-3">{t('contentTab.options.title')}</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
                 <label htmlFor="tone-select" className="block text-sm font-medium text-gray-700">{t('contentTab.options.tone')}</label>
                 <select 
@@ -228,6 +229,18 @@ const ContentTab: React.FC = () => {
                     <option value="Conversational">{t('contentTab.options.styles.Conversational')}</option>
                     <option value="Journalistic">{t('contentTab.options.styles.Journalistic')}</option>
                 </select>
+            </div>
+            <div>
+                <label htmlFor="word-count-input" className="block text-sm font-medium text-gray-700">{t('contentTab.options.wordCount')}</label>
+                <input 
+                    id="word-count-input"
+                    type="number"
+                    value={wordCount}
+                    onChange={(e) => setWordCount(parseInt(e.target.value, 10) || 500)}
+                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                    min="100"
+                    step="50"
+                />
             </div>
         </div>
     </div>

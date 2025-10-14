@@ -6,14 +6,13 @@ import BookPreview from '../PromptForm';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import type { LayoutTemplate, PageSize } from '../../types';
 
-declare const html2canvas: any;
-declare const jspdf: any;
-
 const ValidationTab: React.FC = () => {
   const { t } = useLocalization();
   const { project } = useProject();
   const [isExporting, setIsExporting] = useState(false);
 
+  const isResearchComplete = !!project?.researchData;
+  const isStructureComplete = !!project?.bookStructure && project.bookStructure.chapters.length > 0;
   const isMetadataComplete = !!(project?.bookTitle && project?.author && project?.description);
   
   let areAllChaptersWritten = false;
@@ -30,6 +29,8 @@ const ValidationTab: React.FC = () => {
   }
 
   const checklistItems = [
+    { label: t('validationTab.item0_research'), checked: isResearchComplete },
+    { label: t('validationTab.item0_structure'), checked: isStructureComplete },
     { label: t('validationTab.item1'), checked: areAllChaptersWritten },
     { label: t('validationTab.item2'), checked: isMetadataComplete },
     { label: t('validationTab.item3'), checked: !!project?.coverImage },
@@ -38,57 +39,87 @@ const ValidationTab: React.FC = () => {
   
   const isReadyForExport = checklistItems.every(item => item.checked);
 
+  const waitForLibraries = (timeout = 5000): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        const checkLibs = () => {
+            if ((window as any).html2canvas && (window as any).jspdf) {
+                return true;
+            }
+            return false;
+        }
+
+        if (checkLibs()) {
+            return resolve();
+        }
+
+        const startTime = Date.now();
+        const intervalId = setInterval(() => {
+            if (checkLibs()) {
+                clearInterval(intervalId);
+                return resolve();
+            }
+            if (Date.now() - startTime > timeout) {
+                clearInterval(intervalId);
+                return reject(new Error("PDF generation libraries failed to load."));
+            }
+        }, 200);
+    });
+  };
+
   const handleExportPDF = async () => {
-    const previewElement = document.querySelector('.book-page');
-    if (!previewElement || !project) return;
-
+    if (!project) return;
     setIsExporting(true);
+
     try {
-      const canvas = await html2canvas(previewElement as HTMLElement, {
-        scale: 2,
-        useCORS: true,
-        scrollY: 0,
-        windowWidth: (previewElement as HTMLElement).scrollWidth,
-        windowHeight: (previewElement as HTMLElement).scrollHeight,
-      });
+        await waitForLibraries();
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      const { jsPDF } = jspdf;
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'px',
-        format: 'a4',
-        hotfixes: ['px_scaling'],
-      });
+        const { html2canvas } = window as any;
+        const { jsPDF } = (window as any).jspdf;
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+        const fullBookContainer = document.getElementById('validation-export-container');
+        if (!fullBookContainer) {
+            throw new Error("Full book render container not found.");
+        }
 
-      const ratio = pdfWidth / imgWidth;
-      const scaledImgHeight = imgHeight * ratio;
+        const pages = fullBookContainer.querySelectorAll('.book-page');
+        if (pages.length === 0) {
+            throw new Error("No pages found to export.");
+        }
 
-      let heightLeft = scaledImgHeight;
-      let position = 0;
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'pt',
+            format: project.pageSize === '6x9' ? [432, 648] : [504, 720],
+        });
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledImgHeight);
-      heightLeft -= pdfHeight;
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i] as HTMLElement;
+            const canvas = await html2canvas(page, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                width: page.offsetWidth,
+                height: page.offsetHeight,
+            });
 
-      while (heightLeft >= 0) {
-        position = -heightLeft;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledImgHeight);
-        heightLeft -= pdfHeight;
-      }
-      
-      pdf.save(`${project.projectTitle || 'book'}.pdf`);
-    } catch (error) {
-      console.error("Error exporting PDF:", error);
-      alert("An error occurred while exporting the PDF. Please try again.");
+            const imgData = canvas.toDataURL('image/png');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            if (i > 0) {
+                pdf.addPage();
+            }
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        }
+
+        pdf.save(`${project.projectTitle || 'book'}.pdf`);
+
+    } catch (error: any) {
+        console.error("Error exporting PDF:", error);
+        alert(`An error occurred while exporting the PDF: ${error.message}`);
     } finally {
-      setIsExporting(false);
+        setIsExporting(false);
     }
   };
 
@@ -127,13 +158,13 @@ const ValidationTab: React.FC = () => {
         </div>
       </Card>
       
-      {/* Hidden BookPreview for PDF export */}
-      <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+      <div id="validation-export-container" style={{ position: 'fixed', left: '-9999px', top: '-9999px', zIndex: -1 }}>
         {project && (
            <BookPreview
               project={project}
               layout={project.layoutTemplate}
               pageSize={project.pageSize}
+              renderAllPages={true}
           />
         )}
       </div>

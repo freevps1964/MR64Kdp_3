@@ -115,6 +115,7 @@
       "tone": "Tone of Voice",
       "audience": "Target Audience",
       "style": "Writing Style",
+      "wordCount": "Target Word Count",
       "tones": {
         "Informal": "Informal",
         "Formal": "Formal",
@@ -198,6 +199,8 @@
     "title": "Validation & Export",
     "description": "Review your project and check against KDP guidelines before exporting the final files.",
     "checklistTitle": "Pre-flight Checklist",
+    "item0_research": "Research has been completed.",
+    "item0_structure": "Book structure has been generated.",
     "item1": "All chapters have content.",
     "item2": "Metadata is complete (Title, Author, Description).",
     "item3": "A cover has been selected.",
@@ -226,7 +229,11 @@
     "generatingItem": "Generating {current} of {total}: {title}...",
     "blockOf": "Block {current} of {total}",
     "prevBlock": "Previous",
-    "nextBlock": "Next"
+    "nextBlock": "Next",
+    "generateImage": "Generate Image",
+    "regenerateImage": "Regenerate Image",
+    "noImage": "No image generated yet.",
+    "generatingImage": "Generating image..."
   },
   "archiveTab": {
     "title": "Project Archive",

@@ -17,12 +17,16 @@
         height: 75vh;
         overflow-y: auto;
         display: flex;
+        flex-wrap: wrap;
+        gap: 2rem;
         justify-content: center;
+        align-items: flex-start;
       }
       .book-page {
         background-color: white;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         box-sizing: border-box;
+        flex-shrink: 0;
       }
 
       /* KDP Page Sizes */
@@ -41,7 +45,7 @@
       .book-title { font-size: 2.25rem; line-height: 2.5rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
       .book-subtitle { font-size: 1.25rem; line-height: 1.75rem; text-align: center; color: #6b7280; margin-bottom: 1rem; }
       .book-author { text-align: center; font-style: italic; margin-bottom: 3rem; }
-      .chapter-container { margin-top: 2.5rem; page-break-before: always; }
+      .chapter-container { margin-top: 2.5rem; }
       .chapter-title { font-size: 1.875rem; line-height: 2.25rem; font-weight: 600; margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; }
       .subchapter-container { margin-top: 1.5rem; margin-left: 1rem; }
       .subchapter-title { font-size: 1.25rem; line-height: 1.75rem; font-weight: 600; margin-bottom: 1rem; }
@@ -53,6 +57,13 @@
         content: "";
         display: block;
         margin-bottom: 1rem;
+      }
+      .content-block-image {
+        display: block;
+        margin: 1.5rem auto;
+        max-width: 80%;
+        border-radius: 0.25rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
       }
 
 
@@ -100,7 +111,7 @@
           box-shadow: none;
           margin: 0 auto; /* Center the page content */
           min-height: 0; /* Override screen style */
-          /* Removed page-break-after: always; to avoid a blank page at the end */
+          page-break-after: always; /* Each .book-page is a new printed page */
         }
         .chapter-container, .appendix-container {
           page-break-before: always; /* Each chapter starts on a new page */
@@ -112,6 +123,31 @@
             orphans: 3; /* Minimum lines at the end of a page for a broken paragraph */
             widows: 3; /* Minimum lines at the start of a page for a broken paragraph */
         }
+      }
+      
+      /* Styles for PDF Export Rendering */
+      #full-book-render-for-export, #validation-export-container {
+          position: fixed;
+          left: -9999px; /* Position off-screen */
+          top: 0;
+          z-index: -1; /* Ensure it's not interactive */
+          background: white; /* Give it a background for rendering */
+      }
+
+      #full-book-render-for-export .book-preview-container,
+      #validation-export-container .book-preview-container {
+        /* Override screen styles for export rendering */
+        height: auto;
+        overflow: visible;
+        display: block; /* Not flex, to stack pages vertically */
+        padding: 0;
+        border: none;
+      }
+      #full-book-render-for-export .book-page,
+      #validation-export-container .book-page {
+          margin: 10px; /* Space between pages for clean canvas capture */
+          box-shadow: none;
+          page-break-after: always; /* Helps with print media but not html2canvas directly */
       }
 
     </style>

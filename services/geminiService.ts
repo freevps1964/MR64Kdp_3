@@ -234,7 +234,7 @@ export const generateContentStream = (
   ].filter(Boolean).join('\n');
 
   const wordCountInstruction = wordCount 
-    ? `REQUISITO FONDAMENTALE: Il contenuto di questa sezione DEVE essere di almeno ${wordCount} parole. Scrivi un testo completo, dettagliato e approfondito. Non fornire un breve riassunto. Approfondisci ogni punto per assicurarti che il requisito del conteggio parole sia soddisfatto.`
+    ? `REQUISITO FONDAMENTALE: Il contenuto di questa sezione DEVE avere una lunghezza di circa ${wordCount} parole. Scrivi un testo completo e dettagliato che rispetti questa lunghezza target. Non fornire un breve riassunto.`
     : '';
 
   const regenerationInstruction = existingContent 
@@ -278,13 +278,24 @@ export const generateCoverPromptFromBestsellers = async (
   category: string
 ): Promise<string> => {
   const keywordList = keywords.map(k => k.keyword).join(', ');
-  const prompt = `Research the current best-selling book covers on Amazon.com within the "${category}" category, focusing on the topic of "${topic}".
-Analyze common design trends, color palettes, typography styles (e.g., serif, sans-serif, bold, minimalist), and imagery used in the top results.
-Based on this analysis, create a highly detailed and effective prompt for an AI image generator (like Imagen) to design a book cover for a book titled "${title}".
-The prompt should incorporate concepts from the following keywords: ${keywordList}.
-The prompt must be in English, descriptive, and aim for a commercially successful design that would stand out. Emphasize visual elements, mood, and composition. Ensure the prompt describes a design with significant clear or uncluttered space at the top (for the title and subtitle) and bottom (for the author's name) to prevent text from obscuring key visual elements.
-For example: "A minimalist book cover with a deep blue background. In the center, a stylized, golden line art of a brain with interconnected nodes, leaving the top third and bottom fifth of the cover empty. The title '${title}' is in a clean, white, sans-serif font at the top. The overall mood is intelligent, modern, and professional."
-The output must be only the text of the prompt, without any other introductory text or explanation.`;
+  const prompt = `AGISCI COME un esperto di marketing visivo e un art director specializzato in copertine di libri per Amazon KDP.
+La tua missione è creare il prompt perfetto per un generatore di immagini AI (come Imagen) per produrre una copertina di bestseller per un libro intitolato "${title}" sull'argomento "${topic}" nella categoria "${category}".
+
+Ecco il processo che devi seguire:
+1.  **Ricerca e Analisi Approfondita**: Esegui una ricerca sui 5 attuali bestseller più venduti su Amazon.com nella categoria "${category}" correlati all'argomento "${topic}".
+2.  **Scomposizione Visiva**: Per questi 5 bestseller, analizza e sintetizza meticolosamente i seguenti elementi di design:
+    *   **Palette di Colori Dominanti**: Quali sono i 2-3 colori principali utilizzati? Sono vibranti, pastello, monocromatici? C'è un colore d'accento ricorrente?
+    *   **Stile Tipografico**: Il font del titolo è serif, sans-serif, script, o calligrafico? È in grassetto, sottile, maiuscolo? Come si relaziona con il font del nome dell'autore?
+    *   **Immagini e Iconografia**: Usano fotografie di alta qualità, illustrazioni, grafica astratta, icone o solo testo? Qual è il soggetto principale delle immagini (persone, oggetti, paesaggi)?
+    *   **Composizione e Mood**: La composizione è minimalista, affollata, simmetrica? Qual è l'atmosfera generale (es. professionale, ispiratrice, drammatica, calma, energica)?
+3.  **Creazione del Prompt**: Sulla base della tua analisi, costruisci un unico prompt, **in inglese**, estremamente dettagliato e descrittivo. Questo prompt deve guidare l'AI a creare una copertina che sia commercialmente vincente, si distingua dalla concorrenza ma si allinei alle aspettative del pubblico per quella categoria.
+
+Requisiti del prompt finale:
+-   Deve essere in **inglese**.
+-   Deve descrivere una scena, uno stile e un'atmosfera specifici.
+-   Deve incorporare concetti dalle seguenti parole chiave: ${keywordList}.
+-   **FONDAMENTALE**: Deve specificare una composizione che lasci ampio spazio libero nella parte superiore per il titolo e il sottotitolo, e nella parte inferiore per il nome dell'autore. Ad esempio, menziona "negative space at the top and bottom" o "main visual element centered in the middle third".
+-   L'output finale deve essere **solo il testo del prompt**, senza alcuna introduzione, spiegazione o la tua analisi. Solo il prompt per l'IA.`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -497,6 +508,39 @@ export const generateContentBlockText = async (
 
     } catch (error) {
         console.error(`Error generating ${type} text:`, error);
+        return null;
+    }
+};
+
+/**
+ * Genera un'immagine per un blocco di contenuto (ricetta/esercizio).
+ */
+export const generateContentBlockImage = async (title: string, type: ContentBlockType): Promise<string | null> => {
+    const stylePrompt = type === 'recipe'
+        ? 'A professional, high-quality photograph of the finished dish, cookbook style, bright lighting, clean background, appetizing, hyper-realistic.'
+        : 'A clear, instructional, high-quality photograph of a person performing the exercise, studio lighting, focus on proper form, minimalist background, realistic.';
+
+    const prompt = `${stylePrompt} Image of: "${title}".`;
+
+    try {
+        // Fix: Explicitly type the response to ensure correct type inference.
+        const response: GenerateImagesResponse = await withRetry(() => ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: prompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: '1:1',
+            },
+        }));
+
+        if (response.generatedImages && response.generatedImages.length > 0) {
+            const base64ImageBytes = response.generatedImages[0].image.imageBytes;
+            return `data:image/jpeg;base64,${base64ImageBytes}`;
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error generating ${type} image:`, error);
         return null;
     }
 };

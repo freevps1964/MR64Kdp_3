@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -66,6 +67,9 @@ const CoverTab: React.FC = () => {
     maxWidth: number,
     lineHeight: number
   ): number => {
+    if (!text?.trim()) {
+        return y;
+    }
     const words = text.split(' ');
     let line = '';
     let currentY = y;
@@ -124,32 +128,29 @@ const CoverTab: React.FC = () => {
             let currentY = canvasHeight * 0.15; // Cursore Y iniziale
 
             // --- Draw Title ---
-            if (project.bookTitle) {
-                const title = project.bookTitle.toUpperCase();
-                let titleFontSize = 100;
+            const title = (project.bookTitle || '').toUpperCase();
+            let titleFontSize = 100;
+            ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+            // Shrink font size until title fits within content width
+            while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
+                titleFontSize -= 5;
                 ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
-                // Shrink font size until title fits within content width
-                while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
-                    titleFontSize -= 5;
-                    ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
-                }
-                currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
             }
+            currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
 
             // Aggiungi spazio prima del sottotitolo
             currentY += 20;
             
-            // --- Draw Subtitle (if it exists) ---
-            if (project.subtitle) {
-                let subtitleFontSize = 45;
+            // --- Draw Subtitle ---
+            const subtitle = project.subtitle || '';
+            let subtitleFontSize = 45;
+            ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+                // Shrink font size until subtitle fits within content width
+            while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 15) {
+                subtitleFontSize -= 2;
                 ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
-                 // Shrink font size until subtitle fits within content width
-                while (ctx.measureText(project.subtitle).width > contentWidth && subtitleFontSize > 15) {
-                    subtitleFontSize -= 2;
-                    ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
-                }
-                currentY = wrapText(ctx, project.subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
             }
+            currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
 
             // --- Draw Author (bottom-right) ---
             if (project.author) {
@@ -162,7 +163,6 @@ const CoverTab: React.FC = () => {
             
             // --- Draw Bonus Sticker (bottom-left) ---
             if (project.coverBonusCount && project.coverBonusCount > 0) {
-                // Reset shadow for sticker drawing
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
                 ctx.shadowBlur = 15;
                 ctx.shadowOffsetX = 5;
@@ -170,23 +170,13 @@ const CoverTab: React.FC = () => {
 
                 const bonusNumber = project.coverBonusCount.toString();
                 const bonusText = t('coverTab.bonusText').toUpperCase();
+                const bonusTextLines = bonusText.split(' ');
 
-                // Calculate required text dimensions
-                ctx.font = `bold 100px 'Montserrat', sans-serif`;
-                const numberMetrics = ctx.measureText(bonusNumber);
-                ctx.font = `bold 32px 'Montserrat', sans-serif`;
-                const textMetrics = ctx.measureText(bonusText);
-                
-                const textWidth = Math.max(numberMetrics.width, textMetrics.width);
-                const textHeight = 100 + 32 + 20; // font sizes + spacing
-                
-                const stickerPadding = 60;
-                const stickerRadius = (Math.max(textWidth, textHeight) / 2) + stickerPadding;
-
+                const stickerRadius = 150;
                 const stickerMargin = 50;
                 const stickerCenterX = stickerRadius + stickerMargin;
                 const stickerCenterY = canvasHeight - stickerRadius - stickerMargin;
-
+                
                 const drawStar = (cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) => {
                     let rot = Math.PI / 2 * 3;
                     let x = cx;
@@ -208,30 +198,33 @@ const CoverTab: React.FC = () => {
                     ctx.closePath();
                 };
                 
-                // Draw star shape
                 ctx.fillStyle = '#FFD700'; // Gold color
-                drawStar(stickerCenterX, stickerCenterY, 12, stickerRadius, stickerRadius * 0.6);
+                drawStar(stickerCenterX, stickerCenterY, 24, stickerRadius, stickerRadius * 0.7);
                 ctx.fill();
-                
-                // --- Draw text inside sticker ---
-                ctx.shadowColor = 'transparent'; // No shadow for text on sticker
+
+                ctx.shadowColor = 'transparent';
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
             
-                // Draw bonus count
-                ctx.font = `bold 100px 'Montserrat', sans-serif`;
-                ctx.fillText(bonusNumber, stickerCenterX, stickerCenterY - 25);
+                ctx.font = `bold 70px 'Montserrat', sans-serif`;
+                ctx.fillText(bonusNumber, stickerCenterX, stickerCenterY - 35);
                 
-                // Draw bonus text
-                ctx.font = `bold 32px 'Montserrat', sans-serif`;
-                ctx.fillText(bonusText, stickerCenterX, stickerCenterY + 45);
+                ctx.font = `bold 35px 'Montserrat', sans-serif`;
+                if (bonusTextLines[0]) {
+                    ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 20);
+                }
+                
+                if (bonusTextLines[1]) {
+                    ctx.fillText(bonusTextLines[1], stickerCenterX, stickerCenterY + 60);
+                } else if (bonusTextLines.length < 2) {
+                    ctx.fillText(bonusText, stickerCenterX, stickerCenterY + 20);
+                }
             }
             
             resolve(canvas.toDataURL('image/png'));
         };
         img.onerror = (err) => reject(err);
-        // Assicura che l'immagine base64 abbia il prefisso corretto
         const src = base64Image.startsWith('data:') ? base64Image : `data:image/png;base64,${base64Image}`;
         img.src = src;
     });

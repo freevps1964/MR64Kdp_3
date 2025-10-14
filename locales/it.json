@@ -115,6 +115,7 @@
       "tone": "Tono di Voce",
       "audience": "Pubblico di Riferimento",
       "style": "Stile di Scrittura",
+      "wordCount": "Conteggio Parole Target",
       "tones": {
         "Informal": "Informale",
         "Formal": "Formale",
@@ -198,6 +199,8 @@
     "title": "Validazione ed Esportazione",
     "description": "Rivedi il tuo progetto e controllalo rispetto alle linee guida di KDP prima di esportare i file finali.",
     "checklistTitle": "Checklist Pre-esportazione",
+    "item0_research": "La ricerca è stata completata.",
+    "item0_structure": "La struttura del libro è stata generata.",
     "item1": "Tutti i capitoli hanno un contenuto.",
     "item2": "I metadati sono completi (Titolo, Autore, Descrizione).",
     "item3": "È stata selezionata una copertina.",
@@ -226,7 +229,11 @@
     "generatingItem": "Generazione {current} di {total}: {title}...",
     "blockOf": "Blocco {current} di {total}",
     "prevBlock": "Precedente",
-    "nextBlock": "Successivo"
+    "nextBlock": "Successivo",
+    "generateImage": "Genera Immagine",
+    "regenerateImage": "Rigenera Immagine",
+    "noImage": "Nessuna immagine ancora generata.",
+    "generatingImage": "Generazione immagine..."
   },
   "archiveTab": {
     "title": "Archivio del Progetto",
