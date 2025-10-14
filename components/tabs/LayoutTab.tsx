@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
-import type { LayoutTemplate, PageSize } from '../../types';
+import type { LayoutTemplate, PageSize, Project } from '../../types';
 import BookPreview from '../PromptForm';
 import LoadingSpinner from '../icons/LoadingSpinner';
+import { useToast } from '../../hooks/useToast';
+import { translateFullProject } from '../../services/geminiService';
 
 const LayoutTemplateCard: React.FC<{
   name: LayoutTemplate;
@@ -34,8 +36,16 @@ const LayoutTemplateCard: React.FC<{
 const LayoutTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject } = useProject();
+  const { showToast } = useToast();
+
   const [isExporting, setIsExporting] = useState(false);
   const [showFullRender, setShowFullRender] = useState(false);
+  
+  // Stati per la traduzione
+  const [targetLang, setTargetLang] = useState('it');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationProgress, setTranslationProgress] = useState(0);
+  const [translatedProject, setTranslatedProject] = useState<Project | null>(null);
 
   const templates: { name: LayoutTemplate, description: string }[] = [
     { name: 'Classic', description: t('layoutTab.classic') },
@@ -47,6 +57,34 @@ const LayoutTab: React.FC = () => {
     updateProject({ layoutTemplate: template });
   };
   
+  const handleLanguageChange = (lang: string) => {
+    setTargetLang(lang);
+    setTranslatedProject(null); // Resetta la traduzione quando la lingua cambia
+  };
+
+  const handleTranslate = async () => {
+    if (!project || targetLang === 'it') return;
+    
+    setIsTranslating(true);
+    setTranslationProgress(0);
+    setTranslatedProject(null);
+
+    try {
+        const translation = await translateFullProject(
+            project,
+            targetLang,
+            (progress) => setTranslationProgress(progress)
+        );
+        setTranslatedProject(translation);
+        showToast('Traduzione completata!', 'success');
+    } catch (error) {
+        console.error("Translation failed:", error);
+        showToast('Errore durante la traduzione.', 'error');
+    } finally {
+        setIsTranslating(false);
+    }
+  };
+
   const waitForLibraries = (timeout = 5000): Promise<void> => {
     return new Promise((resolve, reject) => {
         const checkLibs = () => {
@@ -137,9 +175,10 @@ const LayoutTab: React.FC = () => {
   };
 
     const handleExportDoc = () => {
-        if (!project || !project.bookStructure) return;
+        const projectToExport = translatedProject || project;
+        if (!projectToExport || !projectToExport.bookStructure) return;
 
-        const layout = project.layoutTemplate;
+        const layout = projectToExport.layoutTemplate;
         const font = layout === 'Classic' ? "'EB Garamond', serif" :
                      layout === 'Modern' ? "'Georgia', serif" :
                      "'Times New Roman', Times, serif";
@@ -167,13 +206,13 @@ const LayoutTab: React.FC = () => {
 
         let bodyContent = `
             <div>
-                <h1 class="book-title">${project.bookTitle || project.projectTitle}</h1>
-                ${project.subtitle ? `<p class="book-subtitle">${project.subtitle}</p>` : ''}
-                ${project.author ? `<p class="book-author">by ${project.author}</p>` : ''}
+                <h1 class="book-title">${projectToExport.bookTitle || projectToExport.projectTitle}</h1>
+                ${projectToExport.subtitle ? `<p class="book-subtitle">${projectToExport.subtitle}</p>` : ''}
+                ${projectToExport.author ? `<p class="book-author">by ${projectToExport.author}</p>` : ''}
             </div>
         `;
 
-        project.bookStructure.chapters.forEach(chapter => {
+        projectToExport.bookStructure.chapters.forEach(chapter => {
             bodyContent += `
                 <div class="chapter-container">
                     <h2 class="chapter-title">${chapter.title}</h2>
@@ -189,11 +228,11 @@ const LayoutTab: React.FC = () => {
             `;
         });
 
-        if (project.contentBlocks && project.contentBlocks.length > 0) {
+        if (projectToExport.contentBlocks && projectToExport.contentBlocks.length > 0) {
             bodyContent += `
                 <div class="chapter-container">
                     <h2 class="chapter-title">${t('layoutTab.appendix')}</h2>
-                    ${project.contentBlocks.map(block => `
+                    ${projectToExport.contentBlocks.map(block => `
                         <div class="subchapter-container">
                             <h3 class="subchapter-title">${block.title}</h3>
                             ${block.imageUrl ? `<img src="${block.imageUrl}" alt="${block.title}" style="display: block; margin: 1.5rem auto; max-width: 80%; border: 1px solid #cccccc; padding: 5px;" />` : ''}
@@ -209,7 +248,7 @@ const LayoutTab: React.FC = () => {
             <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>${project.projectTitle}</title>
+                    <title>${projectToExport.projectTitle}</title>
                     <style>${styles}</style>
                 </head>
                 <body>
@@ -222,7 +261,7 @@ const LayoutTab: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${project.projectTitle || 'book'}.doc`;
+        a.download = `${projectToExport.projectTitle || 'book'}.doc`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -246,7 +285,6 @@ const LayoutTab: React.FC = () => {
     </div>
   );
 
-  // Fix: Corrected the malformed `fontFamily` style property. The original syntax was invalid, causing multiple parsing errors.
   const minimalistPreview = (
       <div className="font-sans" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         <div className="text-lg font-semibold">Chapter Title</div>
@@ -302,9 +340,28 @@ const LayoutTab: React.FC = () => {
          <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
             <h3 className="text-xl font-bold text-brand-dark">{t('layoutTab.previewTitle')}</h3>
             <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2 border-r pr-2 mr-2 border-gray-300">
+                    <select
+                        value={targetLang}
+                        onChange={(e) => handleLanguageChange(e.target.value)}
+                        className="p-2 border border-gray-300 rounded-md bg-white text-sm focus:ring-brand-light focus:border-brand-light"
+                        disabled={isTranslating}
+                    >
+                        <option value="it">Italiano (Originale)</option>
+                        <option value="en">Inglese</option>
+                        <option value="de">Tedesco</option>
+                    </select>
+                    <button
+                        onClick={handleTranslate}
+                        disabled={isTranslating || targetLang === 'it'}
+                        className="flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed"
+                    >
+                        {isTranslating ? <LoadingSpinner /> : 'Traduci'}
+                    </button>
+                </div>
                 <button
                     onClick={handleExportDoc}
-                    disabled={isExporting || !project?.bookStructure}
+                    disabled={isExporting || !project?.bookStructure || isTranslating}
                     className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
                     >
                     {isExporting ? <LoadingSpinner /> : 'Export .doc'}
@@ -317,15 +374,23 @@ const LayoutTab: React.FC = () => {
                 </button>
                 <button
                 onClick={handleExportPDF}
-                disabled={isExporting || !project?.bookStructure}
+                disabled={isExporting || !project?.bookStructure || isTranslating}
                 className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
                 >
                 {isExporting ? <LoadingSpinner /> : t('layoutTab.exportPDF')}
                 </button>
             </div>
          </div>
+         {isTranslating && (
+            <div className="my-4">
+                <p className="text-center text-sm text-neutral-medium mb-1">Traduzione in corso... {translationProgress}%</p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${translationProgress}%` }}></div>
+                </div>
+            </div>
+          )}
         <BookPreview 
-            project={project} 
+            project={translatedProject || project} 
             layout={project?.layoutTemplate || 'Modern'}
             pageSize={selectedPageSize}
          />

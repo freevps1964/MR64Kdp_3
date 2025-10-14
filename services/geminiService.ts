@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse, Modality } from "@google/genai";
-import type { BookStructure, ResearchResult, Keyword, GroundingSource, ContentBlockType } from '../types';
+import type { BookStructure, ResearchResult, Keyword, GroundingSource, ContentBlockType, Project } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -543,4 +543,91 @@ export const generateContentBlockImage = async (title: string, type: ContentBloc
         console.error(`Error generating ${type} image:`, error);
         return null;
     }
+};
+
+/**
+ * Traduce un dato testo in una lingua di destinazione.
+ */
+export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
+    if (!text || text.trim() === '') {
+        return '';
+    }
+    const targetLanguageName = { en: 'English', de: 'German' }[targetLanguage] || targetLanguage;
+
+    const prompt = `You are an expert multilingual translator. Translate the following text from Italian to ${targetLanguageName}.
+    Preserve original formatting such as line breaks or special characters.
+    Return ONLY the translated text, without any introductory phrases or explanations.
+
+    Text to translate:
+    ---
+    ${text}
+    ---
+    `;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        }));
+        return response.text.trim();
+    } catch (error) {
+        console.error(`Error translating text to ${targetLanguage}:`, error);
+        return `[Translation Error] ${text}`; // Restituisce il testo originale con un marcatore di errore
+    }
+};
+
+/**
+ * Traduce l'intero contenuto testuale di un progetto.
+ */
+export const translateFullProject = async (
+    project: Project, 
+    targetLanguage: string, 
+    onProgress: (progress: number) => void
+): Promise<Project> => {
+    
+    const translatedProject = JSON.parse(JSON.stringify(project)); // Copia profonda
+
+    const textsToTranslate: { obj: any; key: string }[] = [];
+
+    // Raccoglie tutti i campi di testo
+    if (translatedProject.bookTitle) textsToTranslate.push({ obj: translatedProject, key: 'bookTitle' });
+    if (translatedProject.subtitle) textsToTranslate.push({ obj: translatedProject, key: 'subtitle' });
+    if (translatedProject.author) textsToTranslate.push({ obj: translatedProject, key: 'author' });
+    
+    translatedProject.bookStructure?.chapters.forEach((ch: any) => {
+        if (ch.title) textsToTranslate.push({ obj: ch, key: 'title' });
+        if (ch.content) textsToTranslate.push({ obj: ch, key: 'content' });
+        ch.subchapters.forEach((sub: any) => {
+            if (sub.title) textsToTranslate.push({ obj: sub, key: 'title' });
+            if (sub.content) textsToTranslate.push({ obj: sub, key: 'content' });
+        });
+    });
+
+    translatedProject.contentBlocks?.forEach((block: any) => {
+        if (block.title) textsToTranslate.push({ obj: block, key: 'title' });
+        if (block.textContent) textsToTranslate.push({ obj: block, key: 'textContent' });
+    });
+    
+    const totalItems = textsToTranslate.length;
+    if (totalItems === 0) {
+        onProgress(100);
+        return translatedProject;
+    }
+
+    for (let i = 0; i < totalItems; i++) {
+        const item = textsToTranslate[i];
+        const originalText = item.obj[item.key];
+        const translatedText = await translateText(originalText, targetLanguage);
+        item.obj[item.key] = translatedText;
+        
+        const progress = Math.round(((i + 1) / totalItems) * 100);
+        onProgress(progress);
+        
+        // Aggiunge un piccolo ritardo per evitare di raggiungere i limiti di velocità
+        if (i < totalItems - 1) {
+             await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+
+    return translatedProject;
 };
