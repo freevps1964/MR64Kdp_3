@@ -4,9 +4,16 @@ import { useProject } from '../../hooks/useProject';
 import { generateContentStream } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
+import RichTextEditor from '../common/RichTextEditor';
 import type { Chapter, SubChapter, ToneOfVoice, TargetAudience, WritingStyle } from '../../types';
 
-const countWords = (text: string) => text?.split(/\s+/).filter(Boolean).length || 0;
+const countWords = (html: string) => {
+    if (!html) return 0;
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const text = div.textContent || div.innerText || '';
+    return text.trim().split(/\s+/).filter(Boolean).length;
+};
 
 const ContentTab: React.FC = () => {
   const { t } = useLocalization();
@@ -79,8 +86,14 @@ const ContentTab: React.FC = () => {
     if (!project?.topic || !selectedItem || !parentChapter) return;
 
     setIsGenerating(true);
-    if (!isRegeneration) {
-      setContent('');
+    let initialContent = '';
+    if (isRegeneration) {
+        // To regenerate, we need the plain text content, not HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        initialContent = tempDiv.textContent || tempDiv.innerText || '';
+    } else {
+        setContent('');
     }
     
     const isSubchapter = parentChapter.id !== selectedItem.id;
@@ -95,19 +108,19 @@ const ContentTab: React.FC = () => {
         tone,
         audience,
         style,
-        isRegeneration ? content : undefined
+        isRegeneration ? initialContent : undefined
       );
 
       let fullText = '';
       for await (const chunk of stream) {
         fullText += chunk.text;
-        setContent(fullText);
+        setContent(fullText.replace(/\n/g, '<br />'));
       }
-      handleContentChange(fullText);
+      handleContentChange(fullText.replace(/\n/g, '<br />'));
 
     } catch (error) {
       console.error("Error generating content:", error);
-      setContent(t('contentTab.error'));
+      setContent(`<p style="color: red;">${t('contentTab.error')}</p>`);
     } finally {
       setIsGenerating(false);
     }
@@ -153,17 +166,17 @@ const ContentTab: React.FC = () => {
             for await (const chunk of stream) {
                 fullText += chunk.text;
                 if (node.id === selectedChapterId) {
-                    setContent(fullText); // Live update for selected item
+                    setContent(fullText.replace(/\n/g, '<br />'));
                 }
             }
-            updateNodeContent(node.id, fullText);
+            updateNodeContent(node.id, fullText.replace(/\n/g, '<br />'));
 
         } catch (error) {
             console.error(`Error generating content for ${node.title}:`, error);
-            const errorMsg = t('contentTab.error');
-            updateNodeContent(node.id, `// ERROR: ${errorMsg}`);
+            const errorMsg = `<p style="color: red;">// ERROR: ${t('contentTab.error')}</p>`;
+            updateNodeContent(node.id, errorMsg);
             if (node.id === selectedChapterId) {
-                setContent(`// ERROR: ${errorMsg}`);
+                setContent(errorMsg);
             }
         }
         
@@ -176,11 +189,15 @@ const ContentTab: React.FC = () => {
   };
 
   const isBusy = isGenerating || !!generationStatus?.running;
+  
+  const currentWordCount = countWords(content);
+  const progress = wordCount > 0 ? Math.min((currentWordCount / wordCount) * 100, 100) : 0;
+  const isTargetMet = wordCount > 0 && currentWordCount >= wordCount;
 
   const GenerationOptions = () => (
     <div className={`mt-4 p-4 border border-gray-200 rounded-lg bg-neutral-light/50 ${isBusy ? 'opacity-50 pointer-events-none' : ''}`}>
         <h4 className="font-semibold text-brand-dark mb-3">{t('contentTab.options.title')}</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
                 <label htmlFor="tone-select" className="block text-sm font-medium text-gray-700">{t('contentTab.options.tone')}</label>
                 <select 
@@ -229,18 +246,6 @@ const ContentTab: React.FC = () => {
                     <option value="Conversational">{t('contentTab.options.styles.Conversational')}</option>
                     <option value="Journalistic">{t('contentTab.options.styles.Journalistic')}</option>
                 </select>
-            </div>
-            <div>
-                <label htmlFor="word-count-input" className="block text-sm font-medium text-gray-700">{t('contentTab.options.wordCount')}</label>
-                <input 
-                    id="word-count-input"
-                    type="number"
-                    value={wordCount}
-                    onChange={(e) => setWordCount(parseInt(e.target.value, 10) || 500)}
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
-                    min="100"
-                    step="50"
-                />
             </div>
         </div>
     </div>
@@ -331,15 +336,39 @@ const ContentTab: React.FC = () => {
               
               <GenerationOptions />
 
-              <textarea
-                value={content}
-                onChange={(e) => handleContentChange(e.target.value)}
-                placeholder={isGenerating ? t('contentTab.generating') : ''}
-                className="w-full h-96 p-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-4"
-                readOnly={isBusy}
-              />
-               <div className="text-right text-sm text-neutral-medium mt-2">
-                {t('contentTab.wordCount', { count: countWords(content) })}
+              <div className="mt-4">
+                <RichTextEditor
+                    value={content}
+                    onChange={handleContentChange}
+                    placeholder={isGenerating ? t('contentTab.generating') : ''}
+                    disabled={isBusy}
+                />
+              </div>
+               <div className="flex items-center justify-end flex-wrap gap-4 mt-2 text-sm text-neutral-medium">
+                  <div className="flex items-center gap-2">
+                      <label htmlFor="word-count-target" className="font-semibold">{t('contentTab.options.wordCount')}:</label>
+                      <input
+                        id="word-count-target"
+                        type="number"
+                        value={wordCount}
+                        onChange={(e) => setWordCount(parseInt(e.target.value, 10) || 0)}
+                        className="w-20 p-1 border border-gray-300 rounded-md text-center bg-white"
+                        min="0"
+                        step="50"
+                        disabled={isBusy}
+                      />
+                  </div>
+                  <div className="flex items-center gap-2 w-48">
+                      <span className={`font-semibold tabular-nums ${isTargetMet ? 'text-green-600' : ''}`}>
+                        {t('contentTab.wordCountProgress', { current: currentWordCount, target: wordCount })}
+                      </span>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className={`h-2.5 rounded-full transition-all duration-300 ${isTargetMet ? 'bg-green-500' : 'bg-brand-primary'}`} 
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                  </div>
               </div>
             </div>
           ) : (

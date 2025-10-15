@@ -202,7 +202,7 @@ const LayoutTab: React.FC = () => {
             .content-block br { content: ""; display: block; margin-bottom: 1rem; }
         `;
 
-        const sanitize = (html: string) => (html || '').replace(/\n/g, '<br />');
+        const sanitizePlainText = (text: string) => (text || '').replace(/\n/g, '<br />');
 
         let bodyContent = `
             <div>
@@ -216,12 +216,12 @@ const LayoutTab: React.FC = () => {
             bodyContent += `
                 <div class="chapter-container">
                     <h2 class="chapter-title">${chapter.title}</h2>
-                    ${chapter.content ? `<div class="content-block">${sanitize(chapter.content)}</div>` : ''}
+                    ${chapter.content ? `<div class="content-block">${chapter.content}</div>` : ''}
                     
                     ${chapter.subchapters.map(subchapter => `
                         <div class="subchapter-container">
                             <h3 class="subchapter-title">${subchapter.title}</h3>
-                            ${subchapter.content ? `<div class="content-block">${sanitize(subchapter.content)}</div>` : ''}
+                            ${subchapter.content ? `<div class="content-block">${subchapter.content}</div>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -236,7 +236,7 @@ const LayoutTab: React.FC = () => {
                         <div class="subchapter-container">
                             <h3 class="subchapter-title">${block.title}</h3>
                             ${block.imageUrl ? `<img src="${block.imageUrl}" alt="${block.title}" style="display: block; margin: 1.5rem auto; max-width: 80%; border: 1px solid #cccccc; padding: 5px;" />` : ''}
-                            <div class="content-block">${sanitize(block.textContent)}</div>
+                            <div class="content-block">${sanitizePlainText(block.textContent)}</div>
                         </div>
                     `).join('')}
                 </div>

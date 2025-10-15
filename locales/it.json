@@ -102,7 +102,8 @@
     "placeholder": "Seleziona un capitolo per iniziare...",
     "generateButton": "Genera Contenuto",
     "regenerateButton": "Rigenera Contenuto",
-    "wordCount": "Conteggio Parole: {count}",
+    "wordCount": "Conteggio Parole",
+    "wordCountProgress": "{current} / {target}",
     "saveButton": "Salva Contenuto",
     "generating": "Generazione in corso...",
     "saving": "Salvataggio...",
@@ -115,7 +116,7 @@
       "tone": "Tono di Voce",
       "audience": "Pubblico di Riferimento",
       "style": "Stile di Scrittura",
-      "wordCount": "Conteggio Parole Target",
+      "wordCount": "Obiettivo",
       "tones": {
         "Informal": "Informale",
         "Formal": "Formale",

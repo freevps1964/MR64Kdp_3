@@ -349,7 +349,7 @@ export const editCoverImage = async (base64ImageDataUrl: string, prompt: string)
                 parts: [imagePart, textPart]
             },
             config: {
-                responseModalities: [Modality.IMAGE, Modality.TEXT],
+                responseModalities: [Modality.IMAGE],
             },
         }));
         

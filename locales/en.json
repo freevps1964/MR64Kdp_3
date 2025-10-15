@@ -102,7 +102,8 @@
     "placeholder": "Select a chapter to begin...",
     "generateButton": "Generate Content",
     "regenerateButton": "Regenerate Content",
-    "wordCount": "Word Count: {count}",
+    "wordCount": "Word Count",
+    "wordCountProgress": "{current} / {target}",
     "saveButton": "Save Content",
     "generating": "Generating...",
     "saving": "Saving...",
@@ -115,7 +116,7 @@
       "tone": "Tone of Voice",
       "audience": "Target Audience",
       "style": "Writing Style",
-      "wordCount": "Target Word Count",
+      "wordCount": "Target",
       "tones": {
         "Informal": "Informal",
         "Formal": "Formal",

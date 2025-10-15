@@ -52,12 +52,12 @@ const BookPreview: React.FC<BookPreviewProps> = ({ project, layout, pageSize, re
       <div key={chapter.id} className="book-page">
         <div className="chapter-container">
           <h3 className="chapter-title">{chapter.title}</h3>
-          {chapter.content && <div className="content-block" dangerouslySetInnerHTML={{ __html: chapter.content.replace(/\n/g, '<br />') }}></div>}
+          {chapter.content && <div className="content-block" dangerouslySetInnerHTML={{ __html: chapter.content }}></div>}
           
           {chapter.subchapters.map(subchapter => (
             <div key={subchapter.id} className="subchapter-container">
               <h4 className="subchapter-title">{subchapter.title}</h4>
-              {subchapter.content && <div className="content-block" dangerouslySetInnerHTML={{ __html: subchapter.content.replace(/\n/g, '<br />') }}></div>}
+              {subchapter.content && <div className="content-block" dangerouslySetInnerHTML={{ __html: subchapter.content }}></div>}
             </div>
           ))}
         </div>
