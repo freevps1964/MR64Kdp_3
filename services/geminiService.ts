@@ -125,11 +125,11 @@ export const researchTopic = async (topic: string): Promise<{ result: ResearchRe
 L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati riflettano le informazioni più recenti:
 
 - "marketSummary": un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze attuali.
-- "titles": un array di 5 oggetti titolo. Ogni oggetto deve avere "title" (stringa) e "relevance" (numero da 0 a 100). I titoli devono essere **altamente performanti e ad altissima conversione**. Devono essere accattivanti, chiari, promettere un beneficio specifico al lettore e ottimizzati per la ricerca su Amazon.
-- "subtitles": un array di 5 oggetti sottotitolo. Ogni oggetto deve avere "subtitle" (stringa) e "relevance" (numero da 0 a 100). I sottotitoli devono essere **altamente performanti e ad altissima conversione**. Devono espandere il titolo, specificare il pubblico di destinazione (es. "per principianti"), menzionare i benefici chiave e contenere parole chiave pertinenti.
-- "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere le più performanti per Amazon KDP, con alto intento di acquisto, redditività e potenziale di conversione, basate sulle tendenze attuali. Includi un mix di parole chiave a coda corta e a coda lunga.
+- "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere le più redditizie e con il più alto intento di acquisto per Amazon KDP, basate sulle tendenze di ricerca attuali. Includi un mix di parole chiave a coda corta e a coda lunga.
+- "titles": un array di 5 oggetti titolo. Ogni oggetto deve avere "title" (stringa) e "relevance" (numero da 0 a 100). I titoli devono essere scritti per massimizzare il click-through rate (CTR) e le conversioni su Amazon. Devono essere magnetici, chiari, promettere un beneficio specifico al lettore e **incorporare in modo naturale e strategico le parole chiave più pertinenti generate sopra**.
+- "subtitles": un array di 5 oggetti sottotitolo. Ogni oggetto deve avere "subtitle" (stringa) e "relevance" (numero da 0 a 100). I sottotitoli devono espandere il titolo, specificare il pubblico di destinazione (es. "per principianti"), menzionare i benefici chiave e **contenere le parole chiave pertinenti generate sopra per aumentare la visibilità**.
 
-Ordina internamente ogni array in base alla pertinenza, dal più alto al più basso.
+Ordina internamente ogni array in base alla pertinenza (relevance), dal più alto al più basso.
 Assicurati che l'output sia un oggetto JSON valido.`;
 
   try {
@@ -288,13 +288,13 @@ Ecco il processo che devi seguire:
     *   **Stile Tipografico**: Il font del titolo è serif, sans-serif, script, o calligrafico? È in grassetto, sottile, maiuscolo? Come si relaziona con il font del nome dell'autore?
     *   **Immagini e Iconografia**: Usano fotografie di alta qualità, illustrazioni, grafica astratta, icone o solo testo? Qual è il soggetto principale delle immagini (persone, oggetti, paesaggi)?
     *   **Composizione e Mood**: La composizione è minimalista, affollata, simmetrica? Qual è l'atmosfera generale (es. professionale, ispiratrice, drammatica, calma, energica)?
-3.  **Creazione del Prompt**: Sulla base della tua analisi, costruisci un unico prompt, **in inglese**, estremamente dettagliato e descrittivo. Questo prompt deve guidare l'AI a creare una copertina che sia commercialmente vincente, si distingua dalla concorrenza ma si allinei alle aspettative del pubblico per quella categoria.
+3.  **Creazione del Prompt**: Sulla base della tua analisi, costruisci un unico prompt, **in italiano**, estremamente dettagliato e descrittivo. Questo prompt deve guidare l'AI a creare una copertina che sia commercialmente vincente, si distingua dalla concorrenza ma si allinei alle aspettative del pubblico per quella categoria.
 
 Requisiti del prompt finale:
--   Deve essere in **inglese**.
+-   Deve essere in **italiano**.
 -   Deve descrivere una scena, uno stile e un'atmosfera specifici.
 -   Deve incorporare concetti dalle seguenti parole chiave: ${keywordList}.
--   **FONDAMENTALE**: Deve specificare una composizione che lasci ampio spazio libero nella parte superiore per il titolo e il sottotitolo, e nella parte inferiore per il nome dell'autore. Ad esempio, menziona "negative space at the top and bottom" o "main visual element centered in the middle third".
+-   **FONDAMENTALE**: Deve specificare una composizione che lasci ampio spazio libero nella parte superiore per il titolo e il sottotitolo, e nella parte inferiore per il nome dell'autore. Ad esempio, menziona "spazio negativo in alto e in basso" o "elemento visivo principale centrato nel terzo centrale".
 -   L'output finale deve essere **solo il testo del prompt**, senza alcuna introduzione, spiegazione o la tua analisi. Solo il prompt per l'IA.`;
 
   try {
@@ -308,7 +308,7 @@ Requisiti del prompt finale:
     return response.text.trim();
   } catch (error) {
     console.error("Error generating cover prompt from bestsellers:", error);
-    return `Book cover for a title "${title}" on the topic of "${topic}". Clean, modern, and eye-catching design, incorporating ideas from these keywords: ${keywordList}. The target category is ${category}.`;
+    return `Copertina di un libro intitolato "${title}" sull'argomento di "${topic}". Design pulito, moderno e accattivante, che incorpora idee da queste parole chiave: ${keywordList}. La categoria di riferimento è ${category}.`;
   }
 };
 
@@ -422,7 +422,7 @@ export const fetchAmazonCategories = async (): Promise<string[]> => {
  * Genera un prompt per un blocco di contenuto (ricetta/esercizio).
  */
 export const generateContentBlockPrompt = async (topic: string, type: ContentBlockType): Promise<string> => {
-    const prompt = `Based on a book about "${topic}", generate a short, creative, and descriptive prompt for creating a ${type}. The prompt should be a single sentence that can be used to generate the full ${type} content. For example, if the topic is "Healthy Italian Cooking" and the type is "recipe", a good prompt would be "A light and healthy version of classic lasagna with zucchini instead of pasta." The output must be only the text of the prompt.`;
+    const prompt = `Basato su un libro su "${topic}", genera un prompt breve, creativo e descrittivo in **italiano** per creare un/una ${type}. Il prompt deve essere una singola frase accattivante. Ad esempio, se l'argomento è "Cucina Italiana Salutare" e il tipo è "ricetta", un buon prompt potrebbe essere "Una versione leggera e salutare delle lasagne classiche con zucchine al posto della pasta." L'output deve essere solo il testo del prompt.`;
     
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({

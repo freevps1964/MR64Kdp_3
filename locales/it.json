@@ -1,4 +1,5 @@
 
+
 {
   "header": {
     "title": "BookForge AI",
@@ -176,7 +177,11 @@
     "refineButton": "Migliora con AI",
     "refineError": "Impossibile migliorare l'immagine. Prova un prompt diverso.",
     "bonusCountLabel": "Numero di Bonus",
-    "bonusText": "BONUS INCREDIBILI"
+    "bonusText": "BONUS INCREDIBILI",
+    "refineSuggestion1": "Rendi lo sfondo più scuro",
+    "refineSuggestion2": "Aggiungi una texture al titolo",
+    "refineSuggestion3": "Regola l'illuminazione",
+    "refineSuggestion4": "Usa uno stile più minimalista"
   },
   "metadataTab": {
     "title": "Metadati del Libro",

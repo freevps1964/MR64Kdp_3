@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -359,7 +360,14 @@ const CoverTab: React.FC = () => {
     } finally {
         setIsRefining(false);
     }
-};
+  };
+
+  const refineSuggestions = [
+    t('coverTab.refineSuggestion1'),
+    t('coverTab.refineSuggestion2'),
+    t('coverTab.refineSuggestion3'),
+    t('coverTab.refineSuggestion4'),
+  ];
 
 
   return (
@@ -509,6 +517,17 @@ const CoverTab: React.FC = () => {
                         placeholder={t('coverTab.refinePromptPlaceholder')}
                         className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
                     />
+                    <div className="flex flex-wrap gap-2">
+                        {refineSuggestions.map((s, i) => (
+                            <button 
+                                key={i} 
+                                onClick={() => setRefinePrompt(prev => prev ? `${prev}, ${s}` : s)}
+                                className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-full transition-colors"
+                            >
+                                {s}
+                            </button>
+                        ))}
+                    </div>
                     <button
                         onClick={handleRefineImage}
                         disabled={isRefining || !refinePrompt.trim()}

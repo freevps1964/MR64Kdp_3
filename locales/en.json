@@ -1,4 +1,5 @@
 
+
 {
   "header": {
     "title": "BookForge AI",
@@ -176,7 +177,11 @@
     "refineButton": "Refine with AI",
     "refineError": "Failed to refine the image. Please try a different prompt.",
     "bonusCountLabel": "Number of Bonuses",
-    "bonusText": "INCREDIBLE BONUSES"
+    "bonusText": "INCREDIBLE BONUSES",
+    "refineSuggestion1": "Make the background darker",
+    "refineSuggestion2": "Add a subtle texture to the title",
+    "refineSuggestion3": "Adjust lighting for a more dramatic look",
+    "refineSuggestion4": "Use a more minimalist style"
   },
   "metadataTab": {
     "title": "Book Metadata",

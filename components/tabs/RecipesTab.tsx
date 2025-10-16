@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -20,6 +21,7 @@ const RecipesTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isGeneratingAllImages, setIsGeneratingAllImages] = useState(false);
   const [numberOfItems, setNumberOfItems] = useState(1);
   const prevBlockCountRef = useRef(project?.contentBlocks.length || 0);
 
@@ -150,6 +152,31 @@ const RecipesTab: React.FC = () => {
     }
   };
 
+  const handleGenerateAllImages = async () => {
+    if (!project) return;
+    setIsGeneratingAllImages(true);
+
+    const blocksWithoutImages = project.contentBlocks.filter(b => !b.imageUrl);
+    
+    for (const block of blocksWithoutImages) {
+        try {
+            const imageUrl = await generateContentBlockImage(block.title, block.type);
+            if (imageUrl) {
+                const updatedBlock = { ...block, imageUrl };
+                updateContentBlock(updatedBlock);
+                if (currentBlock?.id === block.id) {
+                    setCurrentBlock(updatedBlock);
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        } catch (error) {
+            console.error(`Failed to generate image for ${block.title}:`, error);
+        }
+    }
+    
+    setIsGeneratingAllImages(false);
+  };
+
   const handleSave = () => {
     if (!currentBlock || !currentBlock.type || !currentBlock.title) return;
 
@@ -171,6 +198,8 @@ const RecipesTab: React.FC = () => {
   const contentBlocks = project?.contentBlocks || [];
   const currentIndex = contentBlocks.findIndex(b => b.id === selectedBlockId);
   const totalBlocks = contentBlocks.length;
+  const hasBlocksWithoutImages = contentBlocks.some(b => !b.imageUrl);
+
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (currentIndex === -1 || totalBlocks <= 1) return;
@@ -180,7 +209,7 @@ const RecipesTab: React.FC = () => {
     }
   };
 
-  const isBusy = isLoading || isGeneratingPrompt || isGeneratingImage;
+  const isBusy = isLoading || isGeneratingPrompt || isGeneratingImage || isGeneratingAllImages;
 
   return (
     <Card>
@@ -194,9 +223,16 @@ const RecipesTab: React.FC = () => {
           <h3 className="font-semibold text-lg mb-3 text-brand-dark">{t('tabs.content')}</h3>
           <button
             onClick={() => setSelectedBlockId('new')}
-            className="w-full flex items-center justify-center gap-2 mb-4 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-2 mb-2 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors"
           >
             <PlusIcon /> {t('recipesTab.newBlock')}
+          </button>
+          <button
+            onClick={handleGenerateAllImages}
+            disabled={isBusy || !hasBlocksWithoutImages}
+            className="w-full flex items-center justify-center gap-2 mb-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-neutral-medium"
+          >
+            {isGeneratingAllImages ? <LoadingSpinner /> : '🖼️ Genera tutte le immagini'}
           </button>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {project?.contentBlocks.map(block => (

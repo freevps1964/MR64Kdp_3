@@ -21,6 +21,8 @@ export interface ProjectContextType {
   deleteChapter: (chapterId: string) => void;
   addSubchapter: (chapterId: string) => void;
   deleteSubchapter: (subchapterId: string) => void;
+  reorderStructure: (draggedId: string, targetId: string) => void;
+
 
   // Content Block (Recipes/Exercises) methods
   addContentBlock: (block: Omit<ContentBlock, 'id'>) => void;
@@ -334,6 +336,53 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     };
     updateProject({ bookStructure: newStructure });
   };
+
+  const reorderStructure = (draggedId: string, targetId: string) => {
+    if (!project?.bookStructure || draggedId === targetId) return;
+
+    const chapters = [...project.bookStructure.chapters];
+    let newChapters: Chapter[] | null = null;
+    
+    // Check if we are dragging chapters
+    const draggedChapterIndex = chapters.findIndex(c => c.id === draggedId);
+    const targetChapterIndex = chapters.findIndex(c => c.id === targetId);
+    
+    if (draggedChapterIndex > -1 && targetChapterIndex > -1) {
+        // Reorder chapters
+        const [removed] = chapters.splice(draggedChapterIndex, 1);
+        chapters.splice(targetChapterIndex, 0, removed);
+        newChapters = chapters;
+    } else {
+        // Dragging subchapters - find which chapter they belong to
+        let parentChapterIndex = -1;
+        for (let i = 0; i < chapters.length; i++) {
+            if (chapters[i].subchapters.some(s => s.id === draggedId)) {
+                parentChapterIndex = i;
+                break;
+            }
+        }
+        
+        if (parentChapterIndex > -1) {
+            const chapter = chapters[parentChapterIndex];
+            const subchapters = [...chapter.subchapters];
+            const draggedSubIndex = subchapters.findIndex(s => s.id === draggedId);
+            const targetSubIndex = subchapters.findIndex(s => s.id === targetId);
+
+            if (draggedSubIndex > -1 && targetSubIndex > -1) {
+                const [removed] = subchapters.splice(draggedSubIndex, 1);
+                subchapters.splice(targetSubIndex, 0, removed);
+                
+                const modifiedChapters = [...chapters];
+                modifiedChapters[parentChapterIndex] = { ...chapter, subchapters };
+                newChapters = modifiedChapters;
+            }
+        }
+    }
+
+    if (newChapters) {
+        updateProject({ bookStructure: { chapters: newChapters } });
+    }
+  };
   
   const addContentBlock = (block: Omit<ContentBlock, 'id'>) => {
     if (!project) return;
@@ -403,6 +452,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       deleteChapter,
       addSubchapter,
       deleteSubchapter,
+      reorderStructure,
       addContentBlock,
       updateContentBlock,
       deleteContentBlock,

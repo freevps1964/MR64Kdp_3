@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import { generateStructure } from '../../services/geminiService';
@@ -19,11 +19,17 @@ const StructureTab: React.FC = () => {
     addChapter,
     deleteChapter,
     addSubchapter,
-    deleteSubchapter
+    deleteSubchapter,
+    reorderStructure,
   } = useProject();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Drag and Drop State
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragCounter = useRef(0);
 
   const generateUniqueId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -63,11 +69,56 @@ const StructureTab: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+    e.dataTransfer.setData('text/plain', id);
+    setDraggedId(id);
+  };
+  
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+      e.preventDefault();
+      dragCounter.current++;
+      setDragOverId(id);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      dragCounter.current--;
+      if (dragCounter.current === 0) {
+          setDragOverId(null);
+      }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('text/plain');
+    if (sourceId && sourceId !== targetId) {
+        reorderStructure(sourceId, targetId);
+    }
+    setDraggedId(null);
+    setDragOverId(null);
+    dragCounter.current = 0;
+  };
+  
+  const handleDragEnd = () => {
+      setDraggedId(null);
+      setDragOverId(null);
+      dragCounter.current = 0;
+  };
   
   const currentStructure = project?.bookStructure;
 
   return (
     <Card>
+      <style>{`
+        .dragging {
+          opacity: 0.5;
+          border: 2px dashed #9CA3AF;
+        }
+        .drag-over {
+          background-color: #E0E7FF; /* indigo-100 */
+        }
+      `}</style>
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('structureTab.title')}</h2>
       <p className="text-neutral-medium mb-6">
         {t('structureTab.description')}
@@ -134,7 +185,17 @@ const StructureTab: React.FC = () => {
         <div className="animate-fade-in">
             <div className="space-y-4">
             {currentStructure.chapters.map((chapter, index) => (
-                <div key={chapter.id} className="p-4 border border-gray-200 rounded-lg bg-neutral-light/50">
+                <div 
+                  key={chapter.id} 
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, chapter.id)}
+                  onDragEnter={(e) => handleDragEnter(e, chapter.id)}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, chapter.id)}
+                  onDragEnd={handleDragEnd}
+                  className={`p-4 border border-gray-200 rounded-lg bg-neutral-light/50 transition-all cursor-grab ${draggedId === chapter.id ? 'dragging' : ''} ${dragOverId === chapter.id ? 'drag-over' : ''}`}
+                >
                     <div className="flex items-center gap-2 mb-2">
                         <span className="font-bold text-lg text-brand-dark">{`${t('structureTab.chapter')} ${index + 1}:`}</span>
                         <input
@@ -152,7 +213,17 @@ const StructureTab: React.FC = () => {
                 
                     <div className="mt-2 ml-6 space-y-2">
                         {chapter.subchapters.map((sub, subIndex) => (
-                             <div key={sub.id} className="flex items-center gap-2">
+                             <div 
+                                key={sub.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, sub.id)}
+                                onDragEnter={(e) => handleDragEnter(e, sub.id)}
+                                onDragLeave={handleDragLeave}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => handleDrop(e, sub.id)}
+                                onDragEnd={handleDragEnd}
+                                className={`flex items-center gap-2 transition-all p-1 rounded-md cursor-grab ${draggedId === sub.id ? 'dragging' : ''} ${dragOverId === sub.id ? 'drag-over' : ''}`}
+                             >
                                 <span className="text-neutral-dark">&#8226;</span>
                                 <input
                                     type="text"
