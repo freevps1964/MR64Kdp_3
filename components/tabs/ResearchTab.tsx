@@ -53,8 +53,13 @@ const ResearchTab: React.FC = () => {
       } else {
         throw new Error('No data returned from research.');
       }
-    } catch (err) {
-      setError(t('researchTab.error'));
+    } catch (err: any) {
+      const errorMessage = err.toString().toLowerCase();
+      if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+        setError(t('researchTab.errorRateLimit'));
+      } else {
+        setError(t('researchTab.error'));
+      }
       console.error(err);
     } finally {
       setIsLoading(false);

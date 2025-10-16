@@ -183,16 +183,21 @@ const LayoutTab: React.FC = () => {
                      layout === 'Modern' ? "'Georgia', serif" :
                      "'Times New Roman', Times, serif";
 
+        const pageSize = projectToExport.pageSize || '6x9';
+        const pageStyles = pageSize === '6x9' 
+            ? '@page { size: 6in 9in; margin: 0.59in 0.5in; }'
+            : '@page { size: 7in 10in; margin: 0.69in 0.59in; }';
+
         const styles = `
             @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&display=swap');
+            ${pageStyles}
             body {
                 font-family: ${font};
                 font-size: 14pt;
                 line-height: 1.5;
-                margin: 1.27cm;
             }
             .book-title { font-size: 20pt; font-weight: bold; text-align: center; }
-            .book-subtitle { font-size: 12pt; font-weight: bold; font-style: italic; text-align: center; color: #6b7280; }
+            .book-subtitle { font-size: 16pt; font-style: normal; text-align: center; color: #6b7280; }
             .book-author { text-align: center; font-style: italic; margin-bottom: 3rem; }
             .chapter-container { margin-top: 2.5rem; page-break-before: always; }
             .chapter-title { font-size: 16pt; font-weight: bold; margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; }

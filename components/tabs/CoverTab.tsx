@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -129,33 +127,32 @@ const CoverTab: React.FC = () => {
 
             // --- Draw Title ---
             const title = (project.bookTitle || '').toUpperCase();
-            let titleFontSize = 100;
-            ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+            let titleFontSize = 160; // Titolo1: Georgia 160
+            ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
             // Shrink font size until title fits within content width
             while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
                 titleFontSize -= 5;
-                ctx.font = `bold ${titleFontSize}px 'Montserrat', sans-serif`;
+                ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
             }
             currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
-
-            // Aggiungi spazio prima del sottotitolo
-            currentY += 20;
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSize = 45;
-            ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+            let subtitleFontSize = 80; // Titolo3: Georgia 80
+            // Aggiungi spazio prima del sottotitolo (simula due righe)
+            currentY += subtitleFontSize * 2;
+            ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
                 // Shrink font size until subtitle fits within content width
             while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 15) {
                 subtitleFontSize -= 2;
-                ctx.font = `italic ${subtitleFontSize}px 'EB Garamond', serif`;
+                ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
             }
             currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
 
             // --- Draw Author (bottom-right) ---
             if (project.author) {
                 ctx.textAlign = 'right';
-                ctx.font = `600 48px 'Montserrat', sans-serif`;
+                ctx.font = `normal 48px 'Georgia', serif`;
                 const authorY = canvasHeight - 60; // Posizione fissa dal basso
                 const authorX = canvasWidth - 60; // Posizione fissa da destra
                 ctx.fillText(project.author, authorX, authorY);
@@ -521,7 +518,7 @@ const CoverTab: React.FC = () => {
                         {refineSuggestions.map((s, i) => (
                             <button 
                                 key={i} 
-                                onClick={() => setRefinePrompt(prev => prev ? `${prev}, ${s}` : s)}
+                                onClick={() => setRefinePrompt(prev => prev ? `${prev}, ${s.toLowerCase()}` : s)}
                                 className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-full transition-colors"
                             >
                                 {s}

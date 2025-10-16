@@ -73,6 +73,7 @@
     "sources": "Fonti Web",
     "selectAllSources": "Seleziona Tutto",
     "error": "Si è verificato un errore durante la ricerca. Riprova.",
+    "errorRateLimit": "Le richieste sono state temporaneamente limitate. Attendi un minuto e riprova.",
     "summaryTitle": "Riepilogo Ricerca",
     "summaryTitles": "Titoli Suggeriti",
     "summarySubtitles": "Sottotitoli Suggeriti",

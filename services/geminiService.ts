@@ -10,7 +10,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 async function withRetry<T>(
   apiCall: () => Promise<T>,
   maxRetries = 5,
-  initialDelay = 2000
+  initialDelay = 5000
 ): Promise<T> {
   let retries = 0;
   while (true) {
@@ -278,24 +278,33 @@ export const generateCoverPromptFromBestsellers = async (
   category: string
 ): Promise<string> => {
   const keywordList = keywords.map(k => k.keyword).join(', ');
-  const prompt = `AGISCI COME un esperto di marketing visivo e un art director specializzato in copertine di libri per Amazon KDP.
-La tua missione è creare il prompt perfetto per un generatore di immagini AI (come Imagen) per produrre una copertina di bestseller per un libro intitolato "${title}" sull'argomento "${topic}" nella categoria "${category}".
+  const prompt = `ACT AS an award-winning art director and an expert in book cover design for Amazon KDP. Your mission is to create a prompt for an AI image generator (like Imagen) that will produce a visually stunning, commercially effective, and deeply relevant cover image.
 
-Ecco il processo che devi seguire:
-1.  **Ricerca e Analisi Approfondita**: Esegui una ricerca sui 5 attuali bestseller più venduti su Amazon.com nella categoria "${category}" correlati all'argomento "${topic}".
-2.  **Scomposizione Visiva**: Per questi 5 bestseller, analizza e sintetizza meticolosamente i seguenti elementi di design:
-    *   **Palette di Colori Dominanti**: Quali sono i 2-3 colori principali utilizzati? Sono vibranti, pastello, monocromatici? C'è un colore d'accento ricorrente?
-    *   **Stile Tipografico**: Il font del titolo è serif, sans-serif, script, o calligrafico? È in grassetto, sottile, maiuscolo? Come si relaziona con il font del nome dell'autore?
-    *   **Immagini e Iconografia**: Usano fotografie di alta qualità, illustrazioni, grafica astratta, icone o solo testo? Qual è il soggetto principale delle immagini (persone, oggetti, paesaggi)?
-    *   **Composizione e Mood**: La composizione è minimalista, affollata, simmetrica? Qual è l'atmosfera generale (es. professionale, ispiratrice, drammatica, calma, energica)?
-3.  **Creazione del Prompt**: Sulla base della tua analisi, costruisci un unico prompt, **in italiano**, estremamente dettagliato e descrittivo. Questo prompt deve guidare l'AI a creare una copertina che sia commercialmente vincente, si distingua dalla concorrenza ma si allinei alle aspettative del pubblico per quella categoria.
+Book Details:
+- Title: "${title}"
+- Topic: "${topic}"
+- Category: "${category}"
+- Emotional Keywords: ${keywordList}
 
-Requisiti del prompt finale:
--   Deve essere in **italiano**.
--   Deve descrivere una scena, uno stile e un'atmosfera specifici.
--   Deve incorporare concetti dalle seguenti parole chiave: ${keywordList}.
--   **FONDAMENTALE**: Deve specificare una composizione che lasci ampio spazio libero nella parte superiore per il titolo e il sottotitolo, e nella parte inferiore per il nome dell'autore. Ad esempio, menziona "spazio negativo in alto e in basso" o "elemento visivo principale centrato nel terzo centrale".
--   L'output finale deve essere **solo il testo del prompt**, senza alcuna introduzione, spiegazione o la tua analisi. Solo il prompt per l'IA.`;
+Your Creative Process:
+1.  **Conceptual and Symbolic Analysis**: Don't just do a literal representation. Dive deep into the topic "${topic}" and the title "${title}". What is the core promise to the reader? What is the key transformation or emotion (hope, power, serenity, curiosity)? Translate these abstract concepts into a **powerful and original visual metaphor**. Strictly avoid clichés and generic stock photo imagery.
+2.  **Visual Market Research**: Analyze current bestsellers in the "${category}" category on Amazon to understand the visual language that attracts the target audience. Identify archetypes, color palettes, and styles, but not to imitate them. The goal is to innovate and stand out while speaking a familiar language to the reader.
+3.  **Winning Concept Development**: Choose a single, strong artistic direction (e.g., photographic, illustrative, graphic, symbolic) and build the prompt around it.
+4.  **Final Prompt Construction**: Write a single prompt, in English, that is a masterpiece of descriptiveness. It must be rich, evocative, and precise.
+
+Final Prompt Requirements:
+-   **Language**: Exclusively in **English**.
+-   **Focus on Symbolism**: The main subject must be a visual metaphor, not a literal depiction of the title.
+-   **Absolute Specificity**: Include details on:
+    *   **Subject and Scene**: Describe the central visual element and its environment with great detail. If it's an object, describe its texture, material, and symbolic meaning. If it's a scene, describe the atmosphere.
+    *   **Artistic Style**: Be precise (e.g., "cinematic high-definition photography with soft bokeh", "painterly digital illustration with rich textures", "bold and minimalist vector graphic design").
+    *   **Composition and Text Space**: Guide the AI on element placement. **THIS IS CRITICAL**: design the composition (e.g., "using the rule of thirds", "subject off-center to the left") to leave a large, clean area of negative space at the top for the title and subtitle.
+    *   **Lighting**: Describe the lighting to create the desired mood (e.g., "dramatic, low-key lighting creating long shadows", "soft, ethereal lighting coming from above", "vibrant neon glow").
+    *   **Color Palette**: Define a specific and emotional color palette (e.g., "an analogous color palette of blues and greens to evoke calm, with a single accent of orange for energy", "monochromatic tones of gray with a single bright red element").
+-   **Output**: Provide **only the final prompt text**, with no introduction, explanation, analysis, or alternative options.
+
+Example of a quality output for a book on procrastination:
+"Surrealist digital illustration of an elegant glass hourglass where the falling sand transforms into a flock of paper birds flying away freely. The background is a sunset sky with warm, gradient colors from purple to orange. The lighting is soft and emanates from within the hourglass, creating a magical glow. Detailed painterly style with visible textures. Minimalist composition with the hourglass off-center, leaving ample negative space at the top for text."`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -308,7 +317,7 @@ Requisiti del prompt finale:
     return response.text.trim();
   } catch (error) {
     console.error("Error generating cover prompt from bestsellers:", error);
-    return `Copertina di un libro intitolato "${title}" sull'argomento di "${topic}". Design pulito, moderno e accattivante, che incorpora idee da queste parole chiave: ${keywordList}. La categoria di riferimento è ${category}.`;
+    return `Book cover for a book titled "${title}" on the topic of "${topic}". Clean, modern, and eye-catching design, incorporating ideas from these keywords: ${keywordList}. The reference category is ${category}.`;
   }
 };
 
