@@ -271,12 +271,21 @@ const CoverTab: React.FC = () => {
       const coversWithTextPromises = base64Images.map(base64 => addTextToImage(base64));
       const coversWithText = await Promise.all(coversWithTextPromises);
       
-      // Step 3: Enhance each generated cover with an AI refinement pass
+      // Add a delay before starting the refinement loop to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 31000));
+
+      // Step 3: Enhance each generated cover with an AI refinement pass, sequentially to avoid rate limits
       const enhancementPrompt = "Enhance the quality of this book cover. Improve sharpness, colors, and lighting to make it more professional and visually appealing, but DO NOT change, add, or remove any text or its position.";
-      const refinedCoversPromises = coversWithText.map(coverDataUrl => 
-         editCoverImage(coverDataUrl, enhancementPrompt)
-      );
-      const refinedCoverResults = await Promise.all(refinedCoversPromises);
+      const refinedCoverResults: (string | null)[] = [];
+      for (let i = 0; i < coversWithText.length; i++) {
+        const coverDataUrl = coversWithText[i];
+        const refinedImage = await editCoverImage(coverDataUrl, enhancementPrompt);
+        refinedCoverResults.push(refinedImage);
+        // Add a delay between each API call, but not after the last one
+        if (i < coversWithText.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 31000));
+        }
+      }
       
       // Use the refined image if the enhancement was successful, otherwise fall back to the original
       const finalCovers = coversWithText.map((originalCover, index) => refinedCoverResults[index] || originalCover);

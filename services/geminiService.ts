@@ -10,7 +10,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 async function withRetry<T>(
   apiCall: () => Promise<T>,
   maxRetries = 5,
-  initialDelay = 5000
+  initialDelay = 61000
 ): Promise<T> {
   let retries = 0;
   while (true) {
@@ -140,6 +140,9 @@ Assicurati che l'output sia un oggetto JSON valido.`;
         tools: [{googleSearch: {}}],
       },
     }));
+    
+    // Aggiunge una pausa per evitare di superare i limiti di velocità con la chiamata successiva
+    await new Promise(resolve => setTimeout(resolve, 61000));
 
     const researchData = parseJsonFromMarkdown<ResearchResult>(response.text);
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
@@ -634,7 +637,7 @@ export const translateFullProject = async (
         
         // Aggiunge un piccolo ritardo per evitare di raggiungere i limiti di velocità
         if (i < totalItems - 1) {
-             await new Promise(resolve => setTimeout(resolve, 500));
+             await new Promise(resolve => setTimeout(resolve, 61000));
         }
     }
 

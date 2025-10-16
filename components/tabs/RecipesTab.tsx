@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
@@ -168,7 +164,7 @@ const RecipesTab: React.FC = () => {
                     setCurrentBlock(updatedBlock);
                 }
             }
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 20000));
         } catch (error) {
             console.error(`Failed to generate image for ${block.title}:`, error);
         }

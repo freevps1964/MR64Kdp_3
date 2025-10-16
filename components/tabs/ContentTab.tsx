@@ -182,7 +182,7 @@ const ContentTab: React.FC = () => {
         
         // Add a delay between requests to avoid rate limiting
         if (i < allNodes.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 10000)); // 10-second delay
+            await new Promise(resolve => setTimeout(resolve, 61000)); // 61-second delay
         }
     }
     setGenerationStatus(null);
