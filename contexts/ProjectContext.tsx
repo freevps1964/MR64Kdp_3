@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { Project, BookStructure, Chapter, ContentBlock, ContentBlockType } from '../types';
+import { Project, BookStructure, Chapter, ContentBlock, GlossaryTerm } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
 export interface ProjectContextType {
@@ -28,6 +28,11 @@ export interface ProjectContextType {
   addContentBlock: (block: Omit<ContentBlock, 'id'>) => void;
   updateContentBlock: (block: ContentBlock) => void;
   deleteContentBlock: (blockId: string) => void;
+
+  // Glossary methods
+  addGlossaryTerm: (term: Omit<GlossaryTerm, 'id'>) => void;
+  updateGlossaryTerm: (term: GlossaryTerm) => void;
+  deleteGlossaryTerm: (termId: string) => void;
   
   // Author Archive methods
   addAuthorToArchive: (author: string) => void;
@@ -154,6 +159,21 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     });
   }, [getArchiveKey]);
 
+  // Auto-save effect
+  useEffect(() => {
+    const handleAutoSave = () => {
+        if (project) {
+            // updateProject with an empty object saves the current state and updates the timestamp.
+            updateProject({});
+        }
+    };
+
+    const intervalId = setInterval(handleAutoSave, 60000); // Auto-save every 60 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on component unmount or when dependencies change
+  }, [project, updateProject]);
+
+
   const startNewProject = (title: string) => {
     const archiveKey = getArchiveKey();
     if (!archiveKey) return;
@@ -188,6 +208,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       coverPrompts: [],
       archivedCovers: [],
       contentBlocks: [],
+      glossary: [],
       coverBonusCount: 0,
     };
     // Directly set and save the new project
@@ -402,6 +423,25 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     updateProject({ contentBlocks: newBlocks });
   };
   
+  // Glossary methods
+  const addGlossaryTerm = (term: Omit<GlossaryTerm, 'id'>) => {
+    if (!project) return;
+    const newTerm = { ...term, id: generateId() };
+    updateProject({ glossary: [...project.glossary, newTerm] });
+  };
+  
+  const updateGlossaryTerm = (term: GlossaryTerm) => {
+    if (!project) return;
+    const newGlossary = project.glossary.map(t => t.id === term.id ? term : t);
+    updateProject({ glossary: newGlossary });
+  };
+
+  const deleteGlossaryTerm = (termId: string) => {
+    if (!project) return;
+    const newGlossary = project.glossary.filter(t => t.id !== termId);
+    updateProject({ glossary: newGlossary });
+  };
+
   const addAuthorToArchive = (author: string) => {
     if (!project || !author.trim()) return;
 
@@ -456,6 +496,9 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       addContentBlock,
       updateContentBlock,
       deleteContentBlock,
+      addGlossaryTerm,
+      updateGlossaryTerm,
+      deleteGlossaryTerm,
       addAuthorToArchive,
     }}>
       {children}

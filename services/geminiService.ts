@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse, Modality } from "@google/genai";
-import type { BookStructure, ResearchResult, Keyword, GroundingSource, ContentBlockType, Project } from '../types';
+import type { BookStructure, ResearchResult, Keyword, GroundingSource, Project, ContentBlockType } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -431,10 +431,26 @@ export const fetchAmazonCategories = async (): Promise<string[]> => {
 };
 
 /**
- * Genera un prompt per un blocco di contenuto (ricetta/esercizio).
+ * Genera un prompt per un blocco di contenuto bonus.
  */
-export const generateContentBlockPrompt = async (topic: string, type: ContentBlockType): Promise<string> => {
-    const prompt = `Basato su un libro su "${topic}", genera un prompt breve, creativo e descrittivo in **italiano** per creare un/una ${type}. Il prompt deve essere una singola frase accattivante. Ad esempio, se l'argomento è "Cucina Italiana Salutare" e il tipo è "ricetta", un buon prompt potrebbe essere "Una versione leggera e salutare delle lasagne classiche con zucchine al posto della pasta." L'output deve essere solo il testo del prompt.`;
+export const generateContentBlockPrompt = async (project: Project, contentType: ContentBlockType): Promise<string> => {
+    const chapterTitles = project.bookStructure?.chapters.map(c => c.title).slice(0, 5).join(', ') || '';
+    const context = `Basandosi su un libro intitolato "${project.bookTitle}" sull'argomento "${project.topic}", che include capitoli come "${chapterTitles}"...`;
+    
+    let typeInstruction = '';
+    switch (contentType) {
+        case 'recipe':
+            typeInstruction = "Per una 'ricetta', potrebbe essere 'Un piano alimentare settimanale con ricette ispirate ai principi del libro.'";
+            break;
+        case 'exercise':
+            typeInstruction = "Per un 'esercizio', potrebbe essere 'Una serie di esercizi di stretching da fare alla scrivania, basati sui concetti di ergonomia del libro.'";
+            break;
+        case 'bonus':
+            typeInstruction = "Per un 'bonus', potrebbe essere 'Una checklist stampabile che riassume i passaggi chiave di ogni capitolo.'";
+            break;
+    }
+
+    const prompt = `${context} genera un prompt creativo e altamente pertinente in **italiano** per un'appendice di tipo '${contentType}'. Il prompt deve essere una singola frase accattivante che descriva un bonus di valore per il lettore. Esempio: ${typeInstruction} L'output deve essere solo il testo del prompt.`;
     
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -443,43 +459,37 @@ export const generateContentBlockPrompt = async (topic: string, type: ContentBlo
         }));
         return response.text.trim();
     } catch (error) {
-        console.error(`Error generating ${type} prompt:`, error);
+        console.error(`Error generating bonus prompt:`, error);
         return "";
     }
 };
 
 
 /**
- * Genera il testo per uno o più blocchi di contenuto (ricetta/esercizio).
+ * Genera il testo per uno o più blocchi di contenuto bonus.
  */
 export const generateContentBlockText = async (
-    topic: string, 
+    project: Project,
     description: string, 
-    type: ContentBlockType,
     count: number = 1,
-    existingTitles: string[] = []
+    existingTitles: string[] = [],
+    contentType: ContentBlockType
 ): Promise<{ title: string; textContent: string }[] | null> => {
     
-    const recipeProperties = {
-      description: { type: Type.STRING, description: "A captivating summary of the recipe." },
-      ingredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of ingredients." },
-      instructions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Step-by-step instructions." },
-    };
-    
-    const exerciseProperties = {
-      description: { type: Type.STRING, description: "A summary of the exercise and its benefits." },
-      muscles: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Muscles involved." },
-      instructions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Step-by-step instructions for proper form." },
-    };
+    const chapterTitles = project.bookStructure?.chapters.map(c => c.title).slice(0, 5).join(', ') || '';
+    const context = `per un libro intitolato "${project.bookTitle}" sull'argomento "${project.topic}", i cui capitoli principali includono: "${chapterTitles}".`;
 
-    const itemProperties = type === 'recipe' ? recipeProperties : exerciseProperties;
+    const bonusProperties = {
+      description: { type: Type.STRING, description: "Un riassunto accattivante del contenuto bonus." },
+      items: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Una lista di punti, passaggi o elementi per il contenuto bonus (es. elementi di una checklist, sezioni di un planner, consigli)." },
+    };
     
     const uniquenessInstruction = existingTitles.length > 0
-      ? `IMPORTANTE: Evita di generare ${type} con i seguenti titoli, poiché esistono già: ${existingTitles.join(', ')}.`
+      ? `IMPORTANTE: Evita di generare contenuti bonus con i seguenti titoli, poiché esistono già: ${existingTitles.join(', ')}.`
       : '';
 
-    const prompt = `Basato sull'argomento del libro "${topic}", genera ${count} ${type} unici relativi a "${description}".
-    Per ognuno, fornisci un "title" univoco e i dettagli del contenuto.
+    const prompt = `Agisci come un esperto creatore di contenuti ed esperto di marketing editoriale. ${context} Genera ${count} contenuti bonus unici di tipo '${contentType}' relativi a "${description}". Questi bonus devono fornire un valore aggiunto tangibile, pratico e altamente coerente con il tema del libro.
+    Per ognuno, fornisci un "title" accattivante e i dettagli del contenuto.
     ${uniquenessInstruction}
     Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
 
@@ -495,9 +505,9 @@ export const generateContentBlockText = async (
                         type: Type.OBJECT,
                         properties: {
                            title: { type: Type.STRING },
-                           ...itemProperties
+                           ...bonusProperties
                         },
-                        required: ["title", ...Object.keys(itemProperties)]
+                        required: ["title", ...Object.keys(bonusProperties)]
                     }
                 }
             }
@@ -507,10 +517,8 @@ export const generateContentBlockText = async (
 
         return results.map((item: any) => {
             let formattedText = `${item.description}\n\n`;
-            if (type === 'recipe') {
-                formattedText += `INGREDIENTI:\n- ${item.ingredients.join('\n- ')}\n\nISTRUZIONI:\n${item.instructions.map((step: string, i: number) => `${i + 1}. ${step}`).join('\n')}`;
-            } else {
-                formattedText += `MUSCOLI COINVOLTI:\n- ${item.muscles.join('\n- ')}\n\nISTRUZIONI:\n${item.instructions.map((step: string, i: number) => `${i + 1}. ${step}`).join('\n')}`;
+            if (item.items && item.items.length > 0) {
+                formattedText += `- ${item.items.join('\n- ')}`;
             }
             return {
                 title: item.title,
@@ -519,26 +527,21 @@ export const generateContentBlockText = async (
         });
 
     } catch (error) {
-        console.error(`Error generating ${type} text:`, error);
+        console.error(`Error generating bonus text:`, error);
         return null;
     }
 };
 
 /**
- * Genera un'immagine per un blocco di contenuto (ricetta/esercizio).
+ * Genera un'immagine per un blocco di contenuto bonus.
  */
-export const generateContentBlockImage = async (title: string, type: ContentBlockType): Promise<string | null> => {
-    const stylePrompt = type === 'recipe'
-        ? 'A professional, high-quality photograph of the finished dish, cookbook style, bright lighting, clean background, appetizing, hyper-realistic.'
-        : 'A clear, instructional, high-quality photograph of a person performing the exercise, studio lighting, focus on proper form, minimalist background, realistic.';
-
-    const prompt = `${stylePrompt} Image of: "${title}".`;
+export const generateContentBlockImage = async (title: string, project: Project): Promise<string | null> => {
+    const stylePrompt = `Come illustratore per un libro su "${project.topic}", crea un'immagine pulita, professionale e simbolica per una voce dell'appendice intitolata "${title}". Lo stile deve essere minimalista e grafico, visivamente coerente con il tema del libro e adatto per un'appendice di un libro.`;
 
     try {
-        // Fix: Explicitly type the response to ensure correct type inference.
         const response: GenerateImagesResponse = await withRetry(() => ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
-            prompt: prompt,
+            prompt: stylePrompt,
             config: {
                 numberOfImages: 1,
                 outputMimeType: 'image/jpeg',
@@ -552,7 +555,7 @@ export const generateContentBlockImage = async (title: string, type: ContentBloc
         }
         return null;
     } catch (error) {
-        console.error(`Error generating ${type} image:`, error);
+        console.error(`Error generating bonus image:`, error);
         return null;
     }
 };

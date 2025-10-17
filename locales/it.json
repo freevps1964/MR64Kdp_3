@@ -1,5 +1,4 @@
 
-
 {
   "header": {
     "title": "BookForge AI",
@@ -33,7 +32,9 @@
     "research": "Ricerca",
     "structure": "Struttura",
     "content": "Contenuti",
+    "appendices": "Appendici",
     "recipes": "Ricette & Esercizi",
+    "bonus": "Contenuti Bonus",
     "layout": "Layout",
     "cover": "Copertina",
     "metadata": "Metadati",
@@ -148,14 +149,24 @@
   },
   "layoutTab": {
     "title": "Layout del Libro",
-    "description": "Scegli un modello di layout per formattare professionalmente il tuo libro.",
+    "description": "Scegli un modello di layout per formattare professionalmente il tuo libro o crea il tuo stile personalizzato.",
     "classic": "Classico",
     "modern": "Moderno",
     "minimalist": "Minimalista",
+    "custom": "Personalizzato",
     "previewTitle": "Anteprima Libro",
     "exportPDF": "Esporta in PDF",
+    "exportImage": "Esporta come Immagine",
     "print": "Stampa",
-    "appendix": "Appendice"
+    "appendix": "Appendice",
+    "customStylesTitle": "Editor Stile Personalizzato",
+    "fontFamily": "Famiglia Carattere",
+    "fontSize": "Dimensione Carattere (pt)",
+    "lineHeight": "Interlinea",
+    "mainTitle": "Titolo Principale",
+    "subtitle": "Sottotitolo",
+    "chapterTitle": "Titolo Capitolo",
+    "bodyText": "Testo Principale"
   },
   "coverTab": {
     "title": "Design della Copertina",
@@ -214,38 +225,42 @@
     "item4": "È stato scelto un layout.",
     "exportButton": "Esporta PDF Pronto per la Stampa"
   },
-  "recipesTab": {
-    "title": "Ricette & Esercizi",
-    "description": "Genera contenuti specifici come ricette o esercizi, completi di testo e immagini, basati sull'argomento del tuo libro.",
-    "newBlock": "Nuovo Blocco",
-    "selectType": "Seleziona il tipo di contenuto:",
-    "recipe": "Ricetta",
-    "exercise": "Esercizio",
-    "descriptionPlaceholder": "Descrivi la ricetta o l'esercizio che vuoi creare...\nEs: 'Pancake proteici con mirtilli' o 'Piegamenti sulle braccia per principianti'",
+  "appendicesTab": {
+    "title": "Appendici",
+    "description": "Genera contenuti extra di valore per i tuoi lettori, come ricette, esercizi, checklist o riassunti.",
+    "newBlock": "Nuovo Elemento",
+    "descriptionPlaceholder": "Descrivi il contenuto che vuoi creare...\nEs: 'Un piano alimentare di 7 giorni basato sul libro', o 'Una routine di allenamento giornaliera'",
     "generateButton": "Genera",
     "generating": "Generazione in corso...",
-    "saveButton": "Salva Blocco",
-    "deleteButton": "Elimina Blocco",
+    "saveButton": "Salva Elemento",
+    "deleteButton": "Elimina Elemento",
     "editTitle": "Modifica Titolo",
-    "selectBlock": "Seleziona un blocco da modificare o creane uno nuovo.",
+    "selectBlock": "Seleziona un elemento da modificare o creane uno nuovo.",
     "generatedText": "Testo Generato",
     "generatedImage": "Immagine Generata",
     "generatePrompt": "Genera Prompt con AI",
     "generatingPrompt": "Generazione...",
     "itemCount": "Numero di elementi",
     "generatingItem": "Generazione {current} di {total}: {title}...",
-    "blockOf": "Blocco {current} di {total}",
+    "blockOf": "Elemento {current} di {total}",
     "prevBlock": "Precedente",
     "nextBlock": "Successivo",
     "generateImage": "Genera Immagine",
     "regenerateImage": "Rigenera Immagine",
     "noImage": "Nessuna immagine ancora generata.",
-    "generatingImage": "Generazione immagine..."
+    "generatingImage": "Generazione immagine...",
+    "contentType": "Tipo di Contenuto",
+    "recipeType": "Ricetta",
+    "exerciseType": "Esercizio",
+    "bonusType": "Bonus",
+    "generateAllImages": "Genera Immagini"
   },
   "archiveTab": {
     "title": "Archivio del Progetto",
-    "description": "Una raccolta di tutte le risorse generate e selezionate. Clicca su 'Usa' per applicare un elemento archiviato al tuo progetto corrente.",
+    "description": "Una raccolta di tutte le risorse generate e selezionate per il tuo progetto, più un glossario dei termini.",
     "useButton": "Usa",
+    "assetsSubTab": "Risorse del Progetto",
+    "glossarySubTab": "Glossario",
     "authorsTitle": "Autori Archiviati",
     "titlesTitle": "Titoli Archiviati",
     "subtitlesTitle": "Sottotitoli Archiviati",
@@ -255,6 +270,20 @@
     "noItems": "Nessun elemento archiviato.",
     "noCovers": "Nessuna copertina preferita salvata.",
     "promptLabel": "Prompt utilizzati",
-    "promptsTitle": "Prompt Copertine Utilizzati"
+    "promptsTitle": "Prompt Copertine Utilizzati",
+    "glossary": {
+        "description": "Gestisci un glossario di termini per il tuo libro. Aggiungi, modifica ed elimina termini e le loro definizioni.",
+        "termList": "Elenco Termini",
+        "newTerm": "Nuovo Termine",
+        "searchPlaceholder": "Cerca termini...",
+        "noTerms": "Nessun termine trovato.",
+        "termLabel": "Termine",
+        "definitionLabel": "Definizione",
+        "saveChanges": "Salva Modifiche",
+        "addTerm": "Aggiungi Termine",
+        "deleteTerm": "Elimina Termine",
+        "confirmDelete": "Sei sicuro di voler eliminare il termine \"{term}\"?",
+        "errorEmpty": "Il termine e la definizione non possono essere vuoti."
+    }
   }
 }

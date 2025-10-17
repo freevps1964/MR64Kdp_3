@@ -1,5 +1,4 @@
 
-
 {
   "header": {
     "title": "BookForge AI",
@@ -33,7 +32,9 @@
     "research": "Research",
     "structure": "Structure",
     "content": "Content",
+    "appendices": "Appendices",
     "recipes": "Recipes & Exercises",
+    "bonus": "Bonus Content",
     "layout": "Layout",
     "cover": "Cover",
     "metadata": "Metadata",
@@ -148,14 +149,24 @@
   },
   "layoutTab": {
     "title": "Book Layout",
-    "description": "Choose a layout template to professionally format your book.",
+    "description": "Choose a layout template to professionally format your book, or create your own custom style.",
     "classic": "Classic",
     "modern": "Modern",
     "minimalist": "Minimalist",
+    "custom": "Custom",
     "previewTitle": "Book Preview",
     "exportPDF": "Export to PDF",
+    "exportImage": "Export as Image",
     "print": "Print",
-    "appendix": "Appendix"
+    "appendix": "Appendix",
+    "customStylesTitle": "Custom Style Editor",
+    "fontFamily": "Font Family",
+    "fontSize": "Font Size (pt)",
+    "lineHeight": "Line Height",
+    "mainTitle": "Main Title",
+    "subtitle": "Subtitle",
+    "chapterTitle": "Chapter Title",
+    "bodyText": "Body Text"
   },
   "coverTab": {
     "title": "Cover Design",
@@ -214,38 +225,42 @@
     "item4": "Layout has been chosen.",
     "exportButton": "Export Print-Ready PDF"
   },
-  "recipesTab": {
-    "title": "Recipes & Exercises",
-    "description": "Generate specific content like recipes or exercises, complete with text and images, based on your book's topic.",
-    "newBlock": "New Block",
-    "selectType": "Select content type:",
-    "recipe": "Recipe",
-    "exercise": "Exercise",
-    "descriptionPlaceholder": "Describe the recipe or exercise you want to create...\ne.g., 'High-protein pancakes with blueberries' or 'Push-ups for beginners'",
+  "appendicesTab": {
+    "title": "Appendices",
+    "description": "Generate valuable extra content for your readers, such as recipes, exercises, checklists, or summaries.",
+    "newBlock": "New Item",
+    "descriptionPlaceholder": "Describe the content you want to create...\ne.g., 'A 7-day meal plan based on the book', or 'A daily workout routine'",
     "generateButton": "Generate",
     "generating": "Generating...",
-    "saveButton": "Save Block",
-    "deleteButton": "Delete Block",
+    "saveButton": "Save Item",
+    "deleteButton": "Delete Item",
     "editTitle": "Edit Title",
-    "selectBlock": "Select a block to edit or create a new one.",
+    "selectBlock": "Select an item to edit or create a new one.",
     "generatedText": "Generated Text",
     "generatedImage": "Generated Image",
     "generatePrompt": "Generate Prompt with AI",
     "generatingPrompt": "Generating...",
     "itemCount": "Number of items",
     "generatingItem": "Generating {current} of {total}: {title}...",
-    "blockOf": "Block {current} of {total}",
+    "blockOf": "Item {current} of {total}",
     "prevBlock": "Previous",
     "nextBlock": "Next",
     "generateImage": "Generate Image",
     "regenerateImage": "Regenerate Image",
     "noImage": "No image generated yet.",
-    "generatingImage": "Generating image..."
+    "generatingImage": "Generating image...",
+    "contentType": "Content Type",
+    "recipeType": "Recipe",
+    "exerciseType": "Exercise",
+    "bonusType": "Bonus",
+    "generateAllImages": "Generate Images"
   },
   "archiveTab": {
     "title": "Project Archive",
-    "description": "A collection of all generated and selected assets for your project. Click 'Use' to apply an archived item to your current project.",
+    "description": "A collection of all generated and selected assets for your project, plus a glossary of terms.",
     "useButton": "Use",
+    "assetsSubTab": "Project Assets",
+    "glossarySubTab": "Glossary",
     "authorsTitle": "Archived Authors",
     "titlesTitle": "Archived Titles",
     "subtitlesTitle": "Archived Subtitles",
@@ -255,6 +270,20 @@
     "noItems": "No items archived yet.",
     "noCovers": "No favorite covers saved yet.",
     "promptLabel": "Prompt used",
-    "promptsTitle": "Cover Prompts Used"
+    "promptsTitle": "Cover Prompts Used",
+    "glossary": {
+        "description": "Manage a glossary of terms for your book. Add, edit, and delete terms and their definitions.",
+        "termList": "Term List",
+        "newTerm": "New Term",
+        "searchPlaceholder": "Search terms...",
+        "noTerms": "No terms found.",
+        "termLabel": "Term",
+        "definitionLabel": "Definition",
+        "saveChanges": "Save Changes",
+        "addTerm": "Add Term",
+        "deleteTerm": "Delete Term",
+        "confirmDelete": "Are you sure you want to delete the term \"{term}\"?",
+        "errorEmpty": "Term and definition cannot be empty."
+    }
   }
 }

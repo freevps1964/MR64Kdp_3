@@ -7,7 +7,7 @@
     <title>BookForge AI - Dove si diventa maestri di Amazon KDP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
     <style>
       .book-preview-container {
         background-color: #f9fafb; /* gray-50 */
@@ -27,18 +27,30 @@
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         box-sizing: border-box;
         flex-shrink: 0;
+        position: relative;
       }
 
       /* KDP Page Sizes */
       .size-6x9 .book-page {
         width: 15.24cm;
         min-height: 22.86cm;
-        padding: 1.5cm 1.27cm; /* Margins */
+        padding: 1.5cm 1.27cm 2.5cm 1.27cm; /* Margins, with more space at bottom for page number */
       }
        .size-7x10 .book-page {
         width: 17.78cm;
         min-height: 25.4cm;
-        padding: 1.75cm 1.5cm; /* Margins */
+        padding: 1.75cm 1.5cm 2.5cm 1.5cm; /* Margins, with more space at bottom for page number */
+      }
+      
+      .page-number {
+        position: absolute;
+        bottom: 1cm;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 10pt;
+        color: #6b7280; /* neutral-medium */
+        font-family: 'Montserrat', sans-serif;
       }
 
       /* Base styles */
@@ -120,6 +132,9 @@
           margin: 0 auto; /* Center the page content */
           min-height: 0; /* Override screen style */
           page-break-after: always; /* Each .book-page is a new printed page */
+        }
+        .page-number {
+          visibility: visible !important;
         }
         .chapter-container, .appendix-container {
           page-break-before: always; /* Each chapter starts on a new page */
@@ -206,7 +221,8 @@
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.3",
     "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
     "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.3.0/"
+    "firebase/": "https://aistudiocdn.com/firebase@^12.3.0/",
+    "url": "https://aistudiocdn.com/url@^0.11.4"
   }
 }
 </script>

@@ -8,7 +8,7 @@ import PlusIcon from '../icons/PlusIcon';
 import TrashIcon from '../icons/TrashIcon';
 import type { ContentBlock, ContentBlockType } from '../../types';
 
-const RecipesTab: React.FC = () => {
+const AppendicesTab: React.FC = () => {
   const { t } = useLocalization();
   const { project, updateProject, addContentBlock, updateContentBlock, deleteContentBlock } = useProject();
   
@@ -19,37 +19,40 @@ const RecipesTab: React.FC = () => {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingAllImages, setIsGeneratingAllImages] = useState(false);
   const [numberOfItems, setNumberOfItems] = useState(1);
+  const [newBlockType, setNewBlockType] = useState<ContentBlockType>('recipe');
   const prevBlockCountRef = useRef(project?.contentBlocks.length || 0);
 
   const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 9)}`;
   
+  const contentBlocks = project?.contentBlocks || [];
+
   useEffect(() => {
     if (selectedBlockId === 'new') {
         setCurrentBlock({
-            type: 'recipe',
+            type: newBlockType,
             title: '',
             description: '',
             textContent: '',
             imageUrl: null,
         });
     } else if (selectedBlockId) {
-        const block = project?.contentBlocks.find(b => b.id === selectedBlockId);
+        const block = contentBlocks.find(b => b.id === selectedBlockId);
         setCurrentBlock(block || null);
     } else {
         setCurrentBlock(null);
     }
-  }, [selectedBlockId, project?.contentBlocks]);
+  }, [selectedBlockId, project?.contentBlocks, newBlockType]);
 
   useEffect(() => {
-      const currentBlockCount = project?.contentBlocks.length || 0;
+      const currentBlockCount = contentBlocks.length;
       if (selectedBlockId === 'new' && currentBlockCount > prevBlockCountRef.current) {
-          const lastBlock = project.contentBlocks[project.contentBlocks.length - 1];
+          const lastBlock = contentBlocks[contentBlocks.length - 1];
           if (lastBlock) {
               setSelectedBlockId(lastBlock.id);
           }
       }
       prevBlockCountRef.current = currentBlockCount;
-  }, [project?.contentBlocks, selectedBlockId]);
+  }, [contentBlocks, selectedBlockId]);
 
 
   const handleFieldChange = (field: keyof ContentBlock, value: string) => {
@@ -59,10 +62,11 @@ const RecipesTab: React.FC = () => {
   };
   
   const handleGeneratePrompt = async () => {
-    if (!project?.topic || !currentBlock?.type) return;
+    if (!project) return;
     setIsGeneratingPrompt(true);
     try {
-        const prompt = await generateContentBlockPrompt(project.topic, currentBlock.type);
+        const contentType = currentBlock?.type || 'bonus';
+        const prompt = await generateContentBlockPrompt(project, contentType);
         if (prompt) {
             handleFieldChange('description', prompt);
         }
@@ -74,37 +78,36 @@ const RecipesTab: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!project?.topic || !currentBlock?.description || !currentBlock.type) return;
+    if (!project || !currentBlock?.description) return;
 
     setIsLoading(true);
     
     try {
         const itemsToGenerate = selectedBlockId === 'new' ? numberOfItems : 1;
-        const existingTitles = project.contentBlocks
-            .filter(b => b.id !== selectedBlockId) // Exclude current block if regenerating
+        const existingTitles = contentBlocks
+            .filter(b => b.id !== selectedBlockId)
             .map(b => b.title);
+        const contentType = currentBlock.type!;
 
         const generatedItems = await generateContentBlockText(
-            project.topic,
+            project,
             currentBlock.description,
-            currentBlock.type,
             itemsToGenerate,
-            existingTitles
+            existingTitles,
+            contentType
         );
 
         if (generatedItems && generatedItems.length > 0) {
             if (selectedBlockId === 'new') {
                 const newBlocks: ContentBlock[] = generatedItems.map(item => ({
                     id: generateId(),
-                    type: currentBlock.type!,
+                    type: contentType,
                     title: item.title,
                     description: currentBlock.description!,
                     textContent: item.textContent,
                     imageUrl: null,
                 }));
-                // Single update with all new blocks
                 updateProject({ contentBlocks: [...(project.contentBlocks || []), ...newBlocks] });
-                // Automatically select the first newly created block
                 if (newBlocks.length > 0) {
                     setSelectedBlockId(newBlocks[0].id);
                 }
@@ -131,11 +134,11 @@ const RecipesTab: React.FC = () => {
   };
   
   const handleGenerateImage = async () => {
-    if (!project?.topic || !currentBlock?.title || !currentBlock.type) return;
+    if (!currentBlock?.title || !project) return;
     
     setIsGeneratingImage(true);
     try {
-        const imageUrl = await generateContentBlockImage(currentBlock.title, currentBlock.type);
+        const imageUrl = await generateContentBlockImage(currentBlock.title, project);
         if (imageUrl && currentBlock.id) {
             const updatedBlock = { ...currentBlock, id: currentBlock.id, imageUrl } as ContentBlock;
             updateContentBlock(updatedBlock);
@@ -152,11 +155,11 @@ const RecipesTab: React.FC = () => {
     if (!project) return;
     setIsGeneratingAllImages(true);
 
-    const blocksWithoutImages = project.contentBlocks.filter(b => !b.imageUrl);
+    const blocksWithoutImages = contentBlocks.filter(b => (b.type === 'recipe' || b.type === 'exercise') && !b.imageUrl);
     
     for (const block of blocksWithoutImages) {
         try {
-            const imageUrl = await generateContentBlockImage(block.title, block.type);
+            const imageUrl = await generateContentBlockImage(block.title, project);
             if (imageUrl) {
                 const updatedBlock = { ...block, imageUrl };
                 updateContentBlock(updatedBlock);
@@ -164,7 +167,8 @@ const RecipesTab: React.FC = () => {
                     setCurrentBlock(updatedBlock);
                 }
             }
-            await new Promise(resolve => setTimeout(resolve, 20000));
+            // Delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 31000));
         } catch (error) {
             console.error(`Failed to generate image for ${block.title}:`, error);
         }
@@ -174,13 +178,13 @@ const RecipesTab: React.FC = () => {
   };
 
   const handleSave = () => {
-    if (!currentBlock || !currentBlock.type || !currentBlock.title) return;
+    if (!currentBlock || !currentBlock.title) return;
 
     if (currentBlock.id) {
         updateContentBlock(currentBlock as ContentBlock);
     } else {
         const { id, ...newBlockData } = currentBlock;
-        addContentBlock(newBlockData as Omit<ContentBlock, 'id'>);
+        addContentBlock({ ...newBlockData } as Omit<ContentBlock, 'id'>);
     }
   };
   
@@ -191,10 +195,9 @@ const RecipesTab: React.FC = () => {
     }
   };
 
-  const contentBlocks = project?.contentBlocks || [];
   const currentIndex = contentBlocks.findIndex(b => b.id === selectedBlockId);
   const totalBlocks = contentBlocks.length;
-  const hasBlocksWithoutImages = contentBlocks.some(b => !b.imageUrl);
+  const hasImageableBlocksWithoutImages = contentBlocks.some(b => (b.type === 'recipe' || b.type === 'exercise') && !b.imageUrl);
 
 
   const handleNavigate = (direction: 'prev' | 'next') => {
@@ -206,12 +209,20 @@ const RecipesTab: React.FC = () => {
   };
 
   const isBusy = isLoading || isGeneratingPrompt || isGeneratingImage || isGeneratingAllImages;
+  const blockTypeForIcon = (type: ContentBlockType) => {
+    switch (type) {
+        case 'recipe': return '🍲';
+        case 'exercise': return '💪';
+        case 'bonus': return '✨';
+        default: return '📄';
+    }
+  };
 
   return (
     <Card>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-brand-dark">{t('recipesTab.title')}</h2>
-        <p className="text-neutral-medium mt-1">{t('recipesTab.description')}</p>
+        <h2 className="text-2xl font-bold text-brand-dark">{t('appendicesTab.title')}</h2>
+        <p className="text-neutral-medium mt-1">{t('appendicesTab.description')}</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
@@ -221,23 +232,24 @@ const RecipesTab: React.FC = () => {
             onClick={() => setSelectedBlockId('new')}
             className="w-full flex items-center justify-center gap-2 mb-2 bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors"
           >
-            <PlusIcon /> {t('recipesTab.newBlock')}
+            <PlusIcon /> {t('appendicesTab.newBlock')}
           </button>
           <button
             onClick={handleGenerateAllImages}
-            disabled={isBusy || !hasBlocksWithoutImages}
+            disabled={isBusy || !hasImageableBlocksWithoutImages}
             className="w-full flex items-center justify-center gap-2 mb-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-neutral-medium"
           >
-            {isGeneratingAllImages ? <LoadingSpinner /> : '🖼️ Genera tutte le immagini'}
+            {isGeneratingAllImages ? <LoadingSpinner /> : `🖼️ ${t('appendicesTab.generateAllImages')}`}
           </button>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {project?.contentBlocks.map(block => (
+            {contentBlocks.map(block => (
               <button
                 key={block.id}
                 onClick={() => setSelectedBlockId(block.id)}
-                className={`w-full text-left p-2 rounded truncate ${selectedBlockId === block.id ? 'bg-brand-accent/30 font-semibold' : 'hover:bg-gray-200'}`}
+                className={`w-full text-left p-2 rounded truncate flex items-center gap-2 ${selectedBlockId === block.id ? 'bg-brand-accent/30 font-semibold' : 'hover:bg-gray-200'}`}
               >
-                {block.title}
+                <span>{blockTypeForIcon(block.type)}</span>
+                <span className="flex-grow truncate">{block.title}</span>
               </button>
             ))}
           </div>
@@ -253,70 +265,65 @@ const RecipesTab: React.FC = () => {
                       disabled={currentIndex === 0}
                       className="px-4 py-1 text-sm font-semibold bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      &larr; {t('recipesTab.prevBlock')}
+                      &larr; {t('appendicesTab.prevBlock')}
                     </button>
                     <span className="font-semibold text-sm text-neutral-dark">
-                      {t('recipesTab.blockOf', { current: currentIndex + 1, total: totalBlocks })}
+                      {t('appendicesTab.blockOf', { current: currentIndex + 1, total: totalBlocks })}
                     </span>
                     <button
                       onClick={() => handleNavigate('next')}
                       disabled={currentIndex === totalBlocks - 1}
                       className="px-4 py-1 text-sm font-semibold bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {t('recipesTab.nextBlock')} &rarr;
+                      {t('appendicesTab.nextBlock')} &rarr;
                     </button>
                   </div>
                 )}
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-grow">
-                  <label className="block text-sm font-medium text-gray-700">{t('recipesTab.selectType')}</label>
-                  <div className="flex gap-4 mt-1">
-                    {(['recipe', 'exercise'] as ContentBlockType[]).map(type => (
-                      <label key={type} className="flex items-center">
+              {selectedBlockId === 'new' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end p-3 bg-gray-50 rounded-md border">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('appendicesTab.contentType')}</label>
+                        <div className="flex flex-wrap gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="blockType" value="recipe" checked={newBlockType === 'recipe'} onChange={() => setNewBlockType('recipe')} className="form-radio h-4 w-4 text-brand-primary"/>
+                                {t('appendicesTab.recipeType')}
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="blockType" value="exercise" checked={newBlockType === 'exercise'} onChange={() => setNewBlockType('exercise')} className="form-radio h-4 w-4 text-brand-primary"/>
+                                {t('appendicesTab.exerciseType')}
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="blockType" value="bonus" checked={newBlockType === 'bonus'} onChange={() => setNewBlockType('bonus')} className="form-radio h-4 w-4 text-brand-primary"/>
+                                {t('appendicesTab.bonusType')}
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="item-count" className="block text-sm font-medium text-gray-700">{t('appendicesTab.itemCount')}</label>
                         <input
-                          type="radio"
-                          name="contentType"
-                          value={type}
-                          checked={currentBlock.type === type}
-                          onChange={() => handleFieldChange('type', type)}
-                          className="h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-light"
-                          disabled={isBusy}
-                        />
-                        <span className="ml-2 capitalize">{t(`recipesTab.${type}`)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                 {selectedBlockId === 'new' && (
-                    <div className="flex-shrink-0">
-                        <label htmlFor="item-count" className="block text-sm font-medium text-gray-700">{t('recipesTab.itemCount')}</label>
-                        <input
-                            type="number"
-                            id="item-count"
-                            value={numberOfItems}
+                            type="number" id="item-count" value={numberOfItems}
                             onChange={e => setNumberOfItems(Math.max(1, parseInt(e.target.value, 10)))}
-                            min="1"
-                            max="10"
+                            min="1" max="10"
                             className="w-24 p-2 mt-1 border border-gray-300 rounded-md"
                             disabled={isBusy}
                         />
                     </div>
-                 )}
-              </div>
+                </div>
+              )}
 
               <div>
                 <div className="flex justify-between items-center mb-1">
                     <label className="block text-sm font-medium text-gray-700">Prompt</label>
                     <button onClick={handleGeneratePrompt} disabled={isBusy} className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50">
                         {isGeneratingPrompt ? <LoadingSpinner className="animate-spin h-4 w-4 text-brand-primary"/> : '✨'}
-                        {isGeneratingPrompt ? t('recipesTab.generatingPrompt') : t('recipesTab.generatePrompt')}
+                        {isGeneratingPrompt ? t('appendicesTab.generatingPrompt') : t('appendicesTab.generatePrompt')}
                     </button>
                 </div>
                 <textarea
                   value={currentBlock.description}
                   onChange={e => handleFieldChange('description', e.target.value)}
-                  placeholder={t('recipesTab.descriptionPlaceholder')}
+                  placeholder={t('appendicesTab.descriptionPlaceholder')}
                   rows={4}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
                   disabled={isBusy}
@@ -328,16 +335,16 @@ const RecipesTab: React.FC = () => {
                 disabled={isBusy || !currentBlock.description}
                 className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
               >
-                {isLoading ? <LoadingSpinner /> : `✨ ${t('recipesTab.generateButton')}`}
+                {isLoading ? <LoadingSpinner /> : `✨ ${t('appendicesTab.generateButton')}`}
               </button>
               
-              {isLoading && <p className="text-center mt-2 text-neutral-medium">{t('recipesTab.generating')}</p>}
+              {isLoading && <p className="text-center mt-2 text-neutral-medium">{t('appendicesTab.generating')}</p>}
 
                 <div className="mt-4 space-y-4 pt-4 border-t">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <div className={`grid grid-cols-1 ${(currentBlock.type === 'recipe' || currentBlock.type === 'exercise') ? 'md:grid-cols-2' : ''} gap-6 items-start`}>
                     <div className="space-y-4">
                         <div>
-                            <label className="block font-semibold">{t('recipesTab.editTitle')}</label>
+                            <label className="block font-semibold">{t('appendicesTab.editTitle')}</label>
                             <input
                             type="text"
                             value={currentBlock.title}
@@ -346,7 +353,7 @@ const RecipesTab: React.FC = () => {
                             />
                         </div>
                         <div>
-                            <label className="block font-semibold">{t('recipesTab.generatedText')}</label>
+                            <label className="block font-semibold">{t('appendicesTab.generatedText')}</label>
                             <textarea
                             value={currentBlock.textContent}
                             onChange={e => handleFieldChange('textContent', e.target.value)}
@@ -355,28 +362,30 @@ const RecipesTab: React.FC = () => {
                             />
                         </div>
                     </div>
-                    <div>
-                        <label className="block font-semibold">{t('recipesTab.generatedImage')}</label>
-                        <div className="mt-1 w-full aspect-square border border-gray-300 rounded-md flex items-center justify-center bg-neutral-light/50 relative overflow-hidden">
-                            {isGeneratingImage ? (
-                            <div className="flex flex-col items-center gap-2">
-                                <LoadingSpinner className="h-8 w-8 text-brand-primary" />
-                                <p className="text-sm text-neutral-medium">{t('recipesTab.generatingImage')}</p>
+                    {(currentBlock.type === 'recipe' || currentBlock.type === 'exercise') && (
+                        <div>
+                            <label className="block font-semibold">{t('appendicesTab.generatedImage')}</label>
+                            <div className="mt-1 w-full aspect-square border border-gray-300 rounded-md flex items-center justify-center bg-neutral-light/50 relative overflow-hidden">
+                                {isGeneratingImage ? (
+                                <div className="flex flex-col items-center gap-2">
+                                    <LoadingSpinner className="h-8 w-8 text-brand-primary" />
+                                    <p className="text-sm text-neutral-medium">{t('appendicesTab.generatingImage')}</p>
+                                </div>
+                                ) : currentBlock.imageUrl ? (
+                                <img src={currentBlock.imageUrl} alt={currentBlock.title} className="w-full h-full object-cover" />
+                                ) : (
+                                <p className="text-neutral-medium text-sm px-4 text-center">{t('appendicesTab.noImage')}</p>
+                                )}
                             </div>
-                            ) : currentBlock.imageUrl ? (
-                            <img src={currentBlock.imageUrl} alt={currentBlock.title} className="w-full h-full object-cover" />
-                            ) : (
-                            <p className="text-neutral-medium text-sm px-4 text-center">{t('recipesTab.noImage')}</p>
-                            )}
+                            <button
+                                onClick={handleGenerateImage}
+                                disabled={isBusy || !currentBlock.id}
+                                className="mt-2 w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
+                            >
+                                {isGeneratingImage ? <LoadingSpinner /> : (currentBlock.imageUrl ? `✨ ${t('appendicesTab.regenerateImage')}` : `✨ ${t('appendicesTab.generateImage')}`)}
+                            </button>
                         </div>
-                        <button
-                            onClick={handleGenerateImage}
-                            disabled={isBusy || !currentBlock.id}
-                            className="mt-2 w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
-                        >
-                            {isGeneratingImage ? <LoadingSpinner /> : (currentBlock.imageUrl ? `✨ ${t('recipesTab.regenerateImage')}` : `✨ ${t('recipesTab.generateImage')}`)}
-                        </button>
-                    </div>
+                    )}
                   </div>
                    <div className="flex gap-4 pt-4 border-t">
                     <button
@@ -384,7 +393,7 @@ const RecipesTab: React.FC = () => {
                         disabled={isBusy || !currentBlock.title}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow disabled:bg-neutral-medium"
                     >
-                       {t('recipesTab.saveButton')}
+                       {t('appendicesTab.saveButton')}
                     </button>
                     {currentBlock.id && (
                          <button
@@ -397,32 +406,9 @@ const RecipesTab: React.FC = () => {
                 </div>
                 </div>
             </div>
-            ) : project && project.contentBlocks.length > 0 ? (
-                <div className="animate-fade-in">
-                    <h3 className="text-xl font-bold text-brand-dark mb-4">{t('recipesTab.title')}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {project.contentBlocks.map(block => (
-                            <button 
-                                key={block.id} 
-                                onClick={() => setSelectedBlockId(block.id)}
-                                className="border rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:ring-2 hover:ring-brand-light transition-all text-left"
-                            >
-                                <div className="w-full h-40 bg-neutral-light/50 p-4 flex flex-col justify-start text-clip overflow-hidden">
-                                  <p className="text-sm text-neutral-dark italic" style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 6, overflow: 'hidden' }}>
-                                    {block.textContent}
-                                  </p>
-                                </div>
-                                <div className="p-4 border-t bg-white">
-                                    <h4 className="font-semibold text-brand-dark truncate">{block.title}</h4>
-                                    <p className="text-sm text-neutral-medium capitalize">{t(`recipesTab.${block.type}`)}</p>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
             ) : (
             <div className="flex items-center justify-center h-96 bg-neutral-light rounded-lg border-2 border-dashed">
-              <p className="text-neutral-medium text-center">{t('recipesTab.selectBlock')}</p>
+              <p className="text-neutral-medium text-center">{t('appendicesTab.selectBlock')}</p>
             </div>
           )}
         </main>
@@ -431,4 +417,4 @@ const RecipesTab: React.FC = () => {
   );
 };
 
-export default RecipesTab;
+export default AppendicesTab;

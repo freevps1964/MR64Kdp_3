@@ -8,7 +8,7 @@ import LayoutTab from './components/tabs/LayoutTab';
 import CoverTab from './components/tabs/CoverTab';
 import MetadataTab from './components/tabs/MetadataTab';
 import ValidationTab from './components/tabs/ValidationTab';
-import RecipesTab from './components/tabs/RecipesTab';
+import AppendicesTab from './components/tabs/RecipesTab';
 import { useProject } from './hooks/useProject';
 import WelcomeScreen from './components/WelcomeScreen';
 import type { TabKey } from './types';
@@ -27,16 +27,16 @@ const App: React.FC = () => {
         return <ResearchTab />;
       case 'structure':
         return <StructureTab />;
-      case 'content':
-        return <ContentTab />;
-      case 'recipes':
-        return <RecipesTab />;
-      case 'layout':
-        return <LayoutTab />;
-      case 'cover':
-        return <CoverTab />;
       case 'metadata':
         return <MetadataTab />;
+      case 'cover':
+        return <CoverTab />;
+      case 'content':
+        return <ContentTab />;
+      case 'appendices':
+        return <AppendicesTab />;
+      case 'layout':
+        return <LayoutTab />;
       case 'validation':
         return <ValidationTab />;
       case 'archive':

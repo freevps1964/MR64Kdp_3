@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
-import type { LayoutTemplate, PageSize, Project } from '../../types';
+import type { LayoutTemplate, PageSize, Project, CustomStyles } from '../../types';
 import BookPreview from '../PromptForm';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import { useToast } from '../../hooks/useToast';
@@ -32,6 +32,17 @@ const LayoutTemplateCard: React.FC<{
   </button>
 );
 
+const defaultCustomStyles: CustomStyles = {
+    titleFont: 'EB Garamond',
+    titleSize: 22,
+    subtitleFont: 'Montserrat',
+    subtitleSize: 14,
+    bodyFont: 'EB Garamond',
+    bodySize: 12,
+    lineHeight: 1.5,
+    chapterTitleFont: 'Montserrat',
+    chapterTitleSize: 18,
+};
 
 const LayoutTab: React.FC = () => {
   const { t } = useLocalization();
@@ -40,18 +51,36 @@ const LayoutTab: React.FC = () => {
 
   const [isExporting, setIsExporting] = useState(false);
   const [showFullRender, setShowFullRender] = useState(false);
+  const [customStyles, setCustomStyles] = useState<CustomStyles>(project?.customStyles || defaultCustomStyles);
   
-  // Stati per la traduzione
   const [targetLang, setTargetLang] = useState('it');
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationProgress, setTranslationProgress] = useState(0);
   const [translatedProject, setTranslatedProject] = useState<Project | null>(null);
 
+  useEffect(() => {
+    if (project?.customStyles) {
+        setCustomStyles(project.customStyles);
+    }
+  }, [project?.customStyles]);
+
+  useEffect(() => {
+    if (project?.layoutTemplate === 'Custom') {
+        const handler = setTimeout(() => {
+            updateProject({ customStyles });
+        }, 500); // Debounce updates
+        return () => clearTimeout(handler);
+    }
+  }, [customStyles, project?.layoutTemplate, updateProject]);
+
   const templates: { name: LayoutTemplate, description: string }[] = [
     { name: 'Classic', description: t('layoutTab.classic') },
     { name: 'Modern', description: t('layoutTab.modern') },
     { name: 'Minimalist', description: t('layoutTab.minimalist') },
+    { name: 'Custom', description: t('layoutTab.custom') },
   ];
+  
+  const googleFonts = ['EB Garamond', 'Montserrat', 'Lato', 'Roboto', 'Open Sans', 'Georgia', 'Times New Roman'];
 
   const handleSelectTemplate = (template: LayoutTemplate) => {
     updateProject({ layoutTemplate: template });
@@ -59,7 +88,7 @@ const LayoutTab: React.FC = () => {
   
   const handleLanguageChange = (lang: string) => {
     setTargetLang(lang);
-    setTranslatedProject(null); // Resetta la traduzione quando la lingua cambia
+    setTranslatedProject(null); 
   };
 
   const handleTranslate = async () => {
@@ -173,108 +202,34 @@ const LayoutTab: React.FC = () => {
         }
     }, 200);
   };
+    
+    const handleExportImage = async () => {
+        const previewElement = document.getElementById('book-preview-content');
+        if (!previewElement) return;
 
-    const handleExportDoc = () => {
-        const projectToExport = translatedProject || project;
-        if (!projectToExport || !projectToExport.bookStructure) return;
-
-        const layout = projectToExport.layoutTemplate;
-        const font = layout === 'Classic' ? "'EB Garamond', serif" :
-                     layout === 'Modern' ? "'Georgia', serif" :
-                     "'Times New Roman', Times, serif";
-
-        const pageSize = projectToExport.pageSize || '6x9';
-        const pageStyles = pageSize === '6x9' 
-            ? '@page { size: 6in 9in; margin: 0.59in 0.5in; }'
-            : '@page { size: 7in 10in; margin: 0.69in 0.59in; }';
-
-        const styles = `
-            @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&display=swap');
-            ${pageStyles}
-            body {
-                font-family: ${font};
-                font-size: 14pt;
-                line-height: 1.5;
-            }
-            .book-title { font-size: 20pt; font-weight: bold; text-align: center; }
-            .book-subtitle { font-size: 16pt; font-style: normal; text-align: center; color: #6b7280; }
-            .book-author { text-align: center; font-style: italic; margin-bottom: 3rem; }
-            .chapter-container { margin-top: 2.5rem; page-break-before: always; }
-            .chapter-title { font-size: 16pt; font-weight: bold; margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; }
-            .subchapter-container { margin-top: 1.5rem; margin-left: 1rem; }
-            .subchapter-title { font-size: 14pt; font-weight: bold; margin-bottom: 1rem; }
-            .content-block { line-height: 1.5; font-size: 14pt; }
-            .content-block br { content: ""; display: block; margin-bottom: 1rem; }
-        `;
-
-        const sanitizePlainText = (text: string) => (text || '').replace(/\n/g, '<br />');
-
-        let bodyContent = `
-            <div>
-                <h1 class="book-title">${projectToExport.bookTitle || projectToExport.projectTitle}</h1>
-                ${projectToExport.subtitle ? `<p class="book-subtitle">${projectToExport.subtitle}</p>` : ''}
-                ${projectToExport.author ? `<p class="book-author">by ${projectToExport.author}</p>` : ''}
-            </div>
-        `;
-
-        projectToExport.bookStructure.chapters.forEach(chapter => {
-            bodyContent += `
-                <div class="chapter-container">
-                    <h2 class="chapter-title">${chapter.title}</h2>
-                    ${chapter.content ? `<div class="content-block">${chapter.content}</div>` : ''}
-                    
-                    ${chapter.subchapters.map(subchapter => `
-                        <div class="subchapter-container">
-                            <h3 class="subchapter-title">${subchapter.title}</h3>
-                            ${subchapter.content ? `<div class="content-block">${subchapter.content}</div>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        });
-
-        if (projectToExport.contentBlocks && projectToExport.contentBlocks.length > 0) {
-            bodyContent += `
-                <div class="chapter-container">
-                    <h2 class="chapter-title">${t('layoutTab.appendix')}</h2>
-                    ${projectToExport.contentBlocks.map(block => `
-                        <div class="subchapter-container">
-                            <h3 class="subchapter-title">${block.title}</h3>
-                            ${block.imageUrl ? `<img src="${block.imageUrl}" alt="${block.title}" style="display: block; margin: 1.5rem auto; max-width: 80%; border: 1px solid #cccccc; padding: 5px;" />` : ''}
-                            <div class="content-block">${sanitizePlainText(block.textContent)}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+        try {
+            await waitForLibraries();
+            const { html2canvas } = window as any;
+            const canvas = await html2canvas(previewElement, {
+                backgroundColor: null, // Transparent background
+                useCORS: true,
+            });
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `${project?.projectTitle || 'book-preview'}.png`;
+            link.click();
+        } catch (error) {
+            console.error('Error exporting image:', error);
+            showToast('Failed to export image.', 'error');
         }
-
-        const htmlString = `
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>${projectToExport.projectTitle}</title>
-                    <style>${styles}</style>
-                </head>
-                <body>
-                    ${bodyContent}
-                </body>
-            </html>
-        `;
-
-        const blob = new Blob([htmlString], { type: 'application/msword' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${projectToExport.projectTitle || 'book'}.doc`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     };
 
-  
-  const classicPreview = (
+    const handleCustomStyleChange = (field: keyof CustomStyles, value: string | number) => {
+        setCustomStyles(prev => ({ ...prev, [field]: value }));
+    };
+
+    const classicPreview = (
      <div className="font-serif" style={{ fontFamily: 'EB Garamond, serif' }}>
         <div className="text-xl font-bold text-center">Chapter Title</div>
         <div className="h-1 w-1/4 bg-gray-400 mx-auto my-2"></div>
@@ -297,10 +252,18 @@ const LayoutTab: React.FC = () => {
     </div>
   );
 
+  const customPreview = (
+      <div style={{ fontFamily: customStyles.bodyFont }}>
+        <div style={{ fontFamily: customStyles.chapterTitleFont, fontSize: '1.25rem', fontWeight: 'bold' }}>Custom Title</div>
+        <div className="text-xs text-left mt-3" style={{ lineHeight: customStyles.lineHeight }}>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet.</div>
+    </div>
+  );
+
   const templatePreviews = {
       'Classic': classicPreview,
       'Modern': modernPreview,
       'Minimalist': minimalistPreview,
+      'Custom': customPreview
   }
 
   const selectedPageSize = project?.pageSize || '6x9';
@@ -311,8 +274,9 @@ const LayoutTab: React.FC = () => {
       <p className="text-neutral-medium mb-6">
         {t('layoutTab.description')}
       </p>
-    <div className="flex flex-col sm:flex-row gap-6 mb-8">
-      <div className="w-full sm:w-2/3 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <div className="flex flex-col xl:flex-row gap-6 mb-8">
+      <div className="w-full xl:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {templates.map((template) => (
           <LayoutTemplateCard
             key={template.name}
@@ -324,7 +288,7 @@ const LayoutTab: React.FC = () => {
           />
         ))}
       </div>
-       <div className="w-full sm:w-1/3">
+      <div className="w-full xl:w-1/3">
            <label htmlFor="pageSize" className="block text-sm font-medium text-gray-700 mb-2">
             Formato Pagina (KDP)
             </label>
@@ -340,6 +304,47 @@ const LayoutTab: React.FC = () => {
             </select>
        </div>
     </div>
+    
+    {project?.layoutTemplate === 'Custom' && (
+        <div className="mb-8 p-4 border rounded-lg bg-neutral-light/50 animate-fade-in">
+            <h3 className="text-lg font-semibold text-brand-dark mb-4">{t('layoutTab.customStylesTitle')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                {/* Main Title */}
+                <div className="p-2 border-l-4 border-brand-primary">
+                    <label className="block text-sm font-bold text-gray-800">{t('layoutTab.mainTitle')}</label>
+                    <select value={customStyles.titleFont} onChange={e => handleCustomStyleChange('titleFont', e.target.value)} className="w-full mt-1 p-1 border rounded-md text-sm">
+                        {googleFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <input type="number" value={customStyles.titleSize} onChange={e => handleCustomStyleChange('titleSize', parseInt(e.target.value, 10))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.fontSize')} />
+                </div>
+                 {/* Subtitle */}
+                <div className="p-2 border-l-4 border-brand-light">
+                    <label className="block text-sm font-bold text-gray-800">{t('layoutTab.subtitle')}</label>
+                    <select value={customStyles.subtitleFont} onChange={e => handleCustomStyleChange('subtitleFont', e.target.value)} className="w-full mt-1 p-1 border rounded-md text-sm">
+                        {googleFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <input type="number" value={customStyles.subtitleSize} onChange={e => handleCustomStyleChange('subtitleSize', parseInt(e.target.value, 10))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.fontSize')} />
+                </div>
+                {/* Chapter Title */}
+                <div className="p-2 border-l-4 border-brand-secondary">
+                    <label className="block text-sm font-bold text-gray-800">{t('layoutTab.chapterTitle')}</label>
+                    <select value={customStyles.chapterTitleFont} onChange={e => handleCustomStyleChange('chapterTitleFont', e.target.value)} className="w-full mt-1 p-1 border rounded-md text-sm">
+                       {googleFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <input type="number" value={customStyles.chapterTitleSize} onChange={e => handleCustomStyleChange('chapterTitleSize', parseInt(e.target.value, 10))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.fontSize')} />
+                </div>
+                {/* Body Text */}
+                <div className="p-2 border-l-4 border-neutral-medium">
+                    <label className="block text-sm font-bold text-gray-800">{t('layoutTab.bodyText')}</label>
+                    <select value={customStyles.bodyFont} onChange={e => handleCustomStyleChange('bodyFont', e.target.value)} className="w-full mt-1 p-1 border rounded-md text-sm">
+                        {googleFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <input type="number" value={customStyles.bodySize} onChange={e => handleCustomStyleChange('bodySize', parseInt(e.target.value, 10))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.fontSize')} />
+                    <input type="number" step="0.1" value={customStyles.lineHeight} onChange={e => handleCustomStyleChange('lineHeight', parseFloat(e.target.value))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.lineHeight')} />
+                </div>
+            </div>
+        </div>
+    )}
       
        <div className="mt-8">
          <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
@@ -354,7 +359,6 @@ const LayoutTab: React.FC = () => {
                     >
                         <option value="it">Italiano (Originale)</option>
                         <option value="en">Inglese</option>
-                        <option value="de">Tedesco</option>
                     </select>
                     <button
                         onClick={handleTranslate}
@@ -365,17 +369,11 @@ const LayoutTab: React.FC = () => {
                     </button>
                 </div>
                 <button
-                    onClick={handleExportDoc}
-                    disabled={isExporting || !project?.bookStructure || isTranslating}
-                    className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
-                    >
-                    {isExporting ? <LoadingSpinner /> : 'Export .doc'}
-                </button>
-                 <button
-                    disabled
-                    className="flex items-center justify-center bg-gray-400 text-white font-bold py-2 px-4 rounded-lg cursor-not-allowed"
-                    >
-                    Export .epub (Soon)
+                    onClick={handleExportImage}
+                    disabled={isExporting}
+                    className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium"
+                >
+                    {t('layoutTab.exportImage')}
                 </button>
                 <button
                 onClick={handleExportPDF}

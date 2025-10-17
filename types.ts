@@ -1,6 +1,6 @@
 import type { GenerateContentResponse } from "@google/genai";
 
-export type TabKey = 'research' | 'structure' | 'content' | 'recipes' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive';
+export type TabKey = 'research' | 'structure' | 'content' | 'appendices' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive';
 
 export interface GroundingSource {
   web?: {
@@ -56,10 +56,10 @@ export interface BookStructure {
   chapters: Chapter[];
 }
 
-export type LayoutTemplate = 'Classic' | 'Modern' | 'Minimalist';
+export type LayoutTemplate = 'Classic' | 'Modern' | 'Minimalist' | 'Custom';
 export type PageSize = '6x9' | '7x10';
 
-export type ContentBlockType = 'recipe' | 'exercise';
+export type ContentBlockType = 'recipe' | 'exercise' | 'bonus';
 
 export interface ContentBlock {
   id: string;
@@ -68,6 +68,24 @@ export interface ContentBlock {
   description: string; // User's input prompt
   textContent: string; // Generated text (steps, ingredients, etc.)
   imageUrl: string | null;
+}
+
+export interface GlossaryTerm {
+  id: string;
+  term: string;
+  definition: string;
+}
+
+export interface CustomStyles {
+  titleFont: string;
+  titleSize: number; // pt
+  subtitleFont: string;
+  subtitleSize: number; // pt
+  bodyFont: string;
+  bodySize: number; // pt
+  lineHeight: number; // multiplier
+  chapterTitleFont: string;
+  chapterTitleSize: number; // pt
 }
 
 
@@ -91,11 +109,13 @@ export interface Project {
   bookStructure: BookStructure | null;
   lastSaved: string;
   layoutTemplate: LayoutTemplate;
+  customStyles?: CustomStyles;
   pageSize: PageSize;
   coverImage: string | null; // base64 string
   coverOptions: string[]; // array of base64 strings
   coverPrompts: string[];
   archivedCovers: string[]; // New: array of selected base64 strings
-  contentBlocks: ContentBlock[]; // New: for recipes/exercises
+  contentBlocks: ContentBlock[]; 
+  glossary: GlossaryTerm[];
   coverBonusCount: number;
 }
