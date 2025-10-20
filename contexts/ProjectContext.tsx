@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { Project, BookStructure, Chapter, ContentBlock, GlossaryTerm } from '../types';
-import { useAuth } from '../hooks/useAuth';
 
 export interface ProjectContextType {
   project: Project | null;
@@ -46,8 +45,8 @@ interface ProjectProviderProps {
 }
 
 const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 9)}`;
-const ARCHIVE_KEY_PREFIX = 'kdp-projects-archive';
-const AUTHORS_ARCHIVE_KEY_PREFIX = 'kdp-authors-archive';
+const ARCHIVE_KEY = 'kdp-projects-archive-local';
+const AUTHORS_ARCHIVE_KEY = 'kdp-authors-archive-local';
 
 
 // Helper function to save a "lean" version of the project archive to localStorage.
@@ -74,64 +73,35 @@ const saveArchiveToLocalStorage = (archive: Project[], archiveKey: string) => {
 
 
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) => {
-  const { user, isAuthEnabled } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [isProjectStarted, setIsProjectStarted] = useState(false);
 
-  const getArchiveKey = useCallback(() => {
-    if (user) {
-      return `${ARCHIVE_KEY_PREFIX}-${user.uid}`;
-    }
-    // If auth is disabled, use a generic key for local-only storage.
-    if (!isAuthEnabled) {
-      return `${ARCHIVE_KEY_PREFIX}-guest`;
-    }
-    // If auth is enabled but there's no user, we are logged out.
-    // No key is returned, preventing access to any project data.
-    return null;
-  }, [user, isAuthEnabled]);
-  
-  const getAuthorsArchiveKey = useCallback(() => {
-    if (user) return `${AUTHORS_ARCHIVE_KEY_PREFIX}-${user.uid}`;
-    if (!isAuthEnabled) return `${AUTHORS_ARCHIVE_KEY_PREFIX}-guest`;
-    return null;
-  }, [user, isAuthEnabled]);
-
-
   useEffect(() => {
-    const archiveKey = getArchiveKey();
-    if (archiveKey) {
-        const savedArchive = localStorage.getItem(archiveKey);
-        if (savedArchive) {
-          try {
-            const parsedArchive = JSON.parse(savedArchive);
-            if (Array.isArray(parsedArchive)) {
-              // Hydrate lean project objects with transient fields like coverOptions
-              const hydratedArchive = parsedArchive.map((p: Omit<Project, 'coverOptions'>) => ({
-                ...p,
-                coverOptions: [], // Initialize as empty array on load
-              }));
-              setArchivedProjects(hydratedArchive);
-            }
-          } catch (error) {
-            console.error("Error parsing project archive:", error);
-            localStorage.removeItem(archiveKey);
-          }
-        } else {
-            setArchivedProjects([]); // No archive for this user, reset
+    const archiveKey = ARCHIVE_KEY;
+    const savedArchive = localStorage.getItem(archiveKey);
+    if (savedArchive) {
+      try {
+        const parsedArchive = JSON.parse(savedArchive);
+        if (Array.isArray(parsedArchive)) {
+          // Hydrate lean project objects with transient fields like coverOptions
+          const hydratedArchive = parsedArchive.map((p: Omit<Project, 'coverOptions'>) => ({
+            ...p,
+            coverOptions: [], // Initialize as empty array on load
+          }));
+          setArchivedProjects(hydratedArchive);
         }
+      } catch (error) {
+        console.error("Error parsing project archive:", error);
+        localStorage.removeItem(archiveKey);
+      }
     } else {
-        // User logged out, clear all state
-        setProject(null);
-        setArchivedProjects([]);
-        setIsProjectStarted(false);
+        setArchivedProjects([]); // No archive, reset
     }
-  }, [user, getArchiveKey]);
+  }, []);
 
   const updateProject = useCallback((updates: Partial<Project>) => {
-    const archiveKey = getArchiveKey();
-    if (!archiveKey) return;
+    const archiveKey = ARCHIVE_KEY;
 
     setProject(currentProject => {
       if (!currentProject) return null;
@@ -157,7 +127,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
 
       return updatedProject;
     });
-  }, [getArchiveKey]);
+  }, []);
 
   // Auto-save effect
   useEffect(() => {
@@ -175,10 +145,8 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
 
 
   const startNewProject = (title: string) => {
-    const archiveKey = getArchiveKey();
-    if (!archiveKey) return;
-    
-    const authorsArchiveKey = getAuthorsArchiveKey();
+    const archiveKey = ARCHIVE_KEY;
+    const authorsArchiveKey = AUTHORS_ARCHIVE_KEY;
     const savedAuthors = authorsArchiveKey ? localStorage.getItem(authorsArchiveKey) : null;
     const initialAuthors = savedAuthors ? JSON.parse(savedAuthors) : [];
       
@@ -230,8 +198,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   };
 
   const updateNodeContent = useCallback((nodeId: string, content: string) => {
-    const archiveKey = getArchiveKey();
-    if (!archiveKey) return;
+    const archiveKey = ARCHIVE_KEY;
 
     setProject(currentProject => {
       if (!currentProject) return null;
@@ -275,7 +242,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
 
       return updatedProject;
     });
-  }, [getArchiveKey]);
+  }, []);
 
 
   const setBookStructure = (structure: BookStructure) => {
@@ -445,7 +412,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   const addAuthorToArchive = (author: string) => {
     if (!project || !author.trim()) return;
 
-    const authorsArchiveKey = getAuthorsArchiveKey();
+    const authorsArchiveKey = AUTHORS_ARCHIVE_KEY;
     if (!authorsArchiveKey) return;
 
     const trimmedAuthor = author.trim();
@@ -459,8 +426,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
   };
 
   const deleteProject = (projectId: string) => {
-      const archiveKey = getArchiveKey();
-      if (!archiveKey) return;
+      const archiveKey = ARCHIVE_KEY;
       
       setArchivedProjects(prevArchive => {
           const newArchive = prevArchive.filter(p => p.id !== projectId);

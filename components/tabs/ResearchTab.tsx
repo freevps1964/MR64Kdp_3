@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { researchTopic } from '../../services/geminiService';
+import { researchTopic, discoverTrends } from '../../services/geminiService';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import Card from '../common/Card';
-import type { GroundingSource } from '../../types';
+import type { GroundingSource, Trend } from '../../types';
 
 const StatCard: React.FC<{ value: number; label: string }> = ({ value, label }) => (
   <div>
@@ -20,22 +20,34 @@ const ResearchTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // New state for trends
+  const [isDiscoveringTrends, setIsDiscoveringTrends] = useState(false);
+  const [trendsError, setTrendsError] = useState<string | null>(null);
+  const [timePeriod, setTimePeriod] = useState('ultimo mese');
+  const [trendsResult, setTrendsResult] = useState<{ trends: Trend[], sources: GroundingSource[] } | null>(null);
+  
+  const topicInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (project?.topic) {
       setTopic(project.topic);
     }
   }, [project?.topic]);
 
-  const handleResearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!topic.trim()) return;
+  const handleResearch = async (e?: React.FormEvent, researchTopicOverride?: string) => {
+    if (e) e.preventDefault();
+    const currentTopic = researchTopicOverride || topic;
+    if (!currentTopic.trim()) return;
 
     setIsLoading(true);
     setError(null);
-    updateProject({ researchData: null, topic: topic.trim() });
+    updateProject({ researchData: null, topic: currentTopic.trim() });
+
+    // scroll to topic input
+    topicInputRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     try {
-      const { result } = await researchTopic(topic.trim());
+      const { result } = await researchTopic(currentTopic.trim());
       if (result) {
         // Sort results client-side as a fallback
         result.titles.sort((a, b) => b.relevance - a.relevance);
@@ -66,14 +78,36 @@ const ResearchTab: React.FC = () => {
     }
   };
 
-  const handleSelectTitle = (title: string) => {
-    updateProject({ bookTitle: title });
+  const handleDiscoverTrends = async () => {
+    setIsDiscoveringTrends(true);
+    setTrendsError(null);
+    setTrendsResult(null);
+    try {
+      const { trends, sources } = await discoverTrends(timePeriod);
+      if (trends) {
+        setTrendsResult({ trends, sources });
+      } else {
+        throw new Error('No trends returned from analysis.');
+      }
+    } catch (err: any) {
+      const errorMessage = err.toString().toLowerCase();
+      if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+        setTrendsError(t('researchTab.errorRateLimit'));
+      } else {
+        setTrendsError(t('researchTab.error'));
+      }
+      console.error(err);
+    } finally {
+      setIsDiscoveringTrends(false);
+    }
   };
   
-  const handleSelectSubtitle = (subtitle: string) => {
-    updateProject({ subtitle: subtitle });
+  const handleSelectTrend = (trendTopic: string) => {
+    setTopic(trendTopic);
+    handleResearch(undefined, trendTopic);
   };
-  
+
+
   const handleSourceSelectionChange = (source: GroundingSource, isSelected: boolean) => {
     const currentSelected = project?.selectedSources || [];
     let newSelected;
@@ -101,6 +135,76 @@ const ResearchTab: React.FC = () => {
 
   return (
     <Card>
+      {/* New Trend Research Section */}
+      <div className="mb-12 p-6 border border-brand-light/50 rounded-lg bg-brand-light/10">
+        <h3 className="text-xl font-bold text-brand-dark mb-3">{t('researchTab.trendsTitle')}</h3>
+        <p className="text-neutral-medium mb-4">{t('researchTab.trendsDescription')}</p>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div>
+            <label htmlFor="time-period" className="sr-only">{t('researchTab.timePeriodLabel')}</label>
+            <select
+              id="time-period"
+              value={timePeriod}
+              onChange={(e) => setTimePeriod(e.target.value)}
+              className="p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
+            >
+              <option value="ultima settimana">{t('researchTab.lastWeek')}</option>
+              <option value="ultimo mese">{t('researchTab.lastMonth')}</option>
+              <option value="ultimi 3 mesi">{t('researchTab.last3Months')}</option>
+            </select>
+          </div>
+          <button
+            onClick={handleDiscoverTrends}
+            disabled={isDiscoveringTrends}
+            className="flex items-center justify-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
+          >
+            {isDiscoveringTrends ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-dark" /> : `💡 ${t('researchTab.discoverTrendsButton')}`}
+          </button>
+        </div>
+        {isDiscoveringTrends && <p className="text-center mt-4 text-neutral-medium">{t('researchTab.trendsLoading')}</p>}
+        {trendsError && <p className="text-center mt-4 text-red-600">{trendsError}</p>}
+        
+        {trendsResult && (
+          <div className="mt-6 animate-fade-in space-y-4">
+             <h4 className="text-lg font-semibold text-brand-dark">{t('researchTab.trendingTopics')}</h4>
+             <div className="space-y-3">
+               {trendsResult.trends.map((trend, index) => (
+                 <div key={index} className="p-4 bg-white border rounded-md shadow-sm">
+                   <div className="flex justify-between items-start gap-4">
+                     <div>
+                       <h5 className="font-bold text-brand-primary">{trend.topic}</h5>
+                       <p className="text-sm text-neutral-dark mt-1"><strong className="text-neutral-medium">{t('researchTab.trendReason')}:</strong> {trend.reason}</p>
+                     </div>
+                     <button
+                        onClick={() => handleSelectTrend(trend.topic)}
+                        className="bg-brand-secondary hover:bg-brand-dark text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors flex-shrink-0"
+                      >
+                       {t('researchTab.researchThisTopic')}
+                     </button>
+                   </div>
+                 </div>
+               ))}
+             </div>
+             {trendsResult.sources.length > 0 && (
+                <div className="pt-4 mt-4 border-t">
+                    <h5 className="text-base font-semibold text-brand-dark mb-2">{t('researchTab.trendSources')}</h5>
+                    <ul className="list-disc list-inside text-sm space-y-1">
+                        {trendsResult.sources.map((source, index) => (
+                           source.web?.uri && (
+                             <li key={index}>
+                                <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline">
+                                    {source.web.title || source.web.uri}
+                                </a>
+                             </li>
+                           )
+                        ))}
+                    </ul>
+                </div>
+             )}
+          </div>
+        )}
+      </div>
+
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('researchTab.title')}</h2>
       <p className="text-neutral-medium mb-6">
         {t('researchTab.description')}
@@ -108,6 +212,7 @@ const ResearchTab: React.FC = () => {
       <form onSubmit={handleResearch}>
         <div className="flex flex-col sm:flex-row gap-4">
           <input
+            ref={topicInputRef}
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
@@ -153,7 +258,7 @@ const ResearchTab: React.FC = () => {
               <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.suggestedTitles')}</h3>
               <div className="space-y-2">
                 {project.researchData.titles.map((item, index) => (
-                    <button key={index} onClick={() => handleSelectTitle(item.title)} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.bookTitle === item.title ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
+                    <button key={index} onClick={() => updateProject({ bookTitle: item.title })} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.bookTitle === item.title ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
                         <span>{item.title}</span>
                         <span className="text-xs font-bold text-brand-primary bg-blue-100 px-2 py-1 rounded-full">{item.relevance}%</span>
                     </button>
@@ -164,7 +269,7 @@ const ResearchTab: React.FC = () => {
               <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.suggestedSubtitles')}</h3>
                <div className="space-y-2">
                 {project.researchData.subtitles.map((item, index) => (
-                    <button key={index} onClick={() => handleSelectSubtitle(item.subtitle)} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.subtitle === item.subtitle ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
+                    <button key={index} onClick={() => updateProject({ subtitle: item.subtitle })} className={`w-full text-left p-3 rounded-md transition-colors flex justify-between items-center ${project.subtitle === item.subtitle ? 'bg-brand-accent/30 ring-2 ring-brand-accent' : 'bg-neutral-light hover:bg-gray-200'}`}>
                         <span>{item.subtitle}</span>
                         <span className="text-xs font-bold text-brand-primary bg-blue-100 px-2 py-1 rounded-full">{item.relevance}%</span>
                     </button>

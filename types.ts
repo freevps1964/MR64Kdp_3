@@ -25,6 +25,11 @@ export interface Keyword {
   relevance: number;
 }
 
+export interface Trend {
+  topic: string;
+  reason: string;
+}
+
 export interface ResearchResult {
   marketSummary: string;
   titles: TitleSuggestion[];

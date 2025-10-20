@@ -61,7 +61,7 @@
     "defaultTitle": "Nuovo Progetto"
   },
   "researchTab": {
-    "title": "Ricerca Argomento",
+    "title": "Ricerca Argomento Specifico",
     "description": "Inserisci un argomento per il tuo libro per avviare la ricerca basata sull'IA. Analizzeremo il mercato, suggeriremo titoli e troveremo parole chiave pertinenti per KDP.",
     "placeholder": "Es. Dieta chetogenica per principianti",
     "button": "Avvia Ricerca",
@@ -79,7 +79,19 @@
     "summaryTitles": "Titoli Suggeriti",
     "summarySubtitles": "Sottotitoli Suggeriti",
     "summaryKeywords": "Parole Chiave KDP",
-    "summarySources": "Fonti Web"
+    "summarySources": "Fonti Web",
+    "trendsTitle": "Ricerca Tendenze",
+    "trendsDescription": "Scopri gli argomenti più caldi del momento su Amazon e Google per trovare la tua prossima idea per un bestseller.",
+    "timePeriodLabel": "Periodo di Riferimento",
+    "lastWeek": "Ultima settimana",
+    "lastMonth": "Ultimo mese",
+    "last3Months": "Ultimi 3 mesi",
+    "discoverTrendsButton": "Scopri Tendenze",
+    "trendsLoading": "Analisi delle tendenze in corso...",
+    "trendingTopics": "Argomenti di Tendenza",
+    "trendReason": "Perché è di tendenza",
+    "researchThisTopic": "Ricerca questo argomento",
+    "trendSources": "Fonti dell'analisi di tendenza"
   },
   "structureTab": {
     "title": "Struttura del Libro",

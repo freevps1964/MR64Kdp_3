@@ -61,7 +61,7 @@
     "defaultTitle": "New Project"
   },
   "researchTab": {
-    "title": "Topic Research",
+    "title": "Specific Topic Research",
     "description": "Enter a topic for your book to start the AI-powered research. We will analyze the market, suggest titles, and find relevant keywords for KDP.",
     "placeholder": "e.g., Keto diet for beginners",
     "button": "Start Research",
@@ -79,7 +79,19 @@
     "summaryTitles": "Suggested Titles",
     "summarySubtitles": "Suggested Subtitles",
     "summaryKeywords": "KDP Keywords",
-    "summarySources": "Web Sources"
+    "summarySources": "Web Sources",
+    "trendsTitle": "Trend Research",
+    "trendsDescription": "Discover the hottest topics of the moment on Amazon and Google to find your next bestseller idea.",
+    "timePeriodLabel": "Time Period",
+    "lastWeek": "Last Week",
+    "lastMonth": "Last Month",
+    "last3Months": "Last 3 Months",
+    "discoverTrendsButton": "Discover Trends",
+    "trendsLoading": "Analyzing trends...",
+    "trendingTopics": "Trending Topics",
+    "trendReason": "Why it's trending",
+    "researchThisTopic": "Research this topic",
+    "trendSources": "Trend Analysis Sources"
   },
   "structureTab": {
     "title": "Book Structure",

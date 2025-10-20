@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse, Modality } from "@google/genai";
-import type { BookStructure, ResearchResult, Keyword, GroundingSource, Project, ContentBlockType } from '../types';
+import type { BookStructure, ResearchResult, Keyword, GroundingSource, Project, ContentBlockType, Trend } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -50,7 +50,14 @@ function parseJsonFromMarkdown<T>(jsonString: string): T | null {
     // Tenta un'analisi più permissiva se la prima fallisce
     try {
         const permissiveClean = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-        return JSON.parse(permissiveClean) as T;
+        if(permissiveClean.startsWith('{') && permissiveClean.endsWith('}')) {
+             return JSON.parse(permissiveClean) as T;
+        }
+        const permissiveCleanArray = jsonString.substring(jsonString.indexOf('['), jsonString.lastIndexOf(']') + 1);
+         if(permissiveCleanArray.startsWith('[') && permissiveCleanArray.endsWith(']')) {
+             return JSON.parse(permissiveCleanArray) as T;
+        }
+        return null;
     } catch (permissiveError) {
         console.error("Permissive parsing attempt failed:", permissiveError);
         return null;
@@ -114,6 +121,40 @@ ${JSON.stringify(sourcesToRank)}
         console.error("Error ranking sources:", error);
         return sources; // Restituisce le fonti originali non classificate in caso di errore
     }
+};
+
+/**
+ * Scopre argomenti di tendenza per libri KDP in un dato periodo.
+ */
+export const discoverTrends = async (timePeriod: string): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
+  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è identificare i 5 argomenti di saggistica più redditizi e di tendenza per il self-publishing su Amazon KDP, basandoti sulle tendenze di ricerca di Google e sulle vendite di Amazon nell'${timePeriod}.
+
+Per ogni argomento identificato, fornisci:
+1.  "topic": Il nome dell'argomento del libro, conciso e pronto per KDP.
+2.  "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questo argomento è attualmente di tendenza, citando dati emergenti o cambiamenti culturali.
+
+Fornisci la risposta esclusivamente come un array JSON di oggetti. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili. L'output deve essere solo il JSON.`;
+
+  try {
+    const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        tools: [{googleSearch: {}}],
+      },
+    }));
+    
+    // Aggiunge una pausa per evitare di superare i limiti di velocità con la chiamata successiva
+    await new Promise(resolve => setTimeout(resolve, 61000));
+
+    const trendsData = parseJsonFromMarkdown<Trend[]>(response.text);
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    
+    return { trends: trendsData, sources: groundingChunks };
+  } catch (error) {
+    console.error("Error during trend discovery:", error);
+    return { trends: null, sources: [] };
+  }
 };
 
 
@@ -384,10 +425,21 @@ export const editCoverImage = async (base64ImageDataUrl: string, prompt: string)
  */
 export const generateDescription = async (title: string, structure: BookStructure | null): Promise<string> => {
     const chapterTitles = structure?.chapters.map(c => c.title).join(', ') || 'vari argomenti';
-    const prompt = `Scrivi una descrizione di prodotto avvincente per un libro intitolato "${title}".
-    Il libro tratta i seguenti argomenti principali: ${chapterTitles}.
-    La descrizione deve essere persuasiva, ottimizzata per Amazon KDP e lunga circa 150-200 parole.
-    Evita di usare markdown o formattazione speciale.`;
+    const prompt = `AGISCI COME un copywriter di livello mondiale specializzato in descrizioni di libri per Amazon KDP che convertono. La tua missione è scrivere una descrizione magnetica e irresistibile per un libro intitolato "${title}".
+Il libro tratta i seguenti argomenti principali: ${chapterTitles}.
+
+Segui questa struttura vincente in 3 parti per massimizzare l'impatto e le vendite:
+1.  **Gancio Potente (Prime 1-2 frasi)**: Inizia con una domanda audace, una statistica scioccante o un'affermazione che colpisca direttamente il punto dolente o il desiderio più grande del lettore. Cattura immediatamente la loro attenzione.
+2.  **Corpo Persuasivo (Paragrafo centrale)**: Elenca i benefici chiave e le soluzioni che il lettore otterrà leggendo il libro. Usa un linguaggio orientato all'azione. Spiega cosa impareranno, come la loro vita migliorerà o quale problema risolveranno.
+3.  **Call to Action Irresistibile (Frase finale)**: Concludi con un invito all'azione chiaro, energico e ad altissima conversione che spinga il lettore a comprare ORA.
+
+Requisiti Aggiuntivi:
+-   **Linguaggio**: Scrivi in italiano fluente e naturale.
+-   **Lunghezza**: Mantieni la descrizione tra le 150 e le 200 parole.
+-   **Emoji Strategiche**: Inserisci 3-5 emoji altamente motivanti (es. ✨, 🚀, 💪, ✅, 📚) per spezzare il testo e aumentare l'engagement visivo. Posizionale in modo strategico per enfatizzare i punti chiave.
+-   **Formattazione**: NON usare markdown o HTML. Fornisci solo il testo puro.
+
+Esempio di Call to Action efficace: "Non aspettare un altro giorno per trasformare la tua vita. Scorri verso l'alto e clicca su 'Acquista ora' per iniziare il tuo viaggio oggi stesso!"`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
