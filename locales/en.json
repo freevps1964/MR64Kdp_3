@@ -60,6 +60,11 @@
   "project": {
     "defaultTitle": "New Project"
   },
+  "apiErrors": {
+    "rateLimit": "Requests have been temporarily limited. Please wait a minute and try again.",
+    "invalidInput": "Invalid input provided. Please check the data and try again.",
+    "generic": "An error occurred during the AI operation. Please try again."
+  },
   "researchTab": {
     "title": "Specific Topic Research",
     "description": "Enter a topic for your book to start the AI-powered research. We will analyze the market, suggest titles, and find relevant keywords for KDP.",
@@ -73,8 +78,6 @@
     "kdpKeywords": "KDP Keywords",
     "sources": "Web Sources",
     "selectAllSources": "Select All",
-    "error": "An error occurred during research. Please try again.",
-    "errorRateLimit": "Requests have been temporarily limited. Please wait a minute and try again.",
     "summaryTitle": "Research Summary",
     "summaryTitles": "Suggested Titles",
     "summarySubtitles": "Suggested Subtitles",

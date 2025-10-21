@@ -60,6 +60,11 @@
   "project": {
     "defaultTitle": "Nuovo Progetto"
   },
+  "apiErrors": {
+    "rateLimit": "Le richieste sono state temporaneamente limitate. Attendi un minuto e riprova.",
+    "invalidInput": "Input fornito non valido. Per favore, controlla i dati e riprova.",
+    "generic": "Si è verificato un errore durante l'operazione AI. Riprova."
+  },
   "researchTab": {
     "title": "Ricerca Argomento Specifico",
     "description": "Inserisci un argomento per il tuo libro per avviare la ricerca basata sull'IA. Analizzeremo il mercato, suggeriremo titoli e troveremo parole chiave pertinenti per KDP.",
@@ -73,8 +78,6 @@
     "kdpKeywords": "Parole Chiave KDP",
     "sources": "Fonti Web",
     "selectAllSources": "Seleziona Tutto",
-    "error": "Si è verificato un errore durante la ricerca. Riprova.",
-    "errorRateLimit": "Le richieste sono state temporaneamente limitate. Attendi un minuto e riprova.",
     "summaryTitle": "Riepilogo Ricerca",
     "summaryTitles": "Titoli Suggeriti",
     "summarySubtitles": "Sottotitoli Suggeriti",

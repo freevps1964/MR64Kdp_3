@@ -127,7 +127,7 @@ const CoverTab: React.FC = () => {
 
             // --- Draw Title ---
             const title = (project.bookTitle || '').toUpperCase();
-            let titleFontSize = 160; // Titolo1: Georgia 160
+            let titleFontSize = 200; // Aumentato per un titolo più grande
             ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
             // Shrink font size until title fits within content width
             while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
@@ -138,11 +138,11 @@ const CoverTab: React.FC = () => {
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSize = 80; // Titolo3: Georgia 80
-            // Aggiungi spazio prima del sottotitolo (simula due righe)
-            currentY += subtitleFontSize * 2;
+            let subtitleFontSize = 70; // Leggermente ridotto
+            // Aggiungi spazio prima del sottotitolo
+            currentY += subtitleFontSize; 
             ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
-                // Shrink font size until subtitle fits within content width
+            // Shrink font size until subtitle fits within content width
             while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 15) {
                 subtitleFontSize -= 2;
                 ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
@@ -245,8 +245,12 @@ const CoverTab: React.FC = () => {
         );
         setPrompt(generatedPrompt);
     } catch (err) {
-        console.error("Error generating prompt:", err);
-        setError("Failed to generate prompt. Please try again.");
+        const errorMessage = (err as Error).toString().toLowerCase();
+        if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+            setError(t('apiErrors.rateLimit'));
+        } else {
+            setError(t('apiErrors.generic'));
+        }
     } finally {
         setIsGeneratingPrompt(false);
     }
@@ -305,8 +309,12 @@ const CoverTab: React.FC = () => {
       });
 
     } catch (err) {
-      console.error("Error generating covers:", err);
-      setError("Impossibile generare le copertine. Riprova.");
+      const errorMessage = (err as Error).toString().toLowerCase();
+        if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+            setError(t('apiErrors.rateLimit'));
+        } else {
+            setError(t('apiErrors.generic'));
+        }
     } finally {
       setIsLoading(false);
     }
@@ -361,8 +369,12 @@ const CoverTab: React.FC = () => {
             setError(t('coverTab.refineError'));
         }
     } catch (err) {
-        console.error("Error refining cover:", err);
-        setError("An error occurred while refining the cover.");
+        const errorMessage = (err as Error).toString().toLowerCase();
+        if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+            setError(t('apiErrors.rateLimit'));
+        } else {
+            setError(t('apiErrors.generic'));
+        }
     } finally {
         setIsRefining(false);
     }

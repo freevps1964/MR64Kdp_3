@@ -54,31 +54,58 @@ const StructureTab: React.FC = () => {
             chapters: structure.chapters.map((chapter) => ({
                 ...chapter,
                 id: chapter.id || generateUniqueId('ch'),
+                content: chapter.content || '',
                 subchapters: chapter.subchapters.map((sub) => ({
                     ...sub,
-                    id: sub.id || generateUniqueId('sub')
+                    id: sub.id || generateUniqueId('sub'),
+                    content: sub.content || '',
                 }))
             }))
         };
         setBookStructure(structureWithIds);
       }
-    } catch (err) {
-      setError(t('structureTab.error'));
+    } catch (err: any) {
+      const errorMessage = err.toString().toLowerCase();
+      if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+        setError(t('apiErrors.rateLimit'));
+      } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+        setError(t('apiErrors.invalidInput'));
+      } else {
+        setError(t('apiErrors.generic'));
+      }
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string, type: 'chapter' | 'subchapter', parentId?: string) => {
     e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.setData('type', type);
+    if (parentId) {
+      e.dataTransfer.setData('parentId', parentId);
+    }
     setDraggedId(id);
   };
   
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, id: string) => {
-      e.preventDefault();
-      dragCounter.current++;
-      setDragOverId(id);
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, id: string, type: 'chapter' | 'subchapter', parentId?: string) => {
+    e.preventDefault();
+    const draggedType = e.dataTransfer.getData('type');
+    let isTargetValid = false;
+
+    if (draggedType === 'chapter' && type === 'chapter') {
+        isTargetValid = true;
+    } else if (draggedType === 'subchapter' && type === 'subchapter') {
+        const draggedParentId = e.dataTransfer.getData('parentId');
+        if (draggedParentId === parentId) {
+            isTargetValid = true;
+        }
+    }
+
+    if (isTargetValid) {
+        dragCounter.current++;
+        setDragOverId(id);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
@@ -116,7 +143,9 @@ const StructureTab: React.FC = () => {
           border: 2px dashed #9CA3AF;
         }
         .drag-over {
-          background-color: #E0E7FF; /* indigo-100 */
+          background-color: #BFDBFE !important; /* blue-200 */
+          outline: 2px dashed #3B82F6; /* brand-light */
+          outline-offset: -2px;
         }
       `}</style>
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('structureTab.title')}</h2>
@@ -188,8 +217,8 @@ const StructureTab: React.FC = () => {
                 <div 
                   key={chapter.id} 
                   draggable
-                  onDragStart={(e) => handleDragStart(e, chapter.id)}
-                  onDragEnter={(e) => handleDragEnter(e, chapter.id)}
+                  onDragStart={(e) => handleDragStart(e, chapter.id, 'chapter')}
+                  onDragEnter={(e) => handleDragEnter(e, chapter.id, 'chapter')}
                   onDragLeave={handleDragLeave}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, chapter.id)}
@@ -216,8 +245,8 @@ const StructureTab: React.FC = () => {
                              <div 
                                 key={sub.id}
                                 draggable
-                                onDragStart={(e) => handleDragStart(e, sub.id)}
-                                onDragEnter={(e) => handleDragEnter(e, sub.id)}
+                                onDragStart={(e) => handleDragStart(e, sub.id, 'subchapter', chapter.id)}
+                                onDragEnter={(e) => handleDragEnter(e, sub.id, 'subchapter', chapter.id)}
                                 onDragLeave={handleDragLeave}
                                 onDragOver={(e) => e.preventDefault()}
                                 onDrop={(e) => handleDrop(e, sub.id)}

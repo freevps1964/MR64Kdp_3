@@ -331,10 +331,11 @@ Book Details:
 - Emotional Keywords: ${keywordList}
 
 Your Creative Process:
-1.  **Conceptual and Symbolic Analysis**: Don't just do a literal representation. Dive deep into the topic "${topic}" and the title "${title}". What is the core promise to the reader? What is the key transformation or emotion (hope, power, serenity, curiosity)? Translate these abstract concepts into a **powerful and original visual metaphor**. Strictly avoid clichés and generic stock photo imagery.
-2.  **Visual Market Research**: Analyze current bestsellers in the "${category}" category on Amazon to understand the visual language that attracts the target audience. Identify archetypes, color palettes, and styles, but not to imitate them. The goal is to innovate and stand out while speaking a familiar language to the reader.
-3.  **Winning Concept Development**: Choose a single, strong artistic direction (e.g., photographic, illustrative, graphic, symbolic) and build the prompt around it.
-4.  **Final Prompt Construction**: Write a single prompt, in English, that is a masterpiece of descriptiveness. It must be rich, evocative, and precise.
+1.  **Target Audience and Emotional Tone Analysis**: Based on the title "${title}", the topic "${topic}", and the emotional keywords "${keywordList}", first analyze and define the target audience (e.g., beginners, experts, young adults) and the core emotional tone of the book (e.g., empowering, serene, urgent, mysterious). This analysis must guide all subsequent visual choices.
+2.  **Conceptual and Symbolic Analysis**: Don't just do a literal representation. Dive deep into the topic "${topic}" and the title "${title}". What is the core promise to the reader? What is the key transformation or emotion (hope, power, serenity, curiosity)? Translate these abstract concepts into a **powerful and original visual metaphor**. Strictly avoid clichés and generic stock photo imagery.
+3.  **Visual Market Research**: Analyze current bestsellers in the "${category}" category on Amazon to understand the visual language that attracts the target audience. Identify archetypes, color palettes, and styles, but not to imitate them. The goal is to innovate and stand out while speaking a familiar language to the reader.
+4.  **Winning Concept Development**: Choose a single, strong artistic direction (e.g., photographic, illustrative, graphic, symbolic) and build the prompt around it.
+5.  **Final Prompt Construction**: Write a single prompt, in English, that is a masterpiece of descriptiveness. It must be rich, evocative, and precise.
 
 Final Prompt Requirements:
 -   **Language**: Exclusively in **English**.

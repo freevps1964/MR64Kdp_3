@@ -68,9 +68,11 @@ const ResearchTab: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.toString().toLowerCase();
       if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
-        setError(t('researchTab.errorRateLimit'));
+        setError(t('apiErrors.rateLimit'));
+      } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+        setError(t('apiErrors.invalidInput'));
       } else {
-        setError(t('researchTab.error'));
+        setError(t('apiErrors.generic'));
       }
       console.error(err);
     } finally {
@@ -92,9 +94,11 @@ const ResearchTab: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.toString().toLowerCase();
       if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
-        setTrendsError(t('researchTab.errorRateLimit'));
+        setTrendsError(t('apiErrors.rateLimit'));
+      } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+        setTrendsError(t('apiErrors.invalidInput'));
       } else {
-        setTrendsError(t('researchTab.error'));
+        setTrendsError(t('apiErrors.generic'));
       }
       console.error(err);
     } finally {
