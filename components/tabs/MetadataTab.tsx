@@ -4,7 +4,7 @@ import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
 import { fetchAmazonCategories, generateDescription } from '../../services/geminiService';
 import LoadingSpinner from '../icons/LoadingSpinner';
-import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion } from '../../types';
+import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion, GroundingSource } from '../../types';
 import { useToast } from '../../hooks/useToast';
 
 const MetadataTab: React.FC = () => {
@@ -15,6 +15,9 @@ const MetadataTab: React.FC = () => {
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
   const [amazonCategories, setAmazonCategories] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [descriptionSources, setDescriptionSources] = useState<GroundingSource[]>([]);
+
 
   useEffect(() => {
     if (project && (project.metadataKeywords?.length || 0) === 0 && (project.researchData?.keywords?.length || 0) > 0) {
@@ -25,11 +28,17 @@ const MetadataTab: React.FC = () => {
   const handleFetchCategories = async () => {
     if (isFetchingCategories) return;
     setIsFetchingCategories(true);
+    setError(null);
     try {
         const cats = await fetchAmazonCategories();
         setAmazonCategories(cats);
-    } catch (error) {
-        console.error("Failed to fetch categories:", error);
+    } catch (err) {
+        const errorMessage = (err as Error).toString().toLowerCase();
+        if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+            setError(t('apiErrors.rateLimit'));
+        } else {
+            setError(t('apiErrors.generic'));
+        }
     } finally {
         setIsFetchingCategories(false);
     }
@@ -63,14 +72,24 @@ const MetadataTab: React.FC = () => {
   const handleGenerateDescription = async () => {
     if (!project || !project.bookTitle) return;
     setIsGeneratingDesc(true);
+    setError(null);
+    setDescriptionSources([]);
     try {
-        const desc = await generateDescription(project.bookTitle, project.bookStructure);
+        const { description: desc, sources } = await generateDescription(project.bookTitle, project.bookStructure);
+        setDescriptionSources(sources);
         const newArchive = project.descriptionsArchive.includes(desc) 
             ? project.descriptionsArchive 
             : [...project.descriptionsArchive, desc];
         updateProject({ description: desc, descriptionsArchive: newArchive });
-    } catch (error) {
-        console.error(error);
+    } catch (err) {
+        const errorMessage = (err as Error).toString().toLowerCase();
+        if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
+            setError(t('apiErrors.rateLimit'));
+        } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+            setError(t('apiErrors.invalidInput'));
+        } else {
+            setError(t('apiErrors.generic'));
+        }
     } finally {
         setIsGeneratingDesc(false);
     }
@@ -124,6 +143,8 @@ const MetadataTab: React.FC = () => {
       <p className="text-neutral-medium mb-6">
         {t('metadataTab.description')}
       </p>
+
+      {error && <p className="mb-4 text-center text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,6 +210,22 @@ const MetadataTab: React.FC = () => {
                 rows={6}
                 className="w-full p-2 border rounded-md"
             ></textarea>
+            {descriptionSources.length > 0 && (
+                <div className="mt-2 p-2 bg-neutral-light/70 rounded-md border text-xs">
+                    <p className="font-semibold text-neutral-dark mb-1">Fonti utilizzate per la descrizione:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                        {descriptionSources.map((source, index) => (
+                        source.web?.uri && (
+                            <li key={index}>
+                                <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline">
+                                    {source.web.title || source.web.uri}
+                                </a>
+                            </li>
+                        )
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
         <div>
           <label htmlFor="metadataKeywords" className="block font-semibold mb-1">{t('metadataTab.kdpKeywords')}</label>

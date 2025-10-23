@@ -138,9 +138,9 @@ const CoverTab: React.FC = () => {
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSize = 70; // Leggermente ridotto
+            let subtitleFontSize = 70; // Leggermente ridotto per una migliore gerarchia
             // Aggiungi spazio prima del sottotitolo
-            currentY += subtitleFontSize; 
+            currentY += subtitleFontSize * 0.5; 
             ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
             // Shrink font size until subtitle fits within content width
             while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 15) {
@@ -148,6 +148,7 @@ const CoverTab: React.FC = () => {
                 ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
             }
             currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
+
 
             // --- Draw Author (bottom-right) ---
             if (project.author) {
@@ -248,6 +249,8 @@ const CoverTab: React.FC = () => {
         const errorMessage = (err as Error).toString().toLowerCase();
         if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
             setError(t('apiErrors.rateLimit'));
+        } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+            setError(t('apiErrors.invalidInput'));
         } else {
             setError(t('apiErrors.generic'));
         }
@@ -312,6 +315,8 @@ const CoverTab: React.FC = () => {
       const errorMessage = (err as Error).toString().toLowerCase();
         if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
             setError(t('apiErrors.rateLimit'));
+        } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+            setError(t('apiErrors.invalidInput'));
         } else {
             setError(t('apiErrors.generic'));
         }
@@ -372,6 +377,8 @@ const CoverTab: React.FC = () => {
         const errorMessage = (err as Error).toString().toLowerCase();
         if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
             setError(t('apiErrors.rateLimit'));
+        } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
+            setError(t('apiErrors.invalidInput'));
         } else {
             setError(t('apiErrors.generic'));
         }

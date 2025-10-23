@@ -87,6 +87,8 @@ const ResearchTab: React.FC = () => {
     try {
       const { trends, sources } = await discoverTrends(timePeriod);
       if (trends) {
+        // Sort trends by trendScore descending
+        trends.sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0));
         setTrendsResult({ trends, sources });
       } else {
         throw new Error('No trends returned from analysis.');
@@ -176,7 +178,10 @@ const ResearchTab: React.FC = () => {
                  <div key={index} className="p-4 bg-white border rounded-md shadow-sm">
                    <div className="flex justify-between items-start gap-4">
                      <div>
-                       <h5 className="font-bold text-brand-primary">{trend.topic}</h5>
+                       <div className="flex items-center gap-3">
+                          <h5 className="font-bold text-brand-primary">{trend.topic}</h5>
+                          <span className="text-sm font-bold text-brand-accent bg-yellow-100 px-2 py-1 rounded-full">{trend.trendScore}%</span>
+                       </div>
                        <p className="text-sm text-neutral-dark mt-1"><strong className="text-neutral-medium">{t('researchTab.trendReason')}:</strong> {trend.reason}</p>
                      </div>
                      <button

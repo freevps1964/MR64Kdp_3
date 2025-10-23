@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateContentStream } from '../../services/geminiService';
+import { generateContentStream, processTextWithGemini } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import RichTextEditor from '../common/RichTextEditor';
 import type { Chapter, SubChapter, ToneOfVoice, TargetAudience, WritingStyle } from '../../types';
+import SparklesIcon from '../icons/SparklesIcon';
 
 const countWords = (html: string) => {
     if (!html) return 0;
@@ -22,6 +23,7 @@ const ContentTab: React.FC = () => {
   const [content, setContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<{ running: boolean; current: number; total: number; nodeTitle: string } | null>(null);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const [tone, setTone] = useState<ToneOfVoice>('Informal');
   const [audience, setAudience] = useState<TargetAudience>('Beginners');
@@ -187,8 +189,27 @@ const ContentTab: React.FC = () => {
     }
     setGenerationStatus(null);
   };
+  
+  const handleProcessText = async (action: 'improve' | 'summarize' | 'expand') => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
 
-  const isBusy = isGenerating || !!generationStatus?.running;
+    if (!plainText.trim()) return;
+
+    setIsProcessing(action);
+    try {
+        const result = await processTextWithGemini(plainText, action);
+        handleContentChange(result.replace(/\n/g, '<br />')); 
+    } catch (error) {
+        console.error(`Error processing text: ${action}`, error);
+        // TODO: show a toast notification
+    } finally {
+        setIsProcessing(null);
+    }
+  };
+
+  const isBusy = isGenerating || !!generationStatus?.running || !!isProcessing;
   
   const currentWordCount = countWords(content);
   const progress = wordCount > 0 ? Math.min((currentWordCount / wordCount) * 100, 100) : 0;
@@ -249,6 +270,17 @@ const ContentTab: React.FC = () => {
             </div>
         </div>
     </div>
+  );
+  
+  const AIToolButton: React.FC<{ action: 'improve' | 'summarize' | 'expand', label: string }> = ({ action, label }) => (
+    <button
+        onClick={() => handleProcessText(action)}
+        disabled={isBusy || countWords(content) === 0}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-brand-dark bg-white border border-gray-300 rounded-md shadow-sm hover:bg-neutral-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+        {isProcessing === action ? <LoadingSpinner className="h-4 w-4 text-brand-dark" /> : <SparklesIcon className="h-4 w-4 text-brand-accent" />}
+        {label}
+    </button>
   );
 
   return (
@@ -344,31 +376,42 @@ const ContentTab: React.FC = () => {
                     disabled={isBusy}
                 />
               </div>
-               <div className="flex items-center justify-end flex-wrap gap-4 mt-2 text-sm text-neutral-medium">
-                  <div className="flex items-center gap-2">
-                      <label htmlFor="word-count-target" className="font-semibold">{t('contentTab.options.wordCount')}:</label>
-                      <input
-                        id="word-count-target"
-                        type="number"
-                        value={wordCount}
-                        onChange={(e) => setWordCount(parseInt(e.target.value, 10) || 0)}
-                        className="w-20 p-1 border border-gray-300 rounded-md text-center bg-white"
-                        min="0"
-                        step="50"
-                        disabled={isBusy}
-                      />
-                  </div>
-                  <div className="flex items-center gap-2 w-48">
-                      <span className={`font-semibold tabular-nums ${isTargetMet ? 'text-green-600' : ''}`}>
-                        {t('contentTab.wordCountProgress', { current: currentWordCount, target: wordCount })}
-                      </span>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className={`h-2.5 rounded-full transition-all duration-300 ${isTargetMet ? 'bg-green-500' : 'bg-brand-primary'}`} 
-                          style={{ width: `${progress}%` }}
-                        ></div>
+              
+               <div className="mt-4 p-3 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                      <span className="text-sm font-semibold text-neutral-dark">AI Writing Tools:</span>
+                      <div className="flex items-center gap-2">
+                          <AIToolButton action="improve" label="Migliora" />
+                          <AIToolButton action="summarize" label="Riassumi" />
+                          <AIToolButton action="expand" label="Espandi" />
                       </div>
                   </div>
+                   <div className="flex items-center justify-end flex-wrap gap-4 text-sm text-neutral-medium">
+                        <div className="flex items-center gap-2">
+                            <label htmlFor="word-count-target" className="font-semibold">{t('contentTab.options.wordCount')}:</label>
+                            <input
+                                id="word-count-target"
+                                type="number"
+                                value={wordCount}
+                                onChange={(e) => setWordCount(parseInt(e.target.value, 10) || 0)}
+                                className="w-20 p-1 border border-gray-300 rounded-md text-center bg-white"
+                                min="0"
+                                step="50"
+                                disabled={isBusy}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 w-48">
+                            <span className={`font-semibold tabular-nums ${isTargetMet ? 'text-green-600' : ''}`}>
+                                {t('contentTab.wordCountProgress', { current: currentWordCount, target: wordCount })}
+                            </span>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div 
+                                className={`h-2.5 rounded-full transition-all duration-300 ${isTargetMet ? 'bg-green-500' : 'bg-brand-primary'}`} 
+                                style={{ width: `${progress}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
               </div>
             </div>
           ) : (

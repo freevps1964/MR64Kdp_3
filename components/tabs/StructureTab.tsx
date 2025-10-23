@@ -139,13 +139,13 @@ const StructureTab: React.FC = () => {
     <Card>
       <style>{`
         .dragging {
-          opacity: 0.5;
-          border: 2px dashed #9CA3AF;
+          opacity: 0.4;
+          transform: scale(0.98);
         }
         .drag-over {
-          background-color: #BFDBFE !important; /* blue-200 */
-          outline: 2px dashed #3B82F6; /* brand-light */
-          outline-offset: -2px;
+          background-color: #E0F2FE !important; /* sky-100 */
+          border: 2px dashed #0284C7; /* sky-600 */
+          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
       `}</style>
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('structureTab.title')}</h2>

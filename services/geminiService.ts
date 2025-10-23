@@ -132,8 +132,9 @@ export const discoverTrends = async (timePeriod: string): Promise<{ trends: Tren
 Per ogni argomento identificato, fornisci:
 1.  "topic": Il nome dell'argomento del libro, conciso e pronto per KDP.
 2.  "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questo argomento è attualmente di tendenza, citando dati emergenti o cambiamenti culturali.
+3.  "trendScore": un punteggio da 0 a 100 che rappresenta la forza e il potenziale di redditività della tendenza. 100 è il massimo potenziale.
 
-Fornisci la risposta esclusivamente come un array JSON di oggetti. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili. L'output deve essere solo il JSON.`;
+Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risultati dal "trendScore" più alto al più basso. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili. L'output deve essere solo il JSON.`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -331,7 +332,7 @@ Book Details:
 - Emotional Keywords: ${keywordList}
 
 Your Creative Process:
-1.  **Target Audience and Emotional Tone Analysis**: Based on the title "${title}", the topic "${topic}", and the emotional keywords "${keywordList}", first analyze and define the target audience (e.g., beginners, experts, young adults) and the core emotional tone of the book (e.g., empowering, serene, urgent, mysterious). This analysis must guide all subsequent visual choices.
+1.  **Target Audience and Emotional Tone Analysis (CRITICAL FIRST STEP)**: Based on the book's details, first analyze and define the target audience (e.g., beginners, experts, young adults) and the core emotional tone of the book (e.g., empowering, serene, urgent, mysterious). This analysis is the foundation and MUST guide all subsequent visual choices.
 2.  **Conceptual and Symbolic Analysis**: Don't just do a literal representation. Dive deep into the topic "${topic}" and the title "${title}". What is the core promise to the reader? What is the key transformation or emotion (hope, power, serenity, curiosity)? Translate these abstract concepts into a **powerful and original visual metaphor**. Strictly avoid clichés and generic stock photo imagery.
 3.  **Visual Market Research**: Analyze current bestsellers in the "${category}" category on Amazon to understand the visual language that attracts the target audience. Identify archetypes, color palettes, and styles, but not to imitate them. The goal is to innovate and stand out while speaking a familiar language to the reader.
 4.  **Winning Concept Development**: Choose a single, strong artistic direction (e.g., photographic, illustrative, graphic, symbolic) and build the prompt around it.
@@ -424,7 +425,7 @@ export const editCoverImage = async (base64ImageDataUrl: string, prompt: string)
 /**
  * Genera una descrizione del libro per i metadati KDP.
  */
-export const generateDescription = async (title: string, structure: BookStructure | null): Promise<string> => {
+export const generateDescription = async (title: string, structure: BookStructure | null): Promise<{ description: string, sources: GroundingSource[] }> => {
     const chapterTitles = structure?.chapters.map(c => c.title).join(', ') || 'vari argomenti';
     const prompt = `AGISCI COME un copywriter di livello mondiale specializzato in descrizioni di libri per Amazon KDP che convertono. La tua missione è scrivere una descrizione magnetica e irresistibile per un libro intitolato "${title}".
 Il libro tratta i seguenti argomenti principali: ${chapterTitles}.
@@ -445,12 +446,16 @@ Esempio di Call to Action efficace: "Non aspettare un altro giorno per trasforma
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt
+            contents: prompt,
+            config: {
+                tools: [{ googleSearch: {} }],
+            },
         }));
-        return response.text;
+        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+        return { description: response.text, sources: groundingChunks };
     } catch(error) {
         console.error("Error generating description:", error);
-        return "";
+        return { description: "", sources: [] };
     }
 };
 
@@ -698,4 +703,41 @@ export const translateFullProject = async (
     }
 
     return translatedProject;
+};
+
+/**
+ * Elabora il testo utilizzando Gemini per varie attività di modifica.
+ */
+export const processTextWithGemini = async (
+  text: string,
+  action: 'improve' | 'summarize' | 'expand'
+): Promise<string> => {
+  let prompt = '';
+  let model: 'gemini-2.5-pro' | 'gemini-2.5-flash' = 'gemini-2.5-flash';
+
+  switch (action) {
+    case 'improve':
+      model = 'gemini-2.5-pro';
+      prompt = `AGISCI COME un editor professionista. Riscrivi il seguente testo per migliorarne la chiarezza, il coinvolgimento e la qualità generale senza alterarne il significato fondamentale. Migliora la scelta delle parole, la struttura delle frasi e il flusso. Fornisci solo il testo riscritto. Testo da migliorare:\n---\n${text}\n---`;
+      break;
+    case 'summarize':
+      model = 'gemini-2.5-flash';
+      prompt = `Riassumi il seguente testo in modo conciso, cogliendo i punti principali. Fornisci solo il riassunto. Testo da riassumere:\n---\n${text}\n---`;
+      break;
+    case 'expand':
+      model = 'gemini-2.5-pro';
+      prompt = `Espandi il seguente testo. Aggiungi maggiori dettagli, esempi o spiegazioni per renderlo più completo e informativo. Mantieni uno stile di scrittura coerente. Fornisci solo il testo espanso. Testo da espandere:\n---\n${text}\n---`;
+      break;
+  }
+
+  try {
+    const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+        model: model,
+        contents: prompt
+    }));
+    return response.text.trim();
+  } catch (error) {
+    console.error(`Error during text processing with action '${action}':`, error);
+    throw error;
+  }
 };

@@ -28,6 +28,7 @@ export interface Keyword {
 export interface Trend {
   topic: string;
   reason: string;
+  trendScore: number;
 }
 
 export interface ResearchResult {
