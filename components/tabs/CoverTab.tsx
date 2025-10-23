@@ -125,35 +125,37 @@ const CoverTab: React.FC = () => {
             const contentWidth = canvasWidth - margin * 2;
             let currentY = canvasHeight * 0.15; // Cursore Y iniziale
 
+            const ptToPx = (pt: number) => pt * 4 / 3;
+
             // --- Draw Title ---
             const title = (project.bookTitle || '').toUpperCase();
-            let titleFontSize = 200; // Aumentato per un titolo più grande
-            ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
-            // Shrink font size until title fits within content width, with a minimum of 107px (approx 80pt)
-            while (ctx.measureText(title).width > contentWidth && titleFontSize > 107) {
-                titleFontSize -= 5;
-                ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
+            let titleFontSizePt = 40; // User request: 40pt
+            ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
+            // Shrink font size until title fits within content width, with a minimum of 10pt
+            while (ctx.measureText(title).width > contentWidth && titleFontSizePt > 10) {
+                titleFontSizePt -= 2;
+                ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
             }
-            currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, titleFontSize * 1.1);
+            currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, ptToPx(titleFontSizePt) * 1.1);
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSize = 70; // Leggermente ridotto per una migliore gerarchia
+            let subtitleFontSizePt = 20; // User request: 20pt
             // Aggiungi spazio prima del sottotitolo
-            currentY += subtitleFontSize * 0.5; 
-            ctx.font = `bold ${subtitleFontSize}px 'Georgia', serif`;
-            // Shrink font size until subtitle fits within content width, with a minimum of 67px (approx 50pt)
-            while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 67) {
-                subtitleFontSize -= 2;
-                ctx.font = `bold ${subtitleFontSize}px 'Georgia', serif`;
+            currentY += ptToPx(subtitleFontSizePt) * 0.5;
+            ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
+            // Shrink font size until subtitle fits within content width, with a minimum of 8pt
+            while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSizePt > 8) {
+                subtitleFontSizePt -= 1;
+                ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
             }
-            currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
+            currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, ptToPx(subtitleFontSizePt) * 1.2);
 
 
             // --- Draw Author (bottom-right) ---
             if (project.author) {
                 ctx.textAlign = 'right';
-                ctx.font = `normal 48px 'Georgia', serif`;
+                ctx.font = `normal 18pt 'Georgia', serif`;
                 const authorY = canvasHeight - 60; // Posizione fissa dal basso
                 const authorX = canvasWidth - 60; // Posizione fissa da destra
                 ctx.fillText(project.author, authorX, authorY);
