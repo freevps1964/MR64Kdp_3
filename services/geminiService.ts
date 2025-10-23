@@ -126,13 +126,13 @@ ${JSON.stringify(sourcesToRank)}
 /**
  * Scopre argomenti di tendenza per libri KDP in un dato periodo.
  */
-export const discoverTrends = async (timePeriod: string): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
-  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è identificare i 5 argomenti di saggistica più redditizi e di tendenza per il self-publishing su Amazon KDP, basandoti sulle tendenze di ricerca di Google e sulle vendite di Amazon nell'${timePeriod}.
+export const discoverTrends = async (): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
+  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è analizzare la lista dei bestseller di Amazon Libri (in particolare basandoti su dati come quelli trovati su https://www.amazon.it/gp/bestsellers/books) per identificare le 5 categorie o nicchie di saggistica più redditizie e con meno concorrenza per il self-publishing su Amazon KDP.
 
-Per ogni argomento identificato, fornisci:
-1.  "topic": Il nome dell'argomento del libro, conciso e pronto per KDP.
-2.  "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questo argomento è attualmente di tendenza, citando dati emergenti o cambiamenti culturali.
-3.  "trendScore": un punteggio da 0 a 100 che rappresenta la forza e il potenziale di redditività della tendenza. 100 è il massimo potenziale.
+Per ogni nicchia identificata, fornisci:
+1. "topic": Il nome della nicchia o dell'argomento del libro, conciso e pronto per KDP.
+2. "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questa nicchia è profittevole, analizzando i bestseller attuali e identificando opportunità per nuovi autori.
+3. "trendScore": un punteggio da 0 a 100 che rappresenta il potenziale di redditività della nicchia. 100 è il massimo potenziale.
 
 Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risultati dal "trendScore" più alto al più basso. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili. L'output deve essere solo il JSON.`;
 

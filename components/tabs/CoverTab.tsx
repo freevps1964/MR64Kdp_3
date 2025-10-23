@@ -129,8 +129,8 @@ const CoverTab: React.FC = () => {
             const title = (project.bookTitle || '').toUpperCase();
             let titleFontSize = 200; // Aumentato per un titolo più grande
             ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
-            // Shrink font size until title fits within content width
-            while (ctx.measureText(title).width > contentWidth && titleFontSize > 20) {
+            // Shrink font size until title fits within content width, with a minimum of 107px (approx 80pt)
+            while (ctx.measureText(title).width > contentWidth && titleFontSize > 107) {
                 titleFontSize -= 5;
                 ctx.font = `bold ${titleFontSize}px 'Georgia', serif`;
             }
@@ -141,11 +141,11 @@ const CoverTab: React.FC = () => {
             let subtitleFontSize = 70; // Leggermente ridotto per una migliore gerarchia
             // Aggiungi spazio prima del sottotitolo
             currentY += subtitleFontSize * 0.5; 
-            ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
-            // Shrink font size until subtitle fits within content width
-            while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 15) {
+            ctx.font = `bold ${subtitleFontSize}px 'Georgia', serif`;
+            // Shrink font size until subtitle fits within content width, with a minimum of 67px (approx 50pt)
+            while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSize > 67) {
                 subtitleFontSize -= 2;
-                ctx.font = `normal ${subtitleFontSize}px 'Georgia', serif`;
+                ctx.font = `bold ${subtitleFontSize}px 'Georgia', serif`;
             }
             currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, subtitleFontSize * 1.2);
 

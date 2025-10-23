@@ -23,7 +23,6 @@ const ResearchTab: React.FC = () => {
   // New state for trends
   const [isDiscoveringTrends, setIsDiscoveringTrends] = useState(false);
   const [trendsError, setTrendsError] = useState<string | null>(null);
-  const [timePeriod, setTimePeriod] = useState('ultimo mese');
   const [trendsResult, setTrendsResult] = useState<{ trends: Trend[], sources: GroundingSource[] } | null>(null);
   
   const topicInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +84,7 @@ const ResearchTab: React.FC = () => {
     setTrendsError(null);
     setTrendsResult(null);
     try {
-      const { trends, sources } = await discoverTrends(timePeriod);
+      const { trends, sources } = await discoverTrends();
       if (trends) {
         // Sort trends by trendScore descending
         trends.sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0));
@@ -146,19 +145,6 @@ const ResearchTab: React.FC = () => {
         <h3 className="text-xl font-bold text-brand-dark mb-3">{t('researchTab.trendsTitle')}</h3>
         <p className="text-neutral-medium mb-4">{t('researchTab.trendsDescription')}</p>
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div>
-            <label htmlFor="time-period" className="sr-only">{t('researchTab.timePeriodLabel')}</label>
-            <select
-              id="time-period"
-              value={timePeriod}
-              onChange={(e) => setTimePeriod(e.target.value)}
-              className="p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
-            >
-              <option value="ultima settimana">{t('researchTab.lastWeek')}</option>
-              <option value="ultimo mese">{t('researchTab.lastMonth')}</option>
-              <option value="ultimi 3 mesi">{t('researchTab.last3Months')}</option>
-            </select>
-          </div>
           <button
             onClick={handleDiscoverTrends}
             disabled={isDiscoveringTrends}
