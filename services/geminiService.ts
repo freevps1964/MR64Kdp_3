@@ -127,31 +127,39 @@ ${JSON.stringify(sourcesToRank)}
  * Scopre argomenti di tendenza per libri KDP in un dato periodo.
  */
 export const discoverTrends = async (): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
-  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è analizzare la lista dei bestseller di Amazon Libri (in particolare basandoti su dati come quelli trovati su https://www.amazon.it/gp/bestsellers/books) per identificare le 5 categorie o nicchie di saggistica più redditizie e con meno concorrenza per il self-publishing su Amazon KDP.
+  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è analizzare i dati di vendita e le tendenze generali del mercato librario per identificare le 5 categorie o nicchie di saggistica più redditizie e con meno concorrenza per il self-publishing su Amazon KDP.
 
 Per ogni nicchia identificata, fornisci:
 1. "topic": Il nome della nicchia o dell'argomento del libro, conciso e pronto per KDP.
-2. "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questa nicchia è profittevole, analizzando i bestseller attuali e identificando opportunità per nuovi autori.
+2. "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questa nicchia è profittevole, analizzando le tendenze di mercato e identificando opportunità per nuovi autori.
 3. "trendScore": un punteggio da 0 a 100 che rappresenta il potenziale di redditività della nicchia. 100 è il massimo potenziale.
 
-Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risultati dal "trendScore" più alto al più basso. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili. L'output deve essere solo il JSON.`;
+Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risultati dal "trendScore" più alto al più basso. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili nel tuo set di dati. L'output deve essere solo il JSON.`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-pro",
       contents: prompt,
       config: {
-        tools: [{googleSearch: {}}],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              topic: { type: Type.STRING },
+              reason: { type: Type.STRING },
+              trendScore: { type: Type.NUMBER }
+            },
+            required: ["topic", "reason", "trendScore"]
+          }
+        }
       },
     }));
     
-    // Aggiunge una pausa per evitare di superare i limiti di velocità con la chiamata successiva
-    await new Promise(resolve => setTimeout(resolve, 61000));
-
-    const trendsData = parseJsonFromMarkdown<Trend[]>(response.text);
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const trendsData = JSON.parse(response.text.trim()) as Trend[];
     
-    return { trends: trendsData, sources: groundingChunks };
+    return { trends: trendsData, sources: [] };
   } catch (error) {
     console.error("Error during trend discovery:", error);
     return { trends: null, sources: [] };
@@ -163,11 +171,11 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
  * Esegue una ricerca approfondita su un argomento utilizzando Gemini con il grounding di Google Search.
  */
 export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: any[] }> => {
-  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita e aggiornata per un libro sull'argomento: "${topic}".
-L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati riflettano le informazioni più recenti:
+  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita per un libro sull'argomento: "${topic}".
+L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati riflettano le informazioni più recenti e pertinenti disponibili nel tuo set di dati:
 
-- "marketSummary": un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze attuali.
-- "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere le più redditizie e con il più alto intento di acquisto per Amazon KDP, basate sulle tendenze di ricerca attuali. Includi un mix di parole chiave a coda corta e a coda lunga.
+- "marketSummary": un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze.
+- "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere le più redditizie e con il più alto intento di acquisto per Amazon KDP. Includi un mix di parole chiave a coda corta e a coda lunga.
 - "titles": un array di 5 oggetti titolo. Ogni oggetto deve avere "title" (stringa) e "relevance" (numero da 0 a 100). I titoli devono essere scritti per massimizzare il click-through rate (CTR) e le conversioni su Amazon. Devono essere magnetici, chiari, promettere un beneficio specifico al lettore e **incorporare in modo naturale e strategico le parole chiave più pertinenti generate sopra**.
 - "subtitles": un array di 5 oggetti sottotitolo. Ogni oggetto deve avere "subtitle" (stringa) e "relevance" (numero da 0 a 100). I sottotitoli devono espandere il titolo, specificare il pubblico di destinazione (es. "per principianti"), menzionare i benefici chiave e **contenere le parole chiave pertinenti generate sopra per aumentare la visibilità**.
 
@@ -179,21 +187,57 @@ Assicurati che l'output sia un oggetto JSON valido.`;
       model: "gemini-2.5-pro",
       contents: prompt,
       config: {
-        tools: [{googleSearch: {}}],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            marketSummary: { type: Type.STRING },
+            keywords: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  keyword: { type: Type.STRING },
+                  relevance: { type: Type.NUMBER }
+                },
+                required: ["keyword", "relevance"]
+              }
+            },
+            titles: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  relevance: { type: Type.NUMBER }
+                },
+                required: ["title", "relevance"]
+              }
+            },
+            subtitles: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  subtitle: { type: Type.STRING },
+                  relevance: { type: Type.NUMBER }
+                },
+                required: ["subtitle", "relevance"]
+              }
+            }
+          },
+          required: ["marketSummary", "keywords", "titles", "subtitles"]
+        }
       },
     }));
     
-    // Aggiunge una pausa per evitare di superare i limiti di velocità con la chiamata successiva
-    await new Promise(resolve => setTimeout(resolve, 61000));
-
-    const researchData = parseJsonFromMarkdown<ResearchResult>(response.text);
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const researchData = JSON.parse(response.text.trim()) as Omit<ResearchResult, 'sources'>;
+    const finalResult: ResearchResult = {
+        ...researchData,
+        sources: [],
+    };
     
-    if (researchData) {
-        researchData.sources = await rankSources(topic, groundingChunks);
-    }
-    
-    return { result: researchData, sources: groundingChunks };
+    return { result: finalResult, sources: [] };
   } catch (error) {
     console.error("Error during topic research:", error);
     return { result: null, sources: [] };
@@ -447,12 +491,8 @@ Esempio di Call to Action efficace: "Non aspettare un altro giorno per trasforma
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
-            config: {
-                tools: [{ googleSearch: {} }],
-            },
         }));
-        const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-        return { description: response.text, sources: groundingChunks };
+        return { description: response.text.trim(), sources: [] };
     } catch(error) {
         console.error("Error generating description:", error);
         return { description: "", sources: [] };
