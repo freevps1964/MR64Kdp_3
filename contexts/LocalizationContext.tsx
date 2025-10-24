@@ -4,7 +4,6 @@ import type { Language } from '../types';
 export interface LocalizationContextType {
   locale: Language;
   setLocale: (locale: Language) => void;
-  // Fix: Updated `t` function to accept an optional `options` parameter for string interpolation.
   t: (key: string, options?: { [key: string]: string | number }) => string;
 }
 
@@ -52,7 +51,6 @@ export const LocalizationProvider: React.FC<LocalizationProviderProps> = ({ chil
     loadTranslations();
   }, []);
 
-  // Fix: Updated `t` function implementation to handle string interpolation.
   const t = useCallback((key: string, options?: { [key: string]: string | number }): string => {
     const findTranslation = (source: any, translationKey: string): string | undefined => {
         const keys = translationKey.split('.');

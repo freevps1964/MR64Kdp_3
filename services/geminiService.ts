@@ -38,34 +38,6 @@ async function withRetry<T>(
 }
 
 /**
- * Pulisce e analizza una stringa JSON che potrebbe essere incorporata in un blocco di codice markdown.
- */
-function parseJsonFromMarkdown<T>(jsonString: string): T | null {
-  try {
-    // Rimuove i backtick del blocco di codice e la parola "json"
-    const cleanedString = jsonString.replace(/```json\n|```/g, '').trim();
-    return JSON.parse(cleanedString) as T;
-  } catch (error) {
-    console.error("Error parsing JSON:", error, "Original string:", jsonString);
-    // Tenta un'analisi più permissiva se la prima fallisce
-    try {
-        const permissiveClean = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-        if(permissiveClean.startsWith('{') && permissiveClean.endsWith('}')) {
-             return JSON.parse(permissiveClean) as T;
-        }
-        const permissiveCleanArray = jsonString.substring(jsonString.indexOf('['), jsonString.lastIndexOf(']') + 1);
-         if(permissiveCleanArray.startsWith('[') && permissiveCleanArray.endsWith(']')) {
-             return JSON.parse(permissiveCleanArray) as T;
-         }
-        return null;
-    } catch (permissiveError) {
-        console.error("Permissive parsing attempt failed:", permissiveError);
-        return null;
-    }
-  }
-}
-
-/**
  * Classifica le fonti web in base alla pertinenza per un dato argomento.
  */
 const rankSources = async (topic: string, sources: GroundingSource[]): Promise<GroundingSource[]> => {
@@ -168,7 +140,7 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
 
 
 /**
- * Esegue una ricerca approfondita su un argomento utilizzando Gemini con il grounding di Google Search.
+ * Esegue una ricerca approfondita su un argomento utilizzando Gemini.
  */
 export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: any[] }> => {
   const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita per un libro sull'argomento: "${topic}".
@@ -253,7 +225,8 @@ export const generateStructure = async (topic: string, title: string, subtitle: 
 La struttura deve seguire rigorosamente i seguenti requisiti:
 1.  Deve contenere esattamente 10 capitoli.
 2.  Ogni capitolo deve contenere esattamente 4 sottocapitoli.
-I titoli dei capitoli e dei sottocapitoli devono essere pertinenti, coprire in modo esauriente l'argomento e includere in modo naturale le seguenti parole chiave per massimizzare la visibilità e le vendite su Amazon: ${keywordList}.`;
+I titoli dei capitoli e dei sottocapitoli devono essere pertinenti, coprire in modo esauriente l'argomento e includere in modo naturale le seguenti parole chiave per massimizzare la visibilità e le vendite su Amazon: ${keywordList}.
+Fornisci la risposta come un singolo oggetto JSON con una chiave "chapters" che contiene un array di oggetti capitolo.`;
   
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -398,11 +371,8 @@ Example of a quality output for a book on procrastination:
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       contents: prompt,
-      config: {
-        tools: [{googleSearch: {}}],
-      },
     }));
     return response.text.trim();
   } catch (error) {
@@ -576,18 +546,13 @@ export const generateContentBlockText = async (
     
     const chapterTitles = project.bookStructure?.chapters.map(c => c.title).slice(0, 5).join(', ') || '';
     const context = `per un libro intitolato "${project.bookTitle}" sull'argomento "${project.topic}", i cui capitoli principali includono: "${chapterTitles}".`;
-
-    const bonusProperties = {
-      description: { type: Type.STRING, description: "Un riassunto accattivante del contenuto bonus." },
-      items: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Una lista di punti, passaggi o elementi per il contenuto bonus (es. elementi di una checklist, sezioni di un planner, consigli)." },
-    };
     
     const uniquenessInstruction = existingTitles.length > 0
       ? `IMPORTANTE: Evita di generare contenuti bonus con i seguenti titoli, poiché esistono già: ${existingTitles.join(', ')}.`
       : '';
 
     const prompt = `Agisci come un esperto creatore di contenuti ed esperto di marketing editoriale. ${context} Genera ${count} contenuti bonus unici di tipo '${contentType}' relativi a "${description}". Questi bonus devono fornire un valore aggiunto tangibile, pratico e altamente coerente con il tema del libro.
-    Per ognuno, fornisci un "title" accattivante e i dettagli del contenuto.
+    Per ognuno, fornisci un "title" accattivante, una "description" (un riassunto accattivante del contenuto bonus) e una lista di "items" (punti, passaggi, o elementi per il contenuto bonus).
     ${uniquenessInstruction}
     Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
 
@@ -603,9 +568,10 @@ export const generateContentBlockText = async (
                         type: Type.OBJECT,
                         properties: {
                            title: { type: Type.STRING },
-                           ...bonusProperties
+                           description: { type: Type.STRING },
+                           items: { type: Type.ARRAY, items: { type: Type.STRING } }
                         },
-                        required: ["title", ...Object.keys(bonusProperties)]
+                        required: ["title", "description", "items"]
                     }
                 }
             }
@@ -727,18 +693,26 @@ export const translateFullProject = async (
         return translatedProject;
     }
 
-    for (let i = 0; i < totalItems; i++) {
-        const item = textsToTranslate[i];
-        const originalText = item.obj[item.key];
-        const translatedText = await translateText(originalText, targetLanguage);
-        item.obj[item.key] = translatedText;
-        
-        const progress = Math.round(((i + 1) / totalItems) * 100);
-        onProgress(progress);
-        
-        // Aggiunge un piccolo ritardo per evitare di raggiungere i limiti di velocità
-        if (i < totalItems - 1) {
-             await new Promise(resolve => setTimeout(resolve, 61000));
+    let completedItems = 0;
+
+    const translateChunk = async (chunk: { obj: any; key: string }[]) => {
+        const promises = chunk.map(item => translateText(item.obj[item.key], targetLanguage));
+        const translatedTexts = await Promise.all(promises);
+        chunk.forEach((item, index) => {
+            item.obj[item.key] = translatedTexts[index];
+        });
+        completedItems += chunk.length;
+        onProgress(Math.round((completedItems / totalItems) * 100));
+    };
+
+    // Elabora in blocchi per evitare di raggiungere i limiti di velocità troppo velocemente
+    const chunkSize = 5; 
+    for (let i = 0; i < totalItems; i += chunkSize) {
+        const chunk = textsToTranslate.slice(i, i + chunkSize);
+        await translateChunk(chunk);
+        // Aggiunge un ritardo significativo tra i blocchi
+        if (i + chunkSize < totalItems) {
+            await new Promise(resolve => setTimeout(resolve, 61000)); 
         }
     }
 

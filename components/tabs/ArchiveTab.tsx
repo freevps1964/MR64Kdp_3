@@ -8,7 +8,6 @@ import TrashIcon from '../icons/TrashIcon';
 
 
 const GlossaryManager: React.FC = () => {
-    // FIX: Changed `useLocalization('archiveTab.glossary')` to `useLocalization()` as it does not accept arguments.
     const { t } = useLocalization();
     const { project, addGlossaryTerm, updateGlossaryTerm, deleteGlossaryTerm } = useProject();
     
@@ -34,6 +33,8 @@ const GlossaryManager: React.FC = () => {
             } else {
                 handleNewTerm();
             }
+        } else {
+            handleNewTerm();
         }
     }, [selectedTermId, glossary]);
 
@@ -46,7 +47,6 @@ const GlossaryManager: React.FC = () => {
 
     const handleSave = () => {
         if (!currentTerm.trim() || !currentDefinition.trim()) {
-            // FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call.
             alert(t('archiveTab.glossary.errorEmpty'));
             return;
         }
@@ -59,7 +59,6 @@ const GlossaryManager: React.FC = () => {
     };
 
     const handleDelete = () => {
-        // FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call.
         if (selectedTermId && window.confirm(t('archiveTab.glossary.confirmDelete', { term: currentTerm }))) {
             deleteGlossaryTerm(selectedTermId);
             handleNewTerm();
@@ -75,21 +74,17 @@ const GlossaryManager: React.FC = () => {
 
     return (
         <div>
-            {/* FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call. */}
             <p className="text-neutral-medium mb-6">{t('archiveTab.glossary.description')}</p>
             <div className="flex flex-col md:flex-row gap-6">
                 <aside className="w-full md:w-1/3 p-4 bg-neutral-light rounded-lg border">
                     <div className="flex justify-between items-center mb-3">
-                         {/* FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call. */}
                          <h3 className="font-semibold text-lg text-brand-dark">{t('archiveTab.glossary.termList')}</h3>
-                         {/* FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call. */}
                          <button onClick={handleNewTerm} className="p-1 text-brand-primary hover:bg-brand-light/20 rounded-full" title={t('archiveTab.glossary.newTerm')}>
                             <PlusIcon />
                          </button>
                     </div>
                     <input
                         type="text"
-                        // FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call.
                         placeholder={t('archiveTab.glossary.searchPlaceholder')}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
@@ -107,7 +102,6 @@ const GlossaryManager: React.FC = () => {
                                 </button>
                             ))
                         ) : (
-                            // FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call.
                             <p className="text-sm text-neutral-medium text-center py-4">{t('archiveTab.glossary.noTerms')}</p>
                         )}
                     </div>
@@ -115,7 +109,6 @@ const GlossaryManager: React.FC = () => {
                 <main className="w-full md:w-2/3">
                     <div className="space-y-4">
                         <div>
-                            {/* FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call. */}
                             <label htmlFor="term-input" className="block font-semibold text-neutral-dark mb-1">{t('archiveTab.glossary.termLabel')}</label>
                             <input
                                 id="term-input" type="text" value={currentTerm}
@@ -124,7 +117,6 @@ const GlossaryManager: React.FC = () => {
                             />
                         </div>
                         <div>
-                            {/* FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call. */}
                             <label htmlFor="definition-input" className="block font-semibold text-neutral-dark mb-1">{t('archiveTab.glossary.definitionLabel')}</label>
                             <textarea
                                 id="definition-input" value={currentDefinition}
@@ -137,14 +129,12 @@ const GlossaryManager: React.FC = () => {
                                 onClick={handleSave} disabled={!isFormDirty}
                                 className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium"
                             >
-                                {/* FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call. */}
                                 {selectedTermId ? t('archiveTab.glossary.saveChanges') : t('archiveTab.glossary.addTerm')}
                             </button>
                             {selectedTermId && (
                                 <button
                                     onClick={handleDelete}
                                     className="bg-red-600 hover:bg-red-800 text-white font-bold p-2 rounded-md transition-colors shadow"
-                                    // FIX: Prefixed translation keys with `archiveTab.glossary.` to match the corrected `useLocalization` call.
                                     title={t('archiveTab.glossary.deleteTerm')}
                                 >
                                     <TrashIcon />
@@ -159,7 +149,6 @@ const GlossaryManager: React.FC = () => {
 };
 
 const AssetsArchive: React.FC = () => {
-    // FIX: Changed `useLocalization('archiveTab')` to `useLocalization()` as it does not accept arguments.
     const { t } = useLocalization();
     const { project, updateProject } = useProject();
     if (!project) return null;
@@ -180,7 +169,6 @@ const AssetsArchive: React.FC = () => {
     const ArchiveItem: React.FC<{ onUse: () => void; children: React.ReactNode }> = ({ onUse, children }) => (
         <div className="flex justify-between items-center p-2 bg-neutral-light rounded-md hover:bg-gray-200 transition-colors">
             <div className="text-neutral-dark pr-4 flex-grow">{children}</div>
-            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
             <button onClick={onUse} className="bg-brand-secondary hover:bg-brand-dark text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors flex-shrink-0">
                 {t('archiveTab.useButton')}
             </button>
@@ -191,28 +179,22 @@ const AssetsArchive: React.FC = () => {
          <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-6">
-                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                     <ArchiveSection title={t('archiveTab.titlesTitle')}>
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                             {titlesArchive.length > 0 ? titlesArchive.map(item => (
                                 <ArchiveItem key={item} onUse={() => updateProject({ bookTitle: item })}><p>{item}</p></ArchiveItem>
                             )) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
                         </div>
                     </ArchiveSection>
-                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                     <ArchiveSection title={t('archiveTab.subtitlesTitle')}>
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                             {subtitlesArchive.length > 0 ? subtitlesArchive.map(item => (
                                 <ArchiveItem key={item} onUse={() => updateProject({ subtitle: item })}><p>{item}</p></ArchiveItem>
                             )) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
                         </div>
                     </ArchiveSection>
-                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                     <ArchiveSection title={t('archiveTab.authorsTitle')}>
                             <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                             {authorsArchive.length > 0 ? authorsArchive.map(item => (
                                 <ArchiveItem key={item} onUse={() => updateProject({ author: item })}><p>{item}</p></ArchiveItem>
                             )) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
@@ -220,19 +202,15 @@ const AssetsArchive: React.FC = () => {
                     </ArchiveSection>
                 </div>
                 <div className="space-y-6">
-                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                     <ArchiveSection title={t('archiveTab.descriptionsTitle')}>
                             <div className="space-y-2 max-h-[20.5rem] overflow-y-auto pr-2">
-                            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                             {descriptionsArchive.length > 0 ? descriptionsArchive.map((item, index) => (
                                 <ArchiveItem key={index} onUse={() => updateProject({ description: item })}><p className="text-sm truncate">{item}</p></ArchiveItem>
                             )) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
                         </div>
                     </ArchiveSection>
-                        {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                         <ArchiveSection title={t('archiveTab.categoriesTitle')}>
                             <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                             {categoriesArchive.length > 0 ? categoriesArchive.map((item, index) => (
                                 <ArchiveItem key={index} onUse={() => updateProject({ categories: item })}><p className="text-xs truncate">{item.join(', ')}</p></ArchiveItem>
                             )) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
@@ -240,7 +218,6 @@ const AssetsArchive: React.FC = () => {
                     </ArchiveSection>
                 </div>
             </div>
-            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
             <ArchiveSection title={t('archiveTab.coversTitle')}>
                 {archivedCovers.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -248,7 +225,6 @@ const AssetsArchive: React.FC = () => {
                             <div key={index} className="relative group">
                                 <img src={cover} alt={`Archived cover ${index + 1}`} className="rounded-lg shadow-md w-full object-cover aspect-[3/4]" />
                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                                     <button onClick={() => updateProject({ coverImage: cover })} className="bg-white/80 hover:bg-white text-brand-dark font-bold py-2 px-4 rounded-full">
                                         {t('archiveTab.useButton')}
                                     </button>
@@ -256,16 +232,13 @@ const AssetsArchive: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                // FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call.
-                ) : <p className="text-neutral-medium text-sm">{t('archiveTab.noCovers')}</p>}
+                ) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
             </ArchiveSection>
-            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
             <ArchiveSection title={t('archiveTab.promptsTitle')}>
                 {coverPrompts.length > 0 ? (
                     <ul className="list-disc list-inside space-y-2 text-sm font-mono text-gray-700 max-h-60 overflow-y-auto">
                         {coverPrompts.map((prompt, index) => <li key={index}>{prompt}</li>)}
                     </ul>
-                // FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call.
                 ) : <p className="text-neutral-medium text-sm">{t('archiveTab.noItems')}</p>}
             </ArchiveSection>
         </div>
@@ -273,7 +246,6 @@ const AssetsArchive: React.FC = () => {
 };
 
 const ArchiveTab: React.FC = () => {
-    // FIX: Changed `useLocalization('archiveTab')` to `useLocalization()` as it does not accept arguments.
     const { t } = useLocalization();
     const { project } = useProject();
     const [activeSubTab, setActiveSubTab] = useState<'assets' | 'glossary'>('assets');
@@ -297,14 +269,11 @@ const ArchiveTab: React.FC = () => {
 
     return (
         <Card className="bg-neutral-light/50">
-            {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
             <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('archiveTab.title')}</h2>
             
             <div className="border-b border-gray-200 mb-6">
                 <nav className="-mb-px flex space-x-4">
-                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                     <SubTabButton tabId="assets" label={t('archiveTab.assetsSubTab')} />
-                    {/* FIX: Prefixed translation keys with `archiveTab.` to match the corrected `useLocalization` call. */}
                     <SubTabButton tabId="glossary" label={t('archiveTab.glossarySubTab')} />
                 </nav>
             </div>
