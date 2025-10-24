@@ -56,7 +56,7 @@ function parseJsonFromMarkdown<T>(jsonString: string): T | null {
         const permissiveCleanArray = jsonString.substring(jsonString.indexOf('['), jsonString.lastIndexOf(']') + 1);
          if(permissiveCleanArray.startsWith('[') && permissiveCleanArray.endsWith(']')) {
              return JSON.parse(permissiveCleanArray) as T;
-        }
+         }
         return null;
     } catch (permissiveError) {
         console.error("Permissive parsing attempt failed:", permissiveError);
@@ -138,7 +138,7 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       contents: prompt,
       config: {
         tools: [{googleSearch: {}}],
@@ -176,7 +176,7 @@ Assicurati che l'output sia un oggetto JSON valido.`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       contents: prompt,
       config: {
         tools: [{googleSearch: {}}],

@@ -129,7 +129,7 @@ const CoverTab: React.FC = () => {
 
             // --- Draw Title ---
             const title = (project.bookTitle || '').toUpperCase();
-            let titleFontSizePt = 40; // User request: 40pt
+            let titleFontSizePt = 60; // User request: 60pt
             ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
             // Shrink font size until title fits within content width, with a minimum of 10pt
             while (ctx.measureText(title).width > contentWidth && titleFontSizePt > 10) {
@@ -140,7 +140,7 @@ const CoverTab: React.FC = () => {
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSizePt = 20; // User request: 20pt
+            let subtitleFontSizePt = 30; // User request: 30pt
             // Aggiungi spazio prima del sottotitolo
             currentY += ptToPx(subtitleFontSizePt) * 0.5;
             ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
