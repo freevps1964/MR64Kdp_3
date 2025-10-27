@@ -4,6 +4,7 @@ import { useProject } from '../../hooks/useProject';
 import { generateCoverImages, generateCoverPromptFromBestsellers, editCoverImage, generateCoverTagline } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
+import type { BonusStickerShape } from '../../types';
 
 /**
  * Comprime un'immagine fornita come data URL in formato JPEG.
@@ -214,6 +215,31 @@ const CoverTab: React.FC = () => {
                         break;
                     case 'burst':
                         drawStar(stickerCenterX, stickerCenterY, 16, stickerRadius, stickerRadius * 0.8);
+                        ctx.fill();
+                        break;
+                    case 'square':
+                        ctx.beginPath();
+                        ctx.rect(stickerCenterX - stickerRadius, stickerCenterY - stickerRadius, stickerRadius * 2, stickerRadius * 2);
+                        ctx.fill();
+                        break;
+                    case 'diamond':
+                        ctx.beginPath();
+                        ctx.moveTo(stickerCenterX, stickerCenterY - stickerRadius); // top
+                        ctx.lineTo(stickerCenterX + stickerRadius, stickerCenterY); // right
+                        ctx.lineTo(stickerCenterX, stickerCenterY + stickerRadius); // bottom
+                        ctx.lineTo(stickerCenterX - stickerRadius, stickerCenterY); // left
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
+                    case 'heart':
+                        const heartSize = stickerRadius * 1.8;
+                        const heartX = stickerCenterX;
+                        const heartY = stickerCenterY - 30;
+                        ctx.beginPath();
+                        ctx.moveTo(heartX, heartY + heartSize * 0.25);
+                        ctx.bezierCurveTo(heartX + heartSize * 0.5, heartY - heartSize * 0.2, heartX + heartSize, heartY + heartSize * 0.5, heartX, heartY + heartSize);
+                        ctx.bezierCurveTo(heartX - heartSize, heartY + heartSize * 0.5, heartX - heartSize * 0.5, heartY - heartSize * 0.2, heartX, heartY + heartSize * 0.25);
+                        ctx.closePath();
                         ctx.fill();
                         break;
                     case 'star':
@@ -476,7 +502,7 @@ const CoverTab: React.FC = () => {
                         onChange={(e) => updateProject({ titleFontSize: parseInt(e.target.value, 10) })}
                         className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
                     >
-                        {[40, 48, 54, 60, 72, 80].map(size => <option key={size} value={size}>{size} pt</option>)}
+                        {[40, 48, 54, 60, 72, 80, 90, 100].map(size => <option key={size} value={size}>{size} pt</option>)}
                     </select>
                 </div>
                 <div>
@@ -487,7 +513,7 @@ const CoverTab: React.FC = () => {
                         onChange={(e) => updateProject({ subtitleFontSize: parseInt(e.target.value, 10) })}
                         className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
                     >
-                        {[20, 24, 28, 30, 36, 42].map(size => <option key={size} value={size}>{size} pt</option>)}
+                        {[20, 24, 28, 30, 36, 42, 50, 60, 70, 80, 90, 100].map(size => <option key={size} value={size}>{size} pt</option>)}
                     </select>
                 </div>
                 <div>
@@ -498,7 +524,7 @@ const CoverTab: React.FC = () => {
                         onChange={(e) => updateProject({ authorFontSize: parseInt(e.target.value, 10) })}
                         className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
                     >
-                        {[14, 16, 18, 20, 22, 24].map(size => <option key={size} value={size}>{size} pt</option>)}
+                        {[14, 16, 18, 20, 22, 24, 30, 40, 50, 60, 70, 80].map(size => <option key={size} value={size}>{size} pt</option>)}
                     </select>
                 </div>
                 <div>
@@ -523,12 +549,15 @@ const CoverTab: React.FC = () => {
                     <select
                         id="bonus-shape"
                         value={project?.bonusStickerShape || 'star'}
-                        onChange={(e) => updateProject({ bonusStickerShape: e.target.value as any })}
+                        onChange={(e) => updateProject({ bonusStickerShape: e.target.value as BonusStickerShape })}
                         className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
                     >
                         <option value="star">Stella</option>
                         <option value="circle">Cerchio</option>
                         <option value="burst">Esplosione</option>
+                        <option value="square">Quadrato</option>
+                        <option value="heart">Cuore</option>
+                        <option value="diamond">Diamante</option>
                         <option value="none">Nessuno</option>
                     </select>
                 </div>

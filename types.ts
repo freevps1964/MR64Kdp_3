@@ -94,6 +94,7 @@ export interface CustomStyles {
   chapterTitleSize: number; // pt
 }
 
+export type BonusStickerShape = 'star' | 'circle' | 'burst' | 'square' | 'heart' | 'diamond' | 'none';
 
 export interface Project {
   id: string;
@@ -127,6 +128,6 @@ export interface Project {
   titleFontSize: number;
   subtitleFontSize: number;
   authorFontSize: number;
-  bonusStickerShape: 'star' | 'circle' | 'burst' | 'none';
+  bonusStickerShape: BonusStickerShape;
   coverTagline: string;
 }
