@@ -178,6 +178,11 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       contentBlocks: [],
       glossary: [],
       coverBonusCount: 0,
+      titleFontSize: 60,
+      subtitleFontSize: 30,
+      authorFontSize: 18,
+      bonusStickerShape: 'star',
+      coverTagline: '',
     };
     // Directly set and save the new project
     setProject(newProject);

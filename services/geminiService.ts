@@ -755,3 +755,23 @@ export const processTextWithGemini = async (
     throw error;
   }
 };
+
+/**
+ * Genera una breve tagline ad alta conversione per la copertina di un libro.
+ */
+export const generateCoverTagline = async (project: Project): Promise<string> => {
+    const prompt = `AGISCI COME un copywriter specializzato in copertine di libri. Crea una tagline estremamente breve (massimo 10 parole), accattivante e ad alta conversione per un libro intitolato "${project.bookTitle}" sull'argomento "${project.topic}".
+La tagline deve suscitare curiosità o promettere un beneficio immediato. Deve essere perfetta da inserire sulla copertina di un libro per catturare l'attenzione.
+Fornisci solo il testo della tagline, nient'altro.`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        }));
+        return response.text.trim().replace(/"/g, ''); // Rimuove eventuali virgolette
+    } catch (error) {
+        console.error("Error generating cover tagline:", error);
+        return "";
+    }
+};

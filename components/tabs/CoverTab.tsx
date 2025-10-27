@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateCoverImages, generateCoverPromptFromBestsellers, editCoverImage } from '../../services/geminiService';
+import { generateCoverImages, generateCoverPromptFromBestsellers, editCoverImage, generateCoverTagline } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 
@@ -43,6 +43,7 @@ const CoverTab: React.FC = () => {
   
   const [refinePrompt, setRefinePrompt] = useState('');
   const [isRefining, setIsRefining] = useState(false);
+  const [isGeneratingTagline, setIsGeneratingTagline] = useState(false);
 
   const isMetadataComplete = !!(project?.bookTitle && project?.subtitle && project?.author && project?.categories && project?.categories.length > 0);
 
@@ -129,9 +130,8 @@ const CoverTab: React.FC = () => {
 
             // --- Draw Title ---
             const title = (project.bookTitle || '').toUpperCase();
-            let titleFontSizePt = 60; // User request: 60pt
+            let titleFontSizePt = project.titleFontSize || 60;
             ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
-            // Shrink font size until title fits within content width, with a minimum of 10pt
             while (ctx.measureText(title).width > contentWidth && titleFontSizePt > 10) {
                 titleFontSizePt -= 2;
                 ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
@@ -140,38 +140,44 @@ const CoverTab: React.FC = () => {
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSizePt = 30; // User request: 30pt
-            // Aggiungi spazio prima del sottotitolo
+            let subtitleFontSizePt = project.subtitleFontSize || 30;
             currentY += ptToPx(subtitleFontSizePt) * 0.5;
             ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
-            // Shrink font size until subtitle fits within content width, with a minimum of 8pt
             while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSizePt > 8) {
                 subtitleFontSizePt -= 1;
                 ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
             }
             currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, ptToPx(subtitleFontSizePt) * 1.2);
+            
+            // --- Draw Tagline ---
+            if (project.coverTagline) {
+                currentY += ptToPx(22) * 0.7;
+                ctx.font = `italic 22pt 'Georgia', serif`;
+                ctx.fillStyle = '#FFDD57';
+                currentY = wrapText(ctx, project.coverTagline, canvasWidth / 2, currentY, contentWidth, ptToPx(22) * 1.1);
+                ctx.fillStyle = 'white';
+            }
 
 
             // --- Draw Author (bottom-right) ---
             if (project.author) {
                 ctx.textAlign = 'right';
-                ctx.font = `normal 18pt 'Georgia', serif`;
-                const authorY = canvasHeight - 60; // Posizione fissa dal basso
-                const authorX = canvasWidth - 60; // Posizione fissa da destra
+                const authorFontSizePt = project.authorFontSize || 18;
+                ctx.font = `normal ${authorFontSizePt}pt 'Georgia', serif`;
+                const authorY = canvasHeight - 60;
+                const authorX = canvasWidth - 60;
                 ctx.fillText(project.author, authorX, authorY);
             }
             
             // --- Draw Bonus Sticker (bottom-left) ---
-            if (project.coverBonusCount && project.coverBonusCount > 0) {
+            if (project.coverBonusCount && project.coverBonusCount > 0 && project.bonusStickerShape !== 'none') {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
                 ctx.shadowBlur = 15;
                 ctx.shadowOffsetX = 5;
                 ctx.shadowOffsetY = 5;
 
                 const bonusNumber = project.coverBonusCount.toString();
-                const bonusText = t('coverTab.bonusText').toUpperCase();
-                const bonusTextLines = bonusText.split(' ');
-
+                
                 const stickerRadius = 150;
                 const stickerMargin = 50;
                 const stickerCenterX = stickerRadius + stickerMargin;
@@ -199,26 +205,42 @@ const CoverTab: React.FC = () => {
                 };
                 
                 ctx.fillStyle = '#FFD700'; // Gold color
-                drawStar(stickerCenterX, stickerCenterY, 24, stickerRadius, stickerRadius * 0.7);
-                ctx.fill();
 
+                switch(project.bonusStickerShape) {
+                    case 'circle':
+                        ctx.beginPath();
+                        ctx.arc(stickerCenterX, stickerCenterY, stickerRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'burst':
+                        drawStar(stickerCenterX, stickerCenterY, 16, stickerRadius, stickerRadius * 0.8);
+                        ctx.fill();
+                        break;
+                    case 'star':
+                    default:
+                        drawStar(stickerCenterX, stickerCenterY, 24, stickerRadius, stickerRadius * 0.7);
+                        ctx.fill();
+                        break;
+                }
+                
                 ctx.shadowColor = 'transparent';
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-            
-                ctx.font = `bold 70px 'Montserrat', sans-serif`;
-                ctx.fillText(bonusNumber, stickerCenterX, stickerCenterY - 35);
-                
-                ctx.font = `bold 35px 'Montserrat', sans-serif`;
-                if (bonusTextLines[0]) {
+
+                const bonusTextLines = t('coverTab.bonusText').toUpperCase().split(' ');
+                const hasMultiLineBonusText = bonusTextLines.length > 1;
+
+                ctx.font = `bold ${hasMultiLineBonusText ? '70px' : '80px'} 'Montserrat', sans-serif`;
+                const numberY = stickerCenterY - (hasMultiLineBonusText ? 35 : 20);
+                ctx.fillText(bonusNumber, stickerCenterX, numberY);
+
+                ctx.font = `bold ${hasMultiLineBonusText ? '35px' : '40px'} 'Montserrat', sans-serif`;
+                if (hasMultiLineBonusText) {
                     ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 20);
-                }
-                
-                if (bonusTextLines[1]) {
                     ctx.fillText(bonusTextLines[1], stickerCenterX, stickerCenterY + 60);
-                } else if (bonusTextLines.length < 2) {
-                    ctx.fillText(bonusText, stickerCenterX, stickerCenterY + 20);
+                } else {
+                    ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 45);
                 }
             }
             
@@ -389,6 +411,19 @@ const CoverTab: React.FC = () => {
     }
   };
 
+  const handleGenerateTagline = async () => {
+    if (!project) return;
+    setIsGeneratingTagline(true);
+    try {
+        const tagline = await generateCoverTagline(project);
+        updateProject({ coverTagline: tagline });
+    } catch(e) {
+        console.error(e);
+    } finally {
+        setIsGeneratingTagline(false);
+    }
+  }
+
   const refineSuggestions = [
     t('coverTab.refineSuggestion1'),
     t('coverTab.refineSuggestion2'),
@@ -430,44 +465,120 @@ const CoverTab: React.FC = () => {
 
 
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-grow">
-                <div className="flex justify-between items-center">
-                    <label htmlFor="cover-prompt" className="block font-semibold text-neutral-dark">
-                    {t('coverTab.promptLabel')}
-                    </label>
-                    <button
-                        onClick={handleGeneratePrompt}
-                        disabled={isGeneratingPrompt || isLoading || !isMetadataComplete}
-                        className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+        <div className="p-4 mb-6 border rounded-lg bg-neutral-light/50">
+            <h3 className="text-lg font-semibold text-brand-dark mb-4">Opzioni di Stile e Testo</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label htmlFor="title-font-size" className="block text-sm font-medium text-gray-700">Dimensione Titolo (pt)</label>
+                    <select
+                        id="title-font-size"
+                        value={project?.titleFontSize || 60}
+                        onChange={(e) => updateProject({ titleFontSize: parseInt(e.target.value, 10) })}
+                        className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
                     >
-                        {isGeneratingPrompt ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
-                        {isGeneratingPrompt ? t('coverTab.generatingPrompt') : t('coverTab.generatePrompt')}
-                    </button>
+                        {[40, 48, 54, 60, 72, 80].map(size => <option key={size} value={size}>{size} pt</option>)}
+                    </select>
                 </div>
-                <textarea
-                id="cover-prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={3}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-1"
-                />
+                <div>
+                    <label htmlFor="subtitle-font-size" className="block text-sm font-medium text-gray-700">Dimensione Sottotitolo (pt)</label>
+                    <select
+                        id="subtitle-font-size"
+                        value={project?.subtitleFontSize || 30}
+                        onChange={(e) => updateProject({ subtitleFontSize: parseInt(e.target.value, 10) })}
+                        className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                    >
+                        {[20, 24, 28, 30, 36, 42].map(size => <option key={size} value={size}>{size} pt</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="author-font-size" className="block text-sm font-medium text-gray-700">Dimensione Autore (pt)</label>
+                    <select
+                        id="author-font-size"
+                        value={project?.authorFontSize || 18}
+                        onChange={(e) => updateProject({ authorFontSize: parseInt(e.target.value, 10) })}
+                        className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                    >
+                        {[14, 16, 18, 20, 22, 24].map(size => <option key={size} value={size}>{size} pt</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="bonus-count" className="block text-sm font-medium text-gray-700">
+                        {t('coverTab.bonusCountLabel')}
+                    </label>
+                    <select
+                        id="bonus-count"
+                        value={project?.coverBonusCount || 0}
+                        onChange={(e) => updateProject({ coverBonusCount: parseInt(e.target.value, 10) })}
+                        className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                    >
+                        {[...Array(11).keys()].map(i => (
+                            <option key={i} value={i}>{i}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="bonus-shape" className="block text-sm font-medium text-gray-700">
+                        Forma Adesivo Bonus
+                    </label>
+                    <select
+                        id="bonus-shape"
+                        value={project?.bonusStickerShape || 'star'}
+                        onChange={(e) => updateProject({ bonusStickerShape: e.target.value as any })}
+                        className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm"
+                    >
+                        <option value="star">Stella</option>
+                        <option value="circle">Cerchio</option>
+                        <option value="burst">Esplosione</option>
+                        <option value="none">Nessuno</option>
+                    </select>
+                </div>
             </div>
-            <div className="flex-shrink-0">
-                <label htmlFor="bonus-count" className="block font-semibold text-neutral-dark mb-1">
-                    {t('coverTab.bonusCountLabel')}
+        </div>
+
+        <div>
+            <div className="flex justify-between items-center">
+                <label htmlFor="cover-prompt" className="block font-semibold text-neutral-dark">
+                {t('coverTab.promptLabel')}
                 </label>
-                <select
-                    id="bonus-count"
-                    value={project?.coverBonusCount || 0}
-                    onChange={(e) => updateProject({ coverBonusCount: parseInt(e.target.value, 10) })}
-                    className="p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white w-full"
+                <button
+                    onClick={handleGeneratePrompt}
+                    disabled={isGeneratingPrompt || isLoading || !isMetadataComplete}
+                    className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {[...Array(11).keys()].map(i => (
-                        <option key={i} value={i}>{i}</option>
-                    ))}
-                </select>
+                    {isGeneratingPrompt ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
+                    {isGeneratingPrompt ? t('coverTab.generatingPrompt') : t('coverTab.generatePrompt')}
+                </button>
             </div>
+            <textarea
+            id="cover-prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={3}
+            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-1"
+            />
+        </div>
+        <div>
+            <div className="flex justify-between items-center mb-1">
+                <label htmlFor="cover-tagline" className="block font-semibold text-neutral-dark">
+                    Tagline di Copertina (Opzionale)
+                </label>
+                <button
+                    onClick={handleGenerateTagline}
+                    disabled={isGeneratingTagline || isLoading || !project?.bookTitle}
+                    className="text-sm text-brand-primary font-semibold hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isGeneratingTagline ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-primary" /> : '✨'}
+                    Genera Tagline
+                </button>
+            </div>
+            <input
+                type="text"
+                id="cover-tagline"
+                value={project?.coverTagline || ''}
+                onChange={(e) => updateProject({ coverTagline: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none mt-1"
+                placeholder="Una frase breve e accattivante..."
+            />
         </div>
         <button
           onClick={handleGenerate}

@@ -124,4 +124,9 @@ export interface Project {
   contentBlocks: ContentBlock[]; 
   glossary: GlossaryTerm[];
   coverBonusCount: number;
+  titleFontSize: number;
+  subtitleFontSize: number;
+  authorFontSize: number;
+  bonusStickerShape: 'star' | 'circle' | 'burst' | 'none';
+  coverTagline: string;
 }
