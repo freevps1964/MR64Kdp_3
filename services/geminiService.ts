@@ -45,6 +45,7 @@ const rankSources = async (topic: string, sources: GroundingSource[]): Promise<G
         return [];
     }
     const sourcesToRank = sources.map(s => ({ uri: s.web?.uri, title: s.web?.title })).filter(s => s.uri && s.title);
+    if (sourcesToRank.length === 0) return sources;
 
     const prompt = `Dato l'argomento di un libro "${topic}", analizza e classifica le seguenti fonti web. L'obiettivo è identificare le fonti più **affidabili e autorevoli** per la scrittura di un libro di alta qualità.
 
@@ -140,76 +141,88 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
 
 
 /**
- * Esegue una ricerca approfondita su un argomento utilizzando Gemini.
+ * Esegue una ricerca approfondita su un argomento utilizzando Gemini con Google Search.
  */
-export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: any[] }> => {
-  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita per un libro sull'argomento: "${topic}".
-L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in formato JSON con i seguenti campi, assicurandoti che tutti i dati riflettano le informazioni più recenti e pertinenti disponibili nel tuo set di dati:
+export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: GroundingSource[] }> => {
+  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita, basata sulle informazioni più recenti dal web, per un libro sull'argomento: "${topic}".
+L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in Markdown con le seguenti sezioni ESATTE, ciascuna seguita da un elenco puntato o da un paragrafo:
 
-- "marketSummary": un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze.
-- "keywords": un array di 10 oggetti, ognuno con "keyword" (stringa) e "relevance" (numero da 0 a 100). Queste parole chiave devono essere le più redditizie e con il più alto intento di acquisto per Amazon KDP. Includi un mix di parole chiave a coda corta e a coda lunga.
-- "titles": un array di 5 oggetti titolo. Ogni oggetto deve avere "title" (stringa) e "relevance" (numero da 0 a 100). I titoli devono essere scritti per massimizzare il click-through rate (CTR) e le conversioni su Amazon. Devono essere magnetici, chiari, promettere un beneficio specifico al lettore e **incorporare in modo naturale e strategico le parole chiave più pertinenti generate sopra**.
-- "subtitles": un array di 5 oggetti sottotitolo. Ogni oggetto deve avere "subtitle" (stringa) e "relevance" (numero da 0 a 100). I sottotitoli devono espandere il titolo, specificare il pubblico di destinazione (es. "per principianti"), menzionare i benefici chiave e **contenere le parole chiave pertinenti generate sopra per aumentare la visibilità**.
+### Market Summary
+[Un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze.]
 
-Ordina internamente ogni array in base alla pertinenza (relevance), dal più alto al più basso.
-Assicurati che l'output sia un oggetto JSON valido.`;
+### KDP Keywords
+- [Parola chiave 1] (Rilevanza: X%)
+- [Parola chiave 2] (Rilevanza: X%)
+- ... (Fornisci 10 parole chiave redditizie con il più alto intento di acquisto, miste tra coda corta e lunga, ordinate per rilevanza)
+
+### Suggested Titles
+- [Titolo 1] (Rilevanza: X%)
+- [Titolo 2] (Rilevanza: X%)
+- ... (Fornisci 5 titoli magnetici che massimizzano il CTR e incorporano parole chiave)
+
+### Suggested Subtitles
+- [Sottotitolo 1] (Rilevanza: X%)
+- [Sottotitolo 2] (Rilevanza: X%)
+- ... (Fornisci 5 sottotitoli che espandono il titolo e contengono parole chiave)
+`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
       model: "gemini-2.5-pro",
       contents: prompt,
       config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            marketSummary: { type: Type.STRING },
-            keywords: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  keyword: { type: Type.STRING },
-                  relevance: { type: Type.NUMBER }
-                },
-                required: ["keyword", "relevance"]
-              }
-            },
-            titles: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  relevance: { type: Type.NUMBER }
-                },
-                required: ["title", "relevance"]
-              }
-            },
-            subtitles: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  subtitle: { type: Type.STRING },
-                  relevance: { type: Type.NUMBER }
-                },
-                required: ["subtitle", "relevance"]
-              }
-            }
-          },
-          required: ["marketSummary", "keywords", "titles", "subtitles"]
-        }
+        tools: [{googleSearch: {}}],
       },
     }));
     
-    const researchData = JSON.parse(response.text.trim()) as Omit<ResearchResult, 'sources'>;
+    const text = response.text.trim();
+    // Regex per splittare in base a "### Header" e catturare sia l'header che il contenuto
+    const sections = text.split(/#{3}\s(.+)/).slice(1);
+
+    const researchData: Omit<ResearchResult, 'sources'> = {
+        marketSummary: '',
+        keywords: [],
+        titles: [],
+        subtitles: [],
+    };
+
+    const parseListWithRelevance = (content: string): { text: string; relevance: number }[] => {
+        return content.trim().split('\n')
+            .map(line => line.replace(/^- /, '').trim())
+            .map(line => {
+                const match = line.match(/(.+) \(Rilevanza:\s*(\d+)%\)/i);
+                if (match) {
+                    return { text: match[1].trim(), relevance: parseInt(match[2], 10) };
+                }
+                return { text: line, relevance: 0 };
+            })
+            .filter(item => item.text);
+    };
+
+    for (let i = 0; i < sections.length; i += 2) {
+        const header = sections[i]?.trim();
+        const content = sections[i + 1]?.trim() || '';
+
+        if (header === 'Market Summary') {
+            researchData.marketSummary = content;
+        } else if (header === 'KDP Keywords') {
+            researchData.keywords = parseListWithRelevance(content).map(item => ({ keyword: item.text, relevance: item.relevance }));
+        } else if (header === 'Suggested Titles') {
+            researchData.titles = parseListWithRelevance(content).map(item => ({ title: item.text, relevance: item.relevance }));
+        } else if (header === 'Suggested Subtitles') {
+            researchData.subtitles = parseListWithRelevance(content).map(item => ({ subtitle: item.text, relevance: item.relevance }));
+        }
+    }
+
+    const groundingSources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const rankedSources = await rankSources(topic, groundingSources);
+    
     const finalResult: ResearchResult = {
         ...researchData,
-        sources: [],
+        sources: rankedSources,
     };
     
-    return { result: finalResult, sources: [] };
+    return { result: finalResult, sources: rankedSources };
   } catch (error) {
     console.error("Error during topic research:", error);
     return { result: null, sources: [] };

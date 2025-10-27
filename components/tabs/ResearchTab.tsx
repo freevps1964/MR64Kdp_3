@@ -48,14 +48,13 @@ const ResearchTab: React.FC = () => {
     try {
       const { result } = await researchTopic(currentTopic.trim());
       if (result) {
-        // Sort results client-side as a fallback
+        // Sort results client-side as a fallback, as markdown parsing doesn't guarantee order
         result.titles.sort((a, b) => b.relevance - a.relevance);
         result.subtitles.sort((a, b) => b.relevance - a.relevance);
         result.keywords.sort((a, b) => b.relevance - a.relevance);
         
-        // Filter sources by relevance and pre-select them
+        // Pre-select sources with high relevance, but keep all sources in the main list
         const relevantSources = result.sources.filter(s => (s.relevance ?? 0) >= 60);
-        result.sources = relevantSources;
 
         updateProject({
            researchData: result,

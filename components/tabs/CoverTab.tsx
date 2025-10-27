@@ -131,30 +131,22 @@ const CoverTab: React.FC = () => {
 
             // --- Draw Title ---
             const title = (project.bookTitle || '').toUpperCase();
-            let titleFontSizePt = project.titleFontSize || 60;
+            const titleFontSizePt = project.titleFontSize || 60;
             ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
-            while (ctx.measureText(title).width > contentWidth && titleFontSizePt > 10) {
-                titleFontSizePt -= 2;
-                ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
-            }
             currentY = wrapText(ctx, title, canvasWidth / 2, currentY, contentWidth, ptToPx(titleFontSizePt) * 1.1);
             
             // --- Draw Subtitle ---
             const subtitle = project.subtitle || '';
-            let subtitleFontSizePt = project.subtitleFontSize || 30;
-            currentY += ptToPx(subtitleFontSizePt) * 0.5;
+            const subtitleFontSizePt = project.subtitleFontSize || 30;
+            currentY += ptToPx(subtitleFontSizePt) * 0.5; // Aggiunge un po' di spazio
             ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
-            while (ctx.measureText(subtitle).width > contentWidth && subtitleFontSizePt > 8) {
-                subtitleFontSizePt -= 1;
-                ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
-            }
             currentY = wrapText(ctx, subtitle, canvasWidth / 2, currentY, contentWidth, ptToPx(subtitleFontSizePt) * 1.2);
             
             // --- Draw Tagline ---
             if (project.coverTagline) {
                 currentY += ptToPx(22) * 0.7;
                 ctx.font = `italic 22pt 'Georgia', serif`;
-                ctx.fillStyle = '#FFDD57';
+                ctx.fillStyle = '#FFDD57'; // Colore accento per la tagline
                 currentY = wrapText(ctx, project.coverTagline, canvasWidth / 2, currentY, contentWidth, ptToPx(22) * 1.1);
                 ctx.fillStyle = 'white';
             }
@@ -208,43 +200,51 @@ const CoverTab: React.FC = () => {
                 ctx.fillStyle = '#FFD700'; // Gold color
 
                 switch(project.bonusStickerShape) {
+                    case 'seal':
+                        drawStar(stickerCenterX, stickerCenterY, 40, stickerRadius, stickerRadius * 0.92);
+                        ctx.fill();
+                        break;
+                    case 'shield':
+                        const shieldWidth = stickerRadius * 1.8;
+                        const shieldHeight = stickerRadius * 1.8;
+                        const shieldX = stickerCenterX - shieldWidth / 2;
+                        const shieldY = stickerCenterY - shieldHeight / 2;
+                        ctx.beginPath();
+                        ctx.moveTo(shieldX, shieldY);
+                        ctx.lineTo(shieldX + shieldWidth, shieldY);
+                        ctx.lineTo(shieldX + shieldWidth, shieldY + shieldHeight * 0.7);
+                        ctx.quadraticCurveTo(shieldX + shieldWidth / 2, shieldY + shieldHeight, shieldX, shieldY + shieldHeight * 0.7);
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
+                    case 'ribbon':
+                        const bannerWidth = stickerRadius * 2.5;
+                        const bannerHeight = stickerRadius * 1.2;
+                        const bannerX = stickerCenterX - bannerWidth / 2;
+                        const bannerY = stickerCenterY - bannerHeight / 2;
+                        const notch = bannerHeight / 2;
+                        ctx.beginPath();
+                        ctx.moveTo(bannerX, bannerY);
+                        ctx.lineTo(bannerX + bannerWidth, bannerY);
+                        ctx.lineTo(bannerX + bannerWidth - notch, bannerY + bannerHeight / 2);
+                        ctx.lineTo(bannerX + bannerWidth, bannerY + bannerHeight);
+                        ctx.lineTo(bannerX, bannerY + bannerHeight);
+                        ctx.lineTo(bannerX + notch, bannerY + bannerHeight / 2);
+                        ctx.closePath();
+                        ctx.fill();
+                        break;
                     case 'circle':
                         ctx.beginPath();
                         ctx.arc(stickerCenterX, stickerCenterY, stickerRadius, 0, Math.PI * 2);
                         ctx.fill();
                         break;
                     case 'burst':
-                        drawStar(stickerCenterX, stickerCenterY, 16, stickerRadius, stickerRadius * 0.8);
-                        ctx.fill();
-                        break;
-                    case 'square':
-                        ctx.beginPath();
-                        ctx.rect(stickerCenterX - stickerRadius, stickerCenterY - stickerRadius, stickerRadius * 2, stickerRadius * 2);
-                        ctx.fill();
-                        break;
-                    case 'diamond':
-                        ctx.beginPath();
-                        ctx.moveTo(stickerCenterX, stickerCenterY - stickerRadius); // top
-                        ctx.lineTo(stickerCenterX + stickerRadius, stickerCenterY); // right
-                        ctx.lineTo(stickerCenterX, stickerCenterY + stickerRadius); // bottom
-                        ctx.lineTo(stickerCenterX - stickerRadius, stickerCenterY); // left
-                        ctx.closePath();
-                        ctx.fill();
-                        break;
-                    case 'heart':
-                        const heartSize = stickerRadius * 1.8;
-                        const heartX = stickerCenterX;
-                        const heartY = stickerCenterY - 30;
-                        ctx.beginPath();
-                        ctx.moveTo(heartX, heartY + heartSize * 0.25);
-                        ctx.bezierCurveTo(heartX + heartSize * 0.5, heartY - heartSize * 0.2, heartX + heartSize, heartY + heartSize * 0.5, heartX, heartY + heartSize);
-                        ctx.bezierCurveTo(heartX - heartSize, heartY + heartSize * 0.5, heartX - heartSize * 0.5, heartY - heartSize * 0.2, heartX, heartY + heartSize * 0.25);
-                        ctx.closePath();
+                        drawStar(stickerCenterX, stickerCenterY, 24, stickerRadius, stickerRadius * 0.7);
                         ctx.fill();
                         break;
                     case 'star':
                     default:
-                        drawStar(stickerCenterX, stickerCenterY, 24, stickerRadius, stickerRadius * 0.7);
+                        drawStar(stickerCenterX, stickerCenterY, 5, stickerRadius * 1.1, stickerRadius * 0.5);
                         ctx.fill();
                         break;
                 }
@@ -254,19 +254,25 @@ const CoverTab: React.FC = () => {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                const bonusTextLines = t('coverTab.bonusText').toUpperCase().split(' ');
-                const hasMultiLineBonusText = bonusTextLines.length > 1;
-
-                ctx.font = `bold ${hasMultiLineBonusText ? '70px' : '80px'} 'Montserrat', sans-serif`;
-                const numberY = stickerCenterY - (hasMultiLineBonusText ? 35 : 20);
-                ctx.fillText(bonusNumber, stickerCenterX, numberY);
-
-                ctx.font = `bold ${hasMultiLineBonusText ? '35px' : '40px'} 'Montserrat', sans-serif`;
-                if (hasMultiLineBonusText) {
-                    ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 20);
-                    ctx.fillText(bonusTextLines[1], stickerCenterX, stickerCenterY + 60);
+                if (project.bonusStickerShape === 'ribbon') {
+                    const fullText = `${bonusNumber} ${t('coverTab.bonusText').toUpperCase()}`;
+                    ctx.font = `bold 45px 'Montserrat', sans-serif`;
+                    ctx.fillText(fullText, stickerCenterX, stickerCenterY);
                 } else {
-                    ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 45);
+                    const bonusTextLines = t('coverTab.bonusText').toUpperCase().split(' ');
+                    const hasMultiLineBonusText = bonusTextLines.length > 1;
+
+                    ctx.font = `bold ${hasMultiLineBonusText ? '70px' : '80px'} 'Montserrat', sans-serif`;
+                    const numberY = stickerCenterY - (hasMultiLineBonusText ? 35 : 20);
+                    ctx.fillText(bonusNumber, stickerCenterX, numberY);
+
+                    ctx.font = `bold ${hasMultiLineBonusText ? '35px' : '40px'} 'Montserrat', sans-serif`;
+                    if (hasMultiLineBonusText) {
+                        ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 20);
+                        ctx.fillText(bonusTextLines[1], stickerCenterX, stickerCenterY + 60);
+                    } else {
+                        ctx.fillText(bonusTextLines[0], stickerCenterX, stickerCenterY + 45);
+                    }
                 }
             }
             
@@ -555,9 +561,9 @@ const CoverTab: React.FC = () => {
                         <option value="star">Stella</option>
                         <option value="circle">Cerchio</option>
                         <option value="burst">Esplosione</option>
-                        <option value="square">Quadrato</option>
-                        <option value="heart">Cuore</option>
-                        <option value="diamond">Diamante</option>
+                        <option value="seal">Sigillo</option>
+                        <option value="ribbon">Nastro</option>
+                        <option value="shield">Scudo</option>
                         <option value="none">Nessuno</option>
                     </select>
                 </div>

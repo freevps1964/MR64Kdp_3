@@ -94,7 +94,7 @@ export interface CustomStyles {
   chapterTitleSize: number; // pt
 }
 
-export type BonusStickerShape = 'star' | 'circle' | 'burst' | 'square' | 'heart' | 'diamond' | 'none';
+export type BonusStickerShape = 'star' | 'circle' | 'burst' | 'seal' | 'ribbon' | 'shield' | 'none';
 
 export interface Project {
   id: string;
