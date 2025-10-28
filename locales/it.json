@@ -90,7 +90,9 @@
     "trendingTopics": "Argomenti di Tendenza",
     "trendReason": "Perché è di tendenza",
     "researchThisTopic": "Ricerca questo argomento",
-    "trendSources": "Fonti dell'analisi di tendenza"
+    "trendSources": "Fonti dell'analisi di tendenza",
+    "selectCategoryLabel": "Seleziona una Categoria",
+    "allCategories": "Tutte le Categorie"
   },
   "structureTab": {
     "title": "Struttura del Libro",

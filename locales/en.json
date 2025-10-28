@@ -90,7 +90,9 @@
     "trendingTopics": "Trending Topics",
     "trendReason": "Why it's trending",
     "researchThisTopic": "Research this topic",
-    "trendSources": "Trend Analysis Sources"
+    "trendSources": "Trend Analysis Sources",
+    "selectCategoryLabel": "Select a Category",
+    "allCategories": "All Categories"
   },
   "structureTab": {
     "title": "Book Structure",

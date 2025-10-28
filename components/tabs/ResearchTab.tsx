@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { researchTopic, discoverTrends } from '../../services/geminiService';
+import { researchTopic, discoverTrends, fetchAmazonCategories } from '../../services/geminiService';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import Card from '../common/Card';
 import type { GroundingSource, Trend } from '../../types';
@@ -14,7 +14,7 @@ const StatCard: React.FC<{ value: number; label: string }> = ({ value, label }) 
 );
 
 const ResearchTab: React.FC = () => {
-  const { t } = useLocalization();
+  const { t, locale } = useLocalization();
   const { project, updateProject } = useProject();
   const [topic, setTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,14 +24,33 @@ const ResearchTab: React.FC = () => {
   const [isDiscoveringTrends, setIsDiscoveringTrends] = useState(false);
   const [trendsError, setTrendsError] = useState<string | null>(null);
   const [trendsResult, setTrendsResult] = useState<{ trends: Trend[], sources: GroundingSource[] } | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  
+  const [amazonCategories, setAmazonCategories] = useState<string[]>([]);
+  const [isFetchingCategories, setIsFetchingCategories] = useState(false);
   
   const topicInputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    const loadCategories = async () => {
+        if (!locale) return;
+        setIsFetchingCategories(true);
+        const cats = await fetchAmazonCategories(locale);
+        setAmazonCategories([t('researchTab.allCategories'), ...cats]);
+        setIsFetchingCategories(false);
+    };
+    loadCategories();
+  }, [locale, t]);
 
   useEffect(() => {
     if (project?.topic) {
       setTopic(project.topic);
     }
   }, [project?.topic]);
+
+  useEffect(() => {
+    setSelectedCategory(t('researchTab.allCategories'));
+  }, [t]);
 
   const handleResearch = async (e?: React.FormEvent, researchTopicOverride?: string) => {
     if (e) e.preventDefault();
@@ -83,7 +102,7 @@ const ResearchTab: React.FC = () => {
     setTrendsError(null);
     setTrendsResult(null);
     try {
-      const { trends, sources } = await discoverTrends();
+      const { trends, sources } = await discoverTrends(selectedCategory);
       if (trends) {
         // Sort trends by trendScore descending
         trends.sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0));
@@ -143,11 +162,27 @@ const ResearchTab: React.FC = () => {
       <div className="mb-12 p-6 border border-brand-light/50 rounded-lg bg-brand-light/10">
         <h3 className="text-xl font-bold text-brand-dark mb-3">{t('researchTab.trendsTitle')}</h3>
         <p className="text-neutral-medium mb-4">{t('researchTab.trendsDescription')}</p>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-end gap-4">
+            <div className="w-full sm:w-auto flex-grow">
+                <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-1">{t('researchTab.selectCategoryLabel')}</label>
+                <select
+                    id="category-select"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
+                    disabled={isFetchingCategories}
+                >
+                    {isFetchingCategories ? (
+                      <option>{t('metadataTab.fetchingCategories')}</option>
+                    ) : (
+                      amazonCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)
+                    )}
+                </select>
+            </div>
           <button
             onClick={handleDiscoverTrends}
-            disabled={isDiscoveringTrends}
-            className="flex items-center justify-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
+            disabled={isDiscoveringTrends || isFetchingCategories}
+            className="w-full sm:w-auto flex items-center justify-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
           >
             {isDiscoveringTrends ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-dark" /> : `💡 ${t('researchTab.discoverTrendsButton')}`}
           </button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
@@ -8,7 +8,8 @@ import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion, GroundingSo
 import { useToast } from '../../hooks/useToast';
 
 const MetadataTab: React.FC = () => {
-  const { t } = useLocalization();
+  // FIX: Destructure locale from useLocalization to pass to API calls.
+  const { t, locale } = useLocalization();
   const { project, updateProject, addAuthorToArchive } = useProject();
   const { showToast } = useToast();
 
@@ -25,12 +26,14 @@ const MetadataTab: React.FC = () => {
     }
   }, [project?.researchData, project?.metadataKeywords, updateProject]);
   
-  const handleFetchCategories = async () => {
+  // FIX: Wrap in useCallback and add dependencies to prevent stale closures and unnecessary re-renders.
+  const handleFetchCategories = useCallback(async () => {
     if (isFetchingCategories) return;
     setIsFetchingCategories(true);
     setError(null);
     try {
-        const cats = await fetchAmazonCategories();
+        // FIX: Pass the required 'locale' argument to the function.
+        const cats = await fetchAmazonCategories(locale);
         setAmazonCategories(cats);
     } catch (err) {
         const errorMessage = (err as Error).toString().toLowerCase();
@@ -42,12 +45,13 @@ const MetadataTab: React.FC = () => {
     } finally {
         setIsFetchingCategories(false);
     }
-  };
+  }, [isFetchingCategories, locale, t]);
 
   // Carica le categorie al montaggio del componente per garantire che le selezioni vengano visualizzate
+  // FIX: Add handleFetchCategories to the dependency array as it's now memoized.
   useEffect(() => {
     handleFetchCategories();
-  }, []);
+  }, [handleFetchCategories]);
 
 
   const handleFieldChange = (updates: Partial<Project>) => {
