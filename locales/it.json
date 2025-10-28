@@ -84,7 +84,7 @@
     "summaryKeywords": "Parole Chiave KDP",
     "summarySources": "Fonti Web",
     "trendsTitle": "Ricerca Tendenze",
-    "trendsDescription": "Analizza la classifica dei Bestseller di Amazon (amazon.it/gp/bestsellers/books) per scoprire le nicchie più profittevoli per il tuo prossimo libro.",
+    "trendsDescription": "Analizza la classifica dei Bestseller di Amazon ({amazonDomain}) per scoprire le nicchie più profittevoli per il tuo prossimo libro.",
     "discoverTrendsButton": "Analizza Bestseller",
     "trendsLoading": "Analisi delle tendenze in corso...",
     "trendingTopics": "Argomenti di Tendenza",
@@ -92,7 +92,8 @@
     "researchThisTopic": "Ricerca questo argomento",
     "trendSources": "Fonti dell'analisi di tendenza",
     "selectCategoryLabel": "Seleziona una Categoria",
-    "allCategories": "Tutte le Categorie"
+    "allCategories": "Tutte le Categorie",
+    "selectMarketLabel": "Seleziona un Mercato"
   },
   "structureTab": {
     "title": "Struttura del Libro",

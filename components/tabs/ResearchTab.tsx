@@ -25,12 +25,26 @@ const ResearchTab: React.FC = () => {
   const [trendsError, setTrendsError] = useState<string | null>(null);
   const [trendsResult, setTrendsResult] = useState<{ trends: Trend[], sources: GroundingSource[] } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedMarket, setSelectedMarket] = useState<string>('Italy');
   
   const [amazonCategories, setAmazonCategories] = useState<string[]>([]);
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
   
   const topicInputRef = useRef<HTMLInputElement>(null);
   
+  const markets = ['Italy', 'USA', 'UK', 'Germany', 'France', 'Spain', 'Canada', 'Japan'];
+  const marketToDomain: { [key: string]: string } = {
+      'Italy': 'amazon.it',
+      'USA': 'amazon.com',
+      'UK': 'amazon.co.uk',
+      'Germany': 'amazon.de',
+      'France': 'amazon.fr',
+      'Spain': 'amazon.es',
+      'Canada': 'amazon.ca',
+      'Japan': 'amazon.co.jp',
+  };
+  const amazonDomain = marketToDomain[selectedMarket] || 'amazon.com';
+
   useEffect(() => {
     const loadCategories = async () => {
         if (!locale) return;
@@ -65,7 +79,7 @@ const ResearchTab: React.FC = () => {
     topicInputRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     try {
-      const { result } = await researchTopic(currentTopic.trim());
+      const { result } = await researchTopic(currentTopic.trim(), selectedMarket);
       if (result) {
         // Sort results client-side as a fallback, as markdown parsing doesn't guarantee order
         result.titles.sort((a, b) => b.relevance - a.relevance);
@@ -102,7 +116,7 @@ const ResearchTab: React.FC = () => {
     setTrendsError(null);
     setTrendsResult(null);
     try {
-      const { trends, sources } = await discoverTrends(selectedCategory);
+      const { trends, sources } = await discoverTrends(selectedCategory, selectedMarket);
       if (trends) {
         // Sort trends by trendScore descending
         trends.sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0));
@@ -161,8 +175,20 @@ const ResearchTab: React.FC = () => {
       {/* New Trend Research Section */}
       <div className="mb-12 p-6 border border-brand-light/50 rounded-lg bg-brand-light/10">
         <h3 className="text-xl font-bold text-brand-dark mb-3">{t('researchTab.trendsTitle')}</h3>
-        <p className="text-neutral-medium mb-4">{t('researchTab.trendsDescription')}</p>
+        <p className="text-neutral-medium mb-4">{t('researchTab.trendsDescription', { amazonDomain })}</p>
         <div className="flex flex-col sm:flex-row items-end gap-4">
+            <div className="w-full sm:w-auto flex-grow">
+                <label htmlFor="market-select" className="block text-sm font-medium text-gray-700 mb-1">{t('researchTab.selectMarketLabel')}</label>
+                <select
+                    id="market-select"
+                    value={selectedMarket}
+                    onChange={(e) => setSelectedMarket(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
+                    disabled={isDiscoveringTrends}
+                >
+                    {markets.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+            </div>
             <div className="w-full sm:w-auto flex-grow">
                 <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-1">{t('researchTab.selectCategoryLabel')}</label>
                 <select
@@ -170,7 +196,7 @@ const ResearchTab: React.FC = () => {
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
-                    disabled={isFetchingCategories}
+                    disabled={isFetchingCategories || isDiscoveringTrends}
                 >
                     {isFetchingCategories ? (
                       <option>{t('metadataTab.fetchingCategories')}</option>

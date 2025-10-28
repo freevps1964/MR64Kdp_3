@@ -84,7 +84,7 @@
     "summaryKeywords": "KDP Keywords",
     "summarySources": "Web Sources",
     "trendsTitle": "Trend Research",
-    "trendsDescription": "Analyze the Amazon Bestsellers list (amazon.it/gp/bestsellers/books) to discover the most profitable niches for your next book.",
+    "trendsDescription": "Analyze the Amazon Bestsellers list ({amazonDomain}) to discover the most profitable niches for your next book.",
     "discoverTrendsButton": "Analyze Bestsellers",
     "trendsLoading": "Analyzing trends...",
     "trendingTopics": "Trending Topics",
@@ -92,7 +92,8 @@
     "researchThisTopic": "Research this topic",
     "trendSources": "Trend Analysis Sources",
     "selectCategoryLabel": "Select a Category",
-    "allCategories": "All Categories"
+    "allCategories": "All Categories",
+    "selectMarketLabel": "Select a Market"
   },
   "structureTab": {
     "title": "Book Structure",

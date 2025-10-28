@@ -99,17 +99,29 @@ ${JSON.stringify(sourcesToRank)}
 /**
  * Scopre argomenti di tendenza per libri KDP in un dato periodo.
  */
-export const discoverTrends = async (category: string): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
-  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è analizzare i dati di vendita e le tendenze di mercato per identificare le 5 nicchie di saggistica più redditizie e con meno concorrenza per il self-publishing su Amazon KDP, focalizzandoti sulla categoria: "${category}".
+export const discoverTrends = async (category: string, market: string): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
+  const marketToDomain: { [key: string]: string } = {
+    'Italy': 'amazon.it',
+    'USA': 'amazon.com',
+    'UK': 'amazon.co.uk',
+    'Germany': 'amazon.de',
+    'France': 'amazon.fr',
+    'Spain': 'amazon.es',
+    'Canada': 'amazon.ca',
+    'Japan': 'amazon.co.jp',
+  };
+  const amazonDomain = marketToDomain[market] || 'amazon.com';
 
-Se la categoria è "Tutte le Categorie" o "Libri", analizza il mercato librario nel suo complesso. Altrimenti, fornisci risultati specifici per la categoria data.
+  const prompt = `AGISCI COME un analista di mercato KDP esperto. La tua missione è analizzare i dati di vendita e le tendenze di mercato dal sito **${amazonDomain}** per identificare le 5 nicchie di saggistica più redditizie e con meno concorrenza per il self-publishing su Amazon KDP, focalizzandoti sulla categoria: "${category}".
+
+Se la categoria è "Tutte le Categorie" o "Libri", analizza il mercato librario nel suo complesso su **${amazonDomain}**. Altrimenti, fornisci risultati specifici per la categoria data.
 
 Per ogni nicchia identificata, fornisci:
 1. "topic": Il nome della nicchia o dell'argomento del libro, conciso e pronto per KDP.
-2. "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questa nicchia è profittevole, analizzando le tendenze di mercato e identificando opportunità per nuovi autori all'interno della categoria di riferimento ("${category}").
+2. "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questa nicchia è profittevole, analizzando le tendenze di mercato e identificando opportunità per nuovi autori all'interno della categoria di riferimento ("${category}") e del mercato ("${market}").
 3. "trendScore": un punteggio da 0 a 100 che rappresenta il potenziale di redditività della nicchia. 100 è il massimo potenziale.
 
-Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risultati dal "trendScore" più alto al più basso. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili nel tuo set di dati. L'output deve essere solo il JSON.`;
+Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risultati dal "trendScore" più alto al più basso. Assicurati che l'analisi sia basata sulle informazioni più recenti disponibili nel tuo set di dati per il mercato di riferimento. L'output deve essere solo il JSON.`;
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -145,9 +157,9 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
 /**
  * Esegue una ricerca approfondita su un argomento utilizzando Gemini con Google Search.
  */
-export const researchTopic = async (topic: string): Promise<{ result: ResearchResult | null; sources: GroundingSource[] }> => {
-  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita, basata sulle informazioni più recenti dal web, per un libro sull'argomento: "${topic}".
-L'obiettivo è massimizzare le vendite e la visibilità. Fornisci una risposta strutturata in Markdown con le seguenti sezioni ESATTE, ciascuna seguita da un elenco puntato o da un paragrafo:
+export const researchTopic = async (topic: string, market: string): Promise<{ result: ResearchResult | null; sources: GroundingSource[] }> => {
+  const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita, basata sulle informazioni più recenti dal web e con un focus sul mercato di **${market}**, per un libro sull'argomento: "${topic}".
+L'obiettivo è massimizzare le vendite e la visibilità in quel mercato specifico. Fornisci una risposta strutturata in Markdown con le seguenti sezioni ESATTE, ciascuna seguita da un elenco puntato o da un paragrafo:
 
 ### Market Summary
 [Un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze.]
