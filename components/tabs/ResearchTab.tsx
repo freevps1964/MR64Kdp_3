@@ -86,12 +86,12 @@ const ResearchTab: React.FC = () => {
         result.subtitles.sort((a, b) => b.relevance - a.relevance);
         result.keywords.sort((a, b) => b.relevance - a.relevance);
         
-        // Pre-select sources with high relevance, but keep all sources in the main list
-        const relevantSources = result.sources.filter(s => (s.relevance ?? 0) >= 60);
+        // Since we removed relevance ranking, we'll pre-select all found sources.
+        const allValidSources = result.sources;
 
         updateProject({
            researchData: result,
-           selectedSources: relevantSources,
+           selectedSources: allValidSources,
         });
       } else {
         throw new Error('No data returned from research.');

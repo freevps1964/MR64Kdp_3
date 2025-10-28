@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
@@ -8,7 +8,6 @@ import type { Keyword, Project, TitleSuggestion, SubtitleSuggestion, GroundingSo
 import { useToast } from '../../hooks/useToast';
 
 const MetadataTab: React.FC = () => {
-  // FIX: Destructure locale from useLocalization to pass to API calls.
   const { t, locale } = useLocalization();
   const { project, updateProject, addAuthorToArchive } = useProject();
   const { showToast } = useToast();
@@ -18,6 +17,7 @@ const MetadataTab: React.FC = () => {
   const [amazonCategories, setAmazonCategories] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [descriptionSources, setDescriptionSources] = useState<GroundingSource[]>([]);
+  const fetchingRef = useRef(false);
 
 
   useEffect(() => {
@@ -26,13 +26,12 @@ const MetadataTab: React.FC = () => {
     }
   }, [project?.researchData, project?.metadataKeywords, updateProject]);
   
-  // FIX: Wrap in useCallback and add dependencies to prevent stale closures and unnecessary re-renders.
   const handleFetchCategories = useCallback(async () => {
-    if (isFetchingCategories) return;
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     setIsFetchingCategories(true);
     setError(null);
     try {
-        // FIX: Pass the required 'locale' argument to the function.
         const cats = await fetchAmazonCategories(locale);
         setAmazonCategories(cats);
     } catch (err) {
@@ -43,12 +42,12 @@ const MetadataTab: React.FC = () => {
             setError(t('apiErrors.generic'));
         }
     } finally {
+        fetchingRef.current = false;
         setIsFetchingCategories(false);
     }
-  }, [isFetchingCategories, locale, t]);
+  }, [locale, t]);
 
   // Carica le categorie al montaggio del componente per garantire che le selezioni vengano visualizzate
-  // FIX: Add handleFetchCategories to the dependency array as it's now memoized.
   useEffect(() => {
     handleFetchCategories();
   }, [handleFetchCategories]);

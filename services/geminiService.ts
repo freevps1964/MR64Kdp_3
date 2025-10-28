@@ -38,65 +38,6 @@ async function withRetry<T>(
 }
 
 /**
- * Classifica le fonti web in base alla pertinenza per un dato argomento.
- */
-const rankSources = async (topic: string, sources: GroundingSource[]): Promise<GroundingSource[]> => {
-    if (!sources || sources.length === 0) {
-        return [];
-    }
-    const sourcesToRank = sources.map(s => ({ uri: s.web?.uri, title: s.web?.title })).filter(s => s.uri && s.title);
-    if (sourcesToRank.length === 0) return sources;
-
-    const prompt = `Dato l'argomento di un libro "${topic}", analizza e classifica le seguenti fonti web. L'obiettivo è identificare le fonti più **affidabili e autorevoli** per la scrittura di un libro di alta qualità.
-
-Per ogni fonte, fornisci un punteggio di "relevance" da 0 a 100 basato sui seguenti criteri, in ordine di importanza:
-1.  **Affidabilità e Autorevolezza (Peso maggiore)**: Dai la priorità a fonti accademiche, governative, articoli di testate giornalistiche verificate, pubblicazioni di settore e libri di autori riconosciuti. Penalizza fortemente forum, blog personali di bassa qualità, social media e fonti non verificate.
-2.  **Pertinenza**: Quanto è strettamente correlata la fonte all'argomento "${topic}".
-3.  **Aggiornamento**: La fonte è recente e riflette le informazioni più attuali?
-
-Rispondi con un array JSON di oggetti. Ogni oggetto deve contenere "uri", "title" e "relevance".
-
-Fonti da classificare:
-${JSON.stringify(sourcesToRank)}
-`;
-
-    try {
-        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            uri: { type: Type.STRING },
-                            title: { type: Type.STRING },
-                            relevance: { type: Type.NUMBER }
-                        },
-                        required: ["uri", "title", "relevance"]
-                    }
-                }
-            }
-        }));
-        
-        const rankedSources = JSON.parse(response.text.trim()) as { uri: string; title: string; relevance: number }[];
-        
-        const relevanceMap = new Map(rankedSources.map(s => [s.uri, s.relevance]));
-
-        return sources.map(originalSource => ({
-            ...originalSource,
-            relevance: originalSource.web?.uri ? relevanceMap.get(originalSource.web.uri) ?? 0 : 0
-        })).sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0));
-
-    } catch (error) {
-        console.error("Error ranking sources:", error);
-        return sources; // Restituisce le fonti originali non classificate in caso di errore
-    }
-};
-
-/**
  * Scopre argomenti di tendenza per libri KDP in un dato periodo.
  */
 export const discoverTrends = async (category: string, market: string): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
@@ -229,14 +170,14 @@ L'obiettivo è massimizzare le vendite e la visibilità in quel mercato specific
     }
 
     const groundingSources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    const rankedSources = await rankSources(topic, groundingSources);
+    const validSources = groundingSources.filter(s => s.web?.uri && s.web.title);
     
     const finalResult: ResearchResult = {
         ...researchData,
-        sources: rankedSources,
+        sources: validSources,
     };
     
-    return { result: finalResult, sources: rankedSources };
+    return { result: finalResult, sources: validSources };
   } catch (error) {
     console.error("Error during topic research:", error);
     return { result: null, sources: [] };
