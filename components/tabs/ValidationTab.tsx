@@ -5,11 +5,13 @@ import Card from '../common/Card';
 import BookPreview from '../PromptForm';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import type { LayoutTemplate, PageSize } from '../../types';
+import { useToast } from '../../hooks/useToast';
 
 const ValidationTab: React.FC = () => {
   const { t } = useLocalization();
   const { project } = useProject();
   const [isExporting, setIsExporting] = useState(false);
+  const { showToast } = useToast();
 
   const isResearchComplete = !!project?.researchData;
   const isStructureComplete = !!project?.bookStructure && project.bookStructure.chapters.length > 0;
@@ -80,6 +82,8 @@ const ValidationTab: React.FC = () => {
         if (!fullBookContainer) {
             throw new Error("Full book render container not found.");
         }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         const pages = fullBookContainer.querySelectorAll('.book-page');
         if (pages.length === 0) {
@@ -113,11 +117,11 @@ const ValidationTab: React.FC = () => {
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         }
 
-        pdf.save(`${project.projectTitle || 'book'}.pdf`);
+        pdf.save(`${project.projectTitle || 'book'}-print-ready.pdf`);
 
     } catch (error: any) {
         console.error("Error exporting PDF:", error);
-        alert(`An error occurred while exporting the PDF: ${error.message}`);
+        showToast(`Error exporting PDF: ${error.message}`, 'error');
     } finally {
         setIsExporting(false);
     }
@@ -158,7 +162,7 @@ const ValidationTab: React.FC = () => {
         </div>
       </Card>
       
-      <div id="validation-export-container" style={{ position: 'fixed', left: '-9999px', top: '-9999px', zIndex: -1 }}>
+      <div id="validation-export-container">
         {project && (
            <BookPreview
               project={project}

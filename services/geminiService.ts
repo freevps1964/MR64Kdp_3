@@ -275,25 +275,26 @@ export const generateContentStream = (
 ${regenerationInstruction}
 Sezione corrente: Capitolo "${chapterTitle}" ${subchapterTitle ? `- Sottocapitolo "${subchapterTitle}"` : ''}.
 
-Linee Guida Fondamentali:
-1.  **Qualità da Bestseller**: Scrivi in modo professionale, chiaro e informativo. Il livello deve essere impeccabile, paragonabile a un libro leader nel suo settore.
-2.  **Stile Coinvolgente e Magnetico**: Usa tecniche di storytelling per catturare l'attenzione. Varia la struttura delle frasi per creare un ritmo di lettura dinamico. Garantisci un flusso logico e transizioni impeccabili tra i paragrafi.
-3.  **Tono Autorevole ma Accessibile**: Posizionati come un esperto, ma spiega concetti complessi in modo semplice e comprensibile per il pubblico di destinazione.
-4.  **Valore Pratico Immenso**: Fornisci esempi pratici, strategie attuabili, aneddoti o casi studio che il lettore possa applicare nella propria vita. Il contenuto deve essere utile e trasformazionale.
-5.  **Accuratezza Assoluta**: Verifica che tutte le informazioni siano aggiornate, corrette e supportate da fonti attendibili se necessario.
-6.  **Ottimizzazione per KDP**: ${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave per massimizzare la visibilità: ${keywordList}.` : 'Scrivi in modo naturale senza forzare parole chiave.'}
+Linee Guida Fondamentali per un Contenuto da Bestseller:
+1.  **Qualità Superiore**: Scrivi in modo professionale, chiaro e informativo. Il livello deve essere impeccabile, paragonabile a un libro leader nel suo settore. Evita frasi generiche e superficiali.
+2.  **Stile Coinvolgente e Magnetico**: Utilizza tecniche di storytelling per catturare l'attenzione. Inizia ogni sezione con un'apertura forte e concludi con un pensiero o una transizione che inviti a continuare la lettura. Varia la struttura delle frasi per creare un ritmo di lettura dinamico.
+3.  **Struttura Chiara**: Organizza il contenuto in modo logico. Dove appropriato, usa sotto-intestazioni implicite (separate da una riga vuota) o elenchi puntati/numerati per migliorare la leggibilità e la comprensione.
+4.  **Tono Autorevole ma Accessibile**: Posizionati come un esperto, ma spiega concetti complessi in modo semplice e comprensibile per il pubblico di destinazione. Usa un linguaggio che risuoni con loro.
+5.  **Valore Pratico Immenso**: Fornisci esempi pratici, strategie attuabili, aneddoti, analogie o casi studio che il lettore possa applicare. Il contenuto deve essere utile e trasformazionale.
+6.  **Originalità e Profondità**: Non limitarti a ripetere informazioni comuni. Offri una prospettiva unica, approfondimenti non ovvi e una sintesi intelligente delle informazioni.
+7.  **Accuratezza Assoluta**: Verifica che tutte le informazioni siano aggiornate, corrette e supportate da fonti attendibili se necessario.
+8.  **Ottimizzazione per KDP**: ${keywordList ? `Integra in modo naturale e strategico le seguenti parole chiave per massimizzare la visibilità: ${keywordList}.` : 'Scrivi in modo naturale senza forzare parole chiave.'}
 
 ${writingGuidelines ? `\nSegui anche queste specifiche aggiuntive:\n${writingGuidelines}` : ''}
 
 ${wordCountInstruction}
 
 Output:
-- Fornisci solo il testo del contenuto, senza alcuna introduzione o preambolo.
-- Non includere il titolo del capitolo o del sottocapitolo nel testo.
-- Formatta il testo in paragrafi ben strutturati per una leggibilità ottimale.`;
+- Fornisci solo il testo del contenuto, senza alcuna introduzione, titolo o preambolo.
+- Formatta il testo in paragrafi ben strutturati per una leggibilità ottimale, utilizzando interruzioni di riga per separare le idee.`;
 
   return withRetry(() => ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-pro",
     contents: prompt,
   }));
 };
@@ -480,17 +481,17 @@ export const generateContentBlockPrompt = async (project: Project, contentType: 
     let typeInstruction = '';
     switch (contentType) {
         case 'recipe':
-            typeInstruction = "Per una 'ricetta', potrebbe essere 'Un piano alimentare settimanale con ricette ispirate ai principi del libro.'";
+            typeInstruction = "Per una 'ricetta', deve essere una singola preparazione, ad esempio: 'Una ricetta per una colazione energetica in linea con i temi del libro.'";
             break;
         case 'exercise':
-            typeInstruction = "Per un 'esercizio', potrebbe essere 'Una serie di esercizi di stretching da fare alla scrivania, basati sui concetti di ergonomia del libro.'";
+            typeInstruction = "Per un 'esercizio', deve essere una singola attività, ad esempio: 'Un esercizio di respirazione per ridurre lo stress, spiegato passo dopo passo.'";
             break;
         case 'bonus':
-            typeInstruction = "Per un 'bonus', potrebbe essere 'Una checklist stampabile che riassume i passaggi chiave di ogni capitolo.'";
+            typeInstruction = "Per un 'bonus', deve essere un singolo contenuto aggiuntivo, ad esempio: 'Una checklist stampabile per la routine mattutina suggerita nel capitolo 3.'";
             break;
     }
 
-    const prompt = `${context} genera un prompt creativo e altamente pertinente in **italiano** per un'appendice di tipo '${contentType}'. Il prompt deve essere una singola frase accattivante che descriva un bonus di valore per il lettore. Esempio: ${typeInstruction} L'output deve essere solo il testo del prompt.`;
+    const prompt = `${context} genera un prompt creativo e altamente pertinente in **italiano** per un'appendice di tipo '${contentType}'. Il prompt deve descrivere UN SINGOLO elemento (es. una ricetta, un esercizio), NON una raccolta (es. un menù settimanale, un piano di allenamento). Esempio: ${typeInstruction} L'output deve essere solo il testo del prompt.`;
     
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -523,10 +524,13 @@ export const generateContentBlockText = async (
       ? `IMPORTANTE: Evita di generare contenuti bonus con i seguenti titoli, poiché esistono già: ${existingTitles.join(', ')}.`
       : '';
 
-    const prompt = `Agisci come un esperto creatore di contenuti ed esperto di marketing editoriale. ${context} Genera ${count} contenuti bonus unici di tipo '${contentType}' relativi a "${description}". Questi bonus devono fornire un valore aggiunto tangibile, pratico e altamente coerente con il tema del libro.
-    Per ognuno, fornisci un "title" accattivante, una "description" (un riassunto accattivante del contenuto bonus) e una lista di "items" (punti, passaggi, o elementi per il contenuto bonus).
-    ${uniquenessInstruction}
-    Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
+    const prompt = `Agisci come un esperto creatore di contenuti ed esperto di marketing editoriale. ${context} Basandoti sulla seguente descrizione, genera ${count} contenuti bonus unici di tipo '${contentType}': "${description}".
+
+**REGOLA FONDAMENTALE**: Ogni contenuto bonus generato deve essere un singolo elemento specifico (es. UNA ricetta, UN esercizio, UNA checklist). NON generare raccolte o piani (es. NON un menù settimanale, NON un programma di allenamento). Se la descrizione chiede una raccolta, estrai e genera un singolo elemento rappresentativo da essa.
+
+Per ognuno, fornisci un "title" accattivante e specifico per il singolo elemento, una "description" (un riassunto accattivante del contenuto bonus) e una lista di "items" (punti, passaggi, o elementi per il contenuto bonus).
+${uniquenessInstruction}
+Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({

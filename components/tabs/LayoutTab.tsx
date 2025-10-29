@@ -195,12 +195,12 @@ const LayoutTab: React.FC = () => {
 
         } catch (error: any) {
             console.error("Error exporting PDF:", error);
-            alert(`An error occurred while exporting the PDF: ${error.message}`);
+            showToast(`Error exporting PDF: ${error.message}`, 'error');
         } finally {
             setIsExporting(false);
             setShowFullRender(false);
         }
-    }, 200);
+    }, 500);
   };
     
     const handleExportImage = async () => {
