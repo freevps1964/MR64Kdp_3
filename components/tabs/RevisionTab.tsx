@@ -264,10 +264,10 @@ const RevisionTab: React.FC = () => {
         
         try {
             await waitForDocxLibrary();
-            const htmlToDocxLib = (window as any).htmlToDocx;
+            const htmlToDocx = (window as any).htmlToDocx;
             
             const htmlContent = createHtmlForDocx(regeneratedText);
-            const fileBuffer = await htmlToDocxLib.asBlob(htmlContent, { orientation: 'portrait' });
+            const fileBuffer = await htmlToDocx.asBlob(htmlContent, { orientation: 'portrait' });
             
             const url = URL.createObjectURL(fileBuffer);
             const link = document.createElement('a');
