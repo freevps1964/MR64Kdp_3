@@ -845,9 +845,14 @@ export const regenerateManuscript = async (originalText: string, analysisText: s
 
 Di seguito troverai l'"ANALISI DELL'EDITOR" con un elenco di suggerimenti e il "MANOSCRITTO ORIGINALE".
 
-Il tuo compito è riscrivere l'intero "MANOSCRITTO ORIGINALE" dall'inizio alla fine, incorporando tutte le modifiche strutturali, stilistiche e di chiarezza suggerite nell'"ANALISI DELL'EDITOR". Il risultato finale deve essere solo il testo completo del manoscritto revisionato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
+Il tuo compito è riscrivere l'intero "MANOSCRITTO ORIGINALE" dall'inizio alla fine, incorporando tutte le modifiche strutturali, stilistiche e di chiarezza suggerite nell'/"ANALISI DELL'EDITOR". Il risultato finale deve essere solo il testo completo del manoscritto revisionato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
 
-Per i titoli dei capitoli, formattali usando '## ' seguito dal titolo (es. '## Capitolo 1: L'Inizio').
+REQUISITI FONDAMENTALI DI FORMATAZIONE E CONTENUTO:
+1.  **Conteggio Parole**: Assicurati che ogni capitolo e sottocapitolo nel manoscritto revisionato contenga un minimo di 1000 parole di testo sostanziale e ben sviluppato.
+2.  **Formattazione Titoli**: Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
+    - Per i **Titoli dei Capitoli (Titolo 1)**, usa '## ' seguito dal titolo (es. '## Capitolo 1: L'Inizio').
+    - Per i **Titoli Secondari (Titolo 2)** all'interno di un capitolo, usa '### ' seguito dal titolo (es. '### La Prima Sfida').
+    - Per i **Sottotitoli (corsivo)** all'interno di una sezione, usa '#### ' seguito dal sottotitolo (es. '#### Un nuovo punto di vista').
 
 ---
 ANALISI DELL'EDITOR:

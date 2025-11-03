@@ -7,7 +7,6 @@ import LoadingSpinner from '../icons/LoadingSpinner';
 
 declare const mammoth: any;
 declare const pdfjsLib: any;
-declare const htmlToDocx: any;
 
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     const processLines = (text: string) => {
@@ -38,6 +37,29 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     
     return <div className="space-y-2 text-neutral-dark" dangerouslySetInnerHTML={{ __html: processLines(content) }} />;
 };
+
+const waitForDocxLibrary = (timeout = 15000): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        const checkLib = () => typeof (window as any).htmlToDocx?.asBlob === 'function';
+
+        if (checkLib()) {
+            return resolve();
+        }
+
+        const startTime = Date.now();
+        const intervalId = setInterval(() => {
+            if (checkLib()) {
+                clearInterval(intervalId);
+                return resolve();
+            }
+            if (Date.now() - startTime > timeout) {
+                clearInterval(intervalId);
+                return reject(new Error("La libreria di conversione DOCX non si è caricata. Controlla la tua connessione o prova a disabilitare gli ad-blocker."));
+            }
+        }, 250);
+    });
+};
+
 
 const RevisionTab: React.FC = () => {
     const { t } = useLocalization();
@@ -163,13 +185,32 @@ const RevisionTab: React.FC = () => {
                     font-size: 14pt;
                     line-height: 1.5;
                 }
+                /* Titolo 1 (Capitolo) */
                 h2 {
-                    font-size: 18pt;
+                    font-family: 'Georgia', serif;
                     font-weight: bold;
+                    font-size: 20pt;
                     text-align: center;
                     margin-top: 2em;
                     margin-bottom: 1.5em;
                     page-break-before: always;
+                }
+                /* Titolo 2 (Secondario) */
+                h3 {
+                    font-family: 'Georgia', serif;
+                    font-weight: bold;
+                    font-size: 16pt;
+                    margin-top: 1.5em;
+                    margin-bottom: 1em;
+                }
+                /* Sottotitolo */
+                h4 {
+                    font-family: 'Georgia', serif;
+                    font-weight: bold;
+                    font-size: 14pt;
+                    font-style: italic;
+                    margin-top: 1.2em;
+                    margin-bottom: 0.8em;
                 }
                 p {
                     text-indent: 0.5in;
@@ -177,7 +218,8 @@ const RevisionTab: React.FC = () => {
                     margin-top: 0;
                     text-align: justify;
                 }
-                h2 + p, body > p:first-of-type {
+                /* Nessun rientro per il primo paragrafo dopo un titolo */
+                h2 + p, h3 + p, h4 + p, body > p:first-of-type {
                     text-indent: 0;
                 }
             </style>
@@ -200,6 +242,12 @@ const RevisionTab: React.FC = () => {
             if (trimmedLine.startsWith('## ')) {
                 const title = trimmedLine.substring(3).trim();
                 contentHtml += `<h2>${escapeHtml(title)}</h2>`;
+            } else if (trimmedLine.startsWith('### ')) {
+                const title = trimmedLine.substring(4).trim();
+                contentHtml += `<h3>${escapeHtml(title)}</h3>`;
+            } else if (trimmedLine.startsWith('#### ')) {
+                const title = trimmedLine.substring(5).trim();
+                contentHtml += `<h4>${escapeHtml(title)}</h4>`;
             } else if (trimmedLine) {
                 contentHtml += `<p>${escapeHtml(trimmedLine)}</p>`;
             }
@@ -215,8 +263,11 @@ const RevisionTab: React.FC = () => {
         setError(null);
         
         try {
+            await waitForDocxLibrary();
+            const htmlToDocxLib = (window as any).htmlToDocx;
+            
             const htmlContent = createHtmlForDocx(regeneratedText);
-            const fileBuffer = await htmlToDocx.asBlob(htmlContent, { orientation: 'portrait' });
+            const fileBuffer = await htmlToDocxLib.asBlob(htmlContent, { orientation: 'portrait' });
             
             const url = URL.createObjectURL(fileBuffer);
             const link = document.createElement('a');
@@ -227,9 +278,10 @@ const RevisionTab: React.FC = () => {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
             
-        } catch (err) {
-            console.error("Error creating DOCX file:", err);
-            setError(t('apiErrors.generic'));
+        } catch (err: any) {
+            const errorMessage = err.message || t('apiErrors.generic');
+            console.error("Error creating DOCX file:", errorMessage);
+            setError(errorMessage);
         } finally {
             setIsLoadingAction(null);
         }
