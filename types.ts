@@ -135,5 +135,6 @@ export interface Project {
   manuscript?: {
     text: string;
     analysis: string;
+    regenerated?: string;
   };
 }

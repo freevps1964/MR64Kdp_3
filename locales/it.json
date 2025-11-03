@@ -278,15 +278,24 @@
   },
   "revisionTab": {
     "title": "Revisione Manoscritto",
-    "description": "Incolla il testo completo del tuo manoscritto per un'analisi approfondita con Gemini 2.5 Pro. L'IA identificherà aree di miglioramento, suggerirà modifiche stilistiche, controllerà la coerenza e fornirà un feedback dettagliato per elevare la qualità del tuo libro.",
-    "fileUploadNote": "Nota: Al momento, è necessario copiare e incollare il testo del manoscritto. Il supporto per il caricamento diretto di file .docx e .pdf sarà disponibile in futuro.",
-    "pastePlaceholder": "Incolla qui il testo completo del tuo manoscritto...",
+    "description": "Carica il tuo manoscritto in formato .docx o .pdf per un'analisi approfondita con Gemini 2.5 Pro. L'IA fornirà un feedback dettagliato per elevare la qualità del tuo libro.",
+    "uploadPrompt": "Clicca per caricare o trascina il file",
+    "acceptedFiles": "DOCX o PDF",
+    "parsingFile": "Estrazione del testo dal file in corso...",
+    "fileError": "Impossibile leggere il file. Assicurati che sia un .docx o .pdf valido e non corrotto.",
     "analyzeButton": "Analizza Manoscritto",
     "loading": "Analisi del manoscritto in corso... Questo processo può richiedere diversi minuti.",
     "resultsTitle": "Risultati dell'Analisi AI",
     "originalTitle": "Manoscritto Originale",
     "feedbackTitle": "Suggerimenti di Miglioramento",
-    "startRevision": "Inizia Nuova Revisione"
+    "startRevision": "Inizia Nuova Revisione",
+    "textExtracted": "Testo Estratto con Successo",
+    "uploadDifferentFile": "Carica un altro file",
+    "regenerateAndDownload": "Rigenera Manoscritto",
+    "regenerating": "Rigenerazione del manoscritto in corso...",
+    "regeneratedTitle": "Manoscritto Rigenerato",
+    "downloadButton": "Scarica (.doc)",
+    "regenerateAgain": "Rigenera di Nuovo"
   },
   "archiveTab": {
     "title": "Archivio del Progetto",

@@ -278,15 +278,24 @@
   },
   "revisionTab": {
     "title": "Manuscript Revision",
-    "description": "Paste the full text of your manuscript for an in-depth analysis with Gemini 2.5 Pro. The AI will identify areas for improvement, suggest stylistic changes, check for consistency, and provide detailed feedback to elevate the quality of your book.",
-    "fileUploadNote": "Note: Currently, you need to copy and paste the manuscript text. Direct upload support for .docx and .pdf files will be available in the future.",
-    "pastePlaceholder": "Paste the full text of your manuscript here...",
+    "description": "Upload your manuscript as a .docx or .pdf file for an in-depth analysis with Gemini 2.5 Pro. The AI will provide detailed feedback to elevate the quality of your book.",
+    "uploadPrompt": "Click to upload or drag and drop",
+    "acceptedFiles": "DOCX or PDF",
+    "parsingFile": "Extracting text from your file...",
+    "fileError": "Could not read the file. Please ensure it's a valid .docx or .pdf and not corrupted.",
     "analyzeButton": "Analyze Manuscript",
     "loading": "Analyzing manuscript... This process may take several minutes.",
     "resultsTitle": "AI Analysis Results",
     "originalTitle": "Original Manuscript",
     "feedbackTitle": "Improvement Suggestions",
-    "startRevision": "Start New Revision"
+    "startRevision": "Start New Revision",
+    "textExtracted": "Text Extracted Successfully",
+    "uploadDifferentFile": "Upload a different file",
+    "regenerateAndDownload": "Regenerate Manuscript",
+    "regenerating": "Regenerating manuscript...",
+    "regeneratedTitle": "Regenerated Manuscript",
+    "downloadButton": "Download (.doc)",
+    "regenerateAgain": "Regenerate Again"
   },
   "archiveTab": {
     "title": "Project Archive",

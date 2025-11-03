@@ -836,3 +836,40 @@ ${manuscriptText}
         throw error; // Rilancia l'errore per gestirlo nel componente
     }
 };
+
+/**
+ * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
+ */
+export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
+    const prompt = `AGISCI COME un autore e editor esperto. La tua missione è applicare meticolosamente i suggerimenti di revisione forniti per migliorare un manoscritto.
+
+Di seguito troverai l'"ANALISI DELL'EDITOR" con un elenco di suggerimenti e il "MANOSCRITTO ORIGINALE".
+
+Il tuo compito è riscrivere l'intero "MANOSCRITTO ORIGINALE" dall'inizio alla fine, incorporando tutte le modifiche strutturali, stilistiche e di chiarezza suggerite nell'"ANALISI DELL'EDITOR". Il risultato finale deve essere solo il testo completo del manoscritto revisionato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
+
+Per i titoli dei capitoli, formattali usando '## ' seguito dal titolo (es. '## Capitolo 1: L'Inizio').
+
+---
+ANALISI DELL'EDITOR:
+---
+${analysisText}
+---
+MANOSCRITTO ORIGINALE:
+---
+${originalText}
+---
+MANOSCRITTO REVISIONATO:
+---
+`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        }));
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error regenerating manuscript:", error);
+        throw error;
+    }
+};
