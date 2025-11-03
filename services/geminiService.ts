@@ -106,9 +106,12 @@ L'obiettivo è massimizzare le vendite e la visibilità in quel mercato specific
 [Un'analisi concisa del mercato di riferimento, del potenziale pubblico e delle tendenze.]
 
 ### KDP Keywords
-- [Parola chiave 1] (Rilevanza: X%)
-- [Parola chiave 2] (Rilevanza: X%)
-- ... (Fornisci 10 parole chiave redditizie con il più alto intento di acquisto, miste tra coda corta e lunga, ordinate per rilevanza)
+[Un elenco di 10 parole chiave KDP redditizie, miste tra coda corta e lunga, con il più alto intento di acquisto. Per ogni parola chiave, fornisci:
+- Una valutazione del **Volume di Ricerca** (Valori possibili: Alto, Medio, Basso).
+- Una valutazione della **Competizione** (Valori possibili: Alta, Media, Bassa).
+- Un punteggio di **Rilevanza** (Rilevanza: X%).
+Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
+- [Parola Chiave] (Rilevanza: X%, Volume: [Valore], Competizione: [Valore])]
 
 ### Suggested Titles
 - [Titolo 1] (Rilevanza: X%)
@@ -154,6 +157,34 @@ L'obiettivo è massimizzare le vendite e la visibilità in quel mercato specific
             .filter(item => item.text);
     };
 
+    const parseKeywords = (content: string): Keyword[] => {
+        return content.trim().split('\n')
+            .map(line => line.replace(/^- /, '').trim())
+            .map(line => {
+                const match = line.match(/(.+) \(Rilevanza:\s*(\d+)%,\s*Volume:\s*([^,]+),\s*Competizione:\s*([^)]+)\)/i);
+                if (match) {
+                    return {
+                        keyword: match[1].trim(),
+                        relevance: parseInt(match[2], 10),
+                        searchVolume: match[3].trim(),
+                        competition: match[4].trim(),
+                    };
+                }
+                // Fallback for old format or parsing errors
+                const oldMatch = line.match(/(.+) \(Rilevanza:\s*(\d+)%\)/i);
+                if (oldMatch) {
+                    return {
+                        keyword: oldMatch[1].trim(),
+                        relevance: parseInt(oldMatch[2], 10),
+                        searchVolume: 'N/A',
+                        competition: 'N/A',
+                    };
+                }
+                return null;
+            })
+            .filter((item): item is Keyword => item !== null && !!item.keyword);
+    };
+
     for (let i = 0; i < sections.length; i += 2) {
         const header = sections[i]?.trim();
         const content = sections[i + 1]?.trim() || '';
@@ -161,7 +192,7 @@ L'obiettivo è massimizzare le vendite e la visibilità in quel mercato specific
         if (header === 'Market Summary') {
             researchData.marketSummary = content;
         } else if (header === 'KDP Keywords') {
-            researchData.keywords = parseListWithRelevance(content).map(item => ({ keyword: item.text, relevance: item.relevance }));
+            researchData.keywords = parseKeywords(content);
         } else if (header === 'Suggested Titles') {
             researchData.titles = parseListWithRelevance(content).map(item => ({ title: item.text, relevance: item.relevance }));
         } else if (header === 'Suggested Subtitles') {
@@ -749,5 +780,59 @@ Fornisci solo il testo della tagline, nient'altro.`;
     } catch (error) {
         console.error("Error generating cover tagline:", error);
         return "";
+    }
+};
+
+/**
+ * Analizza un manoscritto completo e fornisce un feedback strutturato.
+ */
+export const analyzeManuscript = async (manuscriptText: string): Promise<string> => {
+    const prompt = `AGISCI COME un editor di libri professionista e un critico letterario di fama mondiale. La tua missione è analizzare in modo approfondito il seguente manoscritto e fornire un feedback costruttivo, dettagliato e attuabile per migliorarne drasticamente la qualità.
+
+Il tuo output deve essere in formato **Markdown** e seguire ESATTAMENTE questa struttura, con intestazioni di terzo livello (###):
+
+### Riepilogo Generale
+[Fornisci una valutazione complessiva del manoscritto. Evidenzia i punti di forza principali (es. concetto, voce, ritmo) e le aree di debolezza più significative che necessitano di attenzione.]
+
+### Miglioramenti Strutturali e di Trama
+[Analizza la struttura generale, l'arco narrativo, lo sviluppo dei personaggi e il ritmo.
+- La trama è avvincente? Ci sono buchi o incongruenze?
+- I personaggi sono ben sviluppati e le loro motivazioni sono chiare?
+- Il ritmo è efficace o ci sono parti lente/affrettate?
+- Fornisci suggerimenti specifici per rafforzare la struttura (es. riordinare capitoli, aggiungere foreshadowing, approfondire un subplot).]
+
+### Perfezionamento Stilistico e di Voce
+[Valuta lo stile di scrittura, il tono e la voce dell'autore.
+- La prosa è chiara, coinvolgente e coerente?
+- La scelta delle parole (diction) è efficace e appropriata?
+- Ci sono cliché, frasi ripetitive o passaggi goffi da migliorare?
+- Fornisci esempi concreti presi dal testo e suggerisci delle alternative migliori.]
+
+### Chiarezza e Coerenza
+[Identifica eventuali passaggi confusi, ambigui o contraddittori.
+- La cronologia è chiara?
+- I concetti (specialmente in saggi o manuali) sono spiegati in modo efficace?
+- Ci sono incongruenze nella caratterizzazione o nei dettagli della trama?
+- Elenca i punti problematici in modo che l'autore possa individuarli e correggerli.]
+
+### Prossimi Passi Consigliati
+[Concludi con un elenco puntato di 3-5 azioni prioritarie che l'autore dovrebbe intraprendere per migliorare il manoscritto. Sii strategico e concentrati sugli interventi con il maggiore impatto.]
+
+---
+MANOSCRITTO DA ANALIZZARE:
+---
+${manuscriptText}
+---
+`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-pro",
+            contents: prompt,
+        }));
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error analyzing manuscript:", error);
+        throw error; // Rilancia l'errore per gestirlo nel componente
     }
 };

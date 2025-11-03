@@ -1,6 +1,6 @@
 import type { GenerateContentResponse } from "@google/genai";
 
-export type TabKey = 'research' | 'structure' | 'content' | 'appendices' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive';
+export type TabKey = 'research' | 'structure' | 'content' | 'appendices' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive' | 'revision';
 
 export interface GroundingSource {
   web?: {
@@ -23,6 +23,8 @@ export interface SubtitleSuggestion {
 export interface Keyword {
   keyword: string;
   relevance: number;
+  searchVolume: string;
+  competition: string;
 }
 
 export interface Trend {
@@ -130,4 +132,8 @@ export interface Project {
   authorFontSize: number;
   bonusStickerShape: BonusStickerShape;
   coverTagline: string;
+  manuscript?: {
+    text: string;
+    analysis: string;
+  };
 }

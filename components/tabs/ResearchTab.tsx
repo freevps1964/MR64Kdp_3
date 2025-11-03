@@ -170,6 +170,25 @@ const ResearchTab: React.FC = () => {
     }
   };
 
+  const getPillClasses = (type: 'volume' | 'competition', value: string) => {
+    const lowerValue = (value || '').toLowerCase();
+    let baseClasses = 'px-2 py-0.5 text-xs font-bold rounded-full w-16 text-center';
+    
+    if (type === 'volume') {
+        if (lowerValue.includes('high') || lowerValue.includes('alto')) return `${baseClasses} bg-green-100 text-green-800`;
+        if (lowerValue.includes('medium') || lowerValue.includes('medio')) return `${baseClasses} bg-yellow-100 text-yellow-800`;
+        if (lowerValue.includes('low') || lowerValue.includes('basso')) return `${baseClasses} bg-red-100 text-red-800`;
+    }
+    
+    if (type === 'competition') {
+        if (lowerValue.includes('high') || lowerValue.includes('alta')) return `${baseClasses} bg-red-100 text-red-800`;
+        if (lowerValue.includes('medium') || lowerValue.includes('media')) return `${baseClasses} bg-yellow-100 text-yellow-800`;
+        if (lowerValue.includes('low') || lowerValue.includes('bassa')) return `${baseClasses} bg-green-100 text-green-800`;
+    }
+    
+    return `${baseClasses} bg-gray-100 text-gray-800`; // for 'N/A' or unknown
+  };
+
   return (
     <Card>
       {/* New Trend Research Section */}
@@ -334,12 +353,32 @@ const ResearchTab: React.FC = () => {
           </div>
           
           <div>
-            <h3 className="text-xl font-semibold text-brand-dark mb-3">{t('researchTab.kdpKeywords')}</h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-xl font-semibold text-brand-dark">{t('researchTab.kdpKeywords')}</h3>
+              <div className="hidden sm:flex items-center gap-4 text-xs text-neutral-medium">
+                  <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500"></span><span>{t('researchTab.good')}</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-yellow-500"></span><span>{t('researchTab.medium')}</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500"></span><span>{t('researchTab.difficult')}</span></div>
+              </div>
+            </div>
+            <div className="space-y-3">
               {project.researchData.keywords.map((item, index) => (
-                <div key={index} className="bg-brand-accent/20 text-brand-dark font-semibold px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                  <span>{item.keyword}</span>
-                  <span className="text-xs opacity-75">({item.relevance}%)</span>
+                <div key={index} className="p-3 bg-neutral-light/70 rounded-md border flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-6">
+                  <div className="font-semibold text-brand-dark flex-grow">{item.keyword}</div>
+                  <div className="flex items-center justify-end gap-6 text-sm flex-shrink-0">
+                      <div className="flex flex-col items-center">
+                          <span className="text-xs text-neutral-medium">{t('researchTab.relevance')}</span>
+                          <span className="font-bold text-lg text-brand-primary">{item.relevance}%</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                          <span className="text-xs text-neutral-medium">{t('researchTab.searchVolume')}</span>
+                          <span className={getPillClasses('volume', item.searchVolume)}>{item.searchVolume || 'N/A'}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                          <span className="text-xs text-neutral-medium">{t('researchTab.competition')}</span>
+                          <span className={getPillClasses('competition', item.competition)}>{item.competition || 'N/A'}</span>
+                      </div>
+                  </div>
                 </div>
               ))}
             </div>

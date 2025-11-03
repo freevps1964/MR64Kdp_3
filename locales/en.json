@@ -40,6 +40,7 @@
     "metadata": "Metadata",
     "validation": "Validation",
     "archive": "Archive",
+    "revision": "Revision",
     "disabledTooltip": "Complete previous steps to unlock"
   },
   "toast": {
@@ -75,7 +76,7 @@
     "marketSummary": "Market Summary",
     "suggestedTitles": "Suggested Titles",
     "suggestedSubtitles": "Suggested Subtitles",
-    "kdpKeywords": "KDP Keywords",
+    "kdpKeywords": "KDP Keywords Analysis",
     "sources": "Web Sources",
     "selectAllSources": "Select All",
     "summaryTitle": "Research Summary",
@@ -93,7 +94,13 @@
     "trendSources": "Trend Analysis Sources",
     "selectCategoryLabel": "Select a Category",
     "allCategories": "All Categories",
-    "selectMarketLabel": "Select a Market"
+    "selectMarketLabel": "Select a Market",
+    "relevance": "Relevance",
+    "searchVolume": "Volume",
+    "competition": "Competition",
+    "good": "Good",
+    "medium": "Medium",
+    "difficult": "Difficult"
   },
   "structureTab": {
     "title": "Book Structure",
@@ -268,6 +275,18 @@
     "exerciseType": "Exercise",
     "bonusType": "Bonus",
     "generateAllImages": "Generate Images"
+  },
+  "revisionTab": {
+    "title": "Manuscript Revision",
+    "description": "Paste the full text of your manuscript for an in-depth analysis with Gemini 2.5 Pro. The AI will identify areas for improvement, suggest stylistic changes, check for consistency, and provide detailed feedback to elevate the quality of your book.",
+    "fileUploadNote": "Note: Currently, you need to copy and paste the manuscript text. Direct upload support for .docx and .pdf files will be available in the future.",
+    "pastePlaceholder": "Paste the full text of your manuscript here...",
+    "analyzeButton": "Analyze Manuscript",
+    "loading": "Analyzing manuscript... This process may take several minutes.",
+    "resultsTitle": "AI Analysis Results",
+    "originalTitle": "Original Manuscript",
+    "feedbackTitle": "Improvement Suggestions",
+    "startRevision": "Start New Revision"
   },
   "archiveTab": {
     "title": "Project Archive",

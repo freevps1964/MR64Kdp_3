@@ -13,6 +13,7 @@ import { useProject } from './hooks/useProject';
 import WelcomeScreen from './components/WelcomeScreen';
 import type { TabKey } from './types';
 import ArchiveTab from './components/tabs/ArchiveTab';
+import RevisionTab from './components/tabs/RevisionTab';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('research');
@@ -34,6 +35,8 @@ const App: React.FC = () => {
         return <AppendicesTab />;
       case 'layout':
         return <LayoutTab />;
+      case 'revision':
+        return <RevisionTab />;
       case 'validation':
         return <ValidationTab />;
       case 'archive':

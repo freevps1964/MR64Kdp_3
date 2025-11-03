@@ -40,6 +40,7 @@
     "metadata": "Metadati",
     "validation": "Validazione",
     "archive": "Archivio",
+    "revision": "Revisione",
     "disabledTooltip": "Completa i passaggi precedenti per sbloccare"
   },
   "toast": {
@@ -75,7 +76,7 @@
     "marketSummary": "Riepilogo del Mercato",
     "suggestedTitles": "Titoli Suggeriti",
     "suggestedSubtitles": "Sottotitoli Suggeriti",
-    "kdpKeywords": "Parole Chiave KDP",
+    "kdpKeywords": "Analisi Parole Chiave KDP",
     "sources": "Fonti Web",
     "selectAllSources": "Seleziona Tutto",
     "summaryTitle": "Riepilogo Ricerca",
@@ -93,7 +94,13 @@
     "trendSources": "Fonti dell'analisi di tendenza",
     "selectCategoryLabel": "Seleziona una Categoria",
     "allCategories": "Tutte le Categorie",
-    "selectMarketLabel": "Seleziona un Mercato"
+    "selectMarketLabel": "Seleziona un Mercato",
+    "relevance": "Rilevanza",
+    "searchVolume": "Volume",
+    "competition": "Competizione",
+    "good": "Buono",
+    "medium": "Medio",
+    "difficult": "Difficile"
   },
   "structureTab": {
     "title": "Struttura del Libro",
@@ -268,6 +275,18 @@
     "exerciseType": "Esercizio",
     "bonusType": "Bonus",
     "generateAllImages": "Genera Immagini"
+  },
+  "revisionTab": {
+    "title": "Revisione Manoscritto",
+    "description": "Incolla il testo completo del tuo manoscritto per un'analisi approfondita con Gemini 2.5 Pro. L'IA identificherà aree di miglioramento, suggerirà modifiche stilistiche, controllerà la coerenza e fornirà un feedback dettagliato per elevare la qualità del tuo libro.",
+    "fileUploadNote": "Nota: Al momento, è necessario copiare e incollare il testo del manoscritto. Il supporto per il caricamento diretto di file .docx e .pdf sarà disponibile in futuro.",
+    "pastePlaceholder": "Incolla qui il testo completo del tuo manoscritto...",
+    "analyzeButton": "Analizza Manoscritto",
+    "loading": "Analisi del manoscritto in corso... Questo processo può richiedere diversi minuti.",
+    "resultsTitle": "Risultati dell'Analisi AI",
+    "originalTitle": "Manoscritto Originale",
+    "feedbackTitle": "Suggerimenti di Miglioramento",
+    "startRevision": "Inizia Nuova Revisione"
   },
   "archiveTab": {
     "title": "Archivio del Progetto",
