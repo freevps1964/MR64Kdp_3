@@ -38,23 +38,40 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     return <div className="space-y-2 text-neutral-dark" dangerouslySetInnerHTML={{ __html: processLines(content) }} />;
 };
 
-const waitForDocxLibrary = (timeout = 15000): Promise<void> => {
+const waitForLibraries = (libs: ('htmlToDocx' | 'html2canvas' | 'jspdf')[], timeout = 15000): Promise<void> => {
     return new Promise((resolve, reject) => {
-        const checkLib = () => typeof (window as any).htmlToDocx?.asBlob === 'function';
+        const checkLibs = () => {
+            return libs.every(lib => {
+                switch(lib) {
+                    case 'htmlToDocx': return typeof (window as any).htmlToDocx?.asBlob === 'function';
+                    case 'html2canvas': return typeof (window as any).html2canvas === 'function';
+                    case 'jspdf': return typeof (window as any).jspdf?.jsPDF === 'function';
+                    default: return false;
+                }
+            });
+        };
 
-        if (checkLib()) {
+        if (checkLibs()) {
             return resolve();
         }
 
         const startTime = Date.now();
         const intervalId = setInterval(() => {
-            if (checkLib()) {
+            if (checkLibs()) {
                 clearInterval(intervalId);
                 return resolve();
             }
             if (Date.now() - startTime > timeout) {
                 clearInterval(intervalId);
-                return reject(new Error("La libreria di conversione DOCX non si è caricata. Controlla la tua connessione o prova a disabilitare gli ad-blocker."));
+                const missing = libs.filter(lib => {
+                    switch(lib) {
+                        case 'htmlToDocx': return typeof (window as any).htmlToDocx?.asBlob !== 'function';
+                        case 'html2canvas': return typeof (window as any).html2canvas !== 'function';
+                        case 'jspdf': return typeof (window as any).jspdf?.jsPDF !== 'function';
+                        default: return true;
+                    }
+                });
+                return reject(new Error(`Le seguenti librerie non si sono caricate: ${missing.join(', ')}. Controlla la tua connessione o prova a disabilitare gli ad-blocker.`));
             }
         }, 250);
     });
@@ -72,6 +89,7 @@ const RevisionTab: React.FC = () => {
     const [isLoadingAction, setIsLoadingAction] = useState<'regenerating' | 'downloading' | null>(null);
     const [fileName, setFileName] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [downloadFormat, setDownloadFormat] = useState<'docx' | 'doc' | 'pdf' | 'txt'>('docx');
 
     const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
         const pdf = await pdfjsLib.getDocument({ data }).promise;
@@ -255,15 +273,29 @@ const RevisionTab: React.FC = () => {
         
         return `<!DOCTYPE html><html><head><meta charset="UTF-8">${kdpStyles}</head><body>${contentHtml}</body></html>`;
     };
+    
+    const handleDownloadTxt = () => {
+        if (!regeneratedText) return;
+        const plainText = regeneratedText.replace(/^#+\s/gm, '');
+        const blob = new Blob([plainText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${project?.projectTitle || 'manoscritto'}-revisionato.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
 
-    const handleDownload = async () => {
+    const handleDownloadDocx = async (extension: 'docx' | 'doc') => {
         if (!regeneratedText) return;
         
         setIsLoadingAction('downloading');
         setError(null);
         
         try {
-            await waitForDocxLibrary();
+            await waitForLibraries(['htmlToDocx']);
             const htmlToDocx = (window as any).htmlToDocx;
             
             const htmlContent = createHtmlForDocx(regeneratedText);
@@ -272,7 +304,7 @@ const RevisionTab: React.FC = () => {
             const url = URL.createObjectURL(fileBuffer);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${project?.projectTitle || 'manoscritto'}-revisionato.docx`;
+            link.download = `${project?.projectTitle || 'manoscritto'}-revisionato.${extension}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -287,6 +319,72 @@ const RevisionTab: React.FC = () => {
         }
     };
     
+    const handleDownloadPdf = async () => {
+        if (!regeneratedText) return;
+        setIsLoadingAction('downloading');
+        setError(null);
+        try {
+            await waitForLibraries(['html2canvas', 'jspdf']);
+            const { html2canvas } = window as any;
+            const { jsPDF } = (window as any).jspdf;
+
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.width = '210mm'; // A4 width
+            container.innerHTML = createHtmlForDocx(regeneratedText).replace(/@page\s*{[^}]+}/, '@page { size: A4 portrait; margin: 1in; }');
+            document.body.appendChild(container);
+
+            const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+            document.body.removeChild(container);
+            
+            const imgData = canvas.toDataURL('image/png');
+            const imgProps= pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            let heightLeft = pdfHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
+            }
+            pdf.save(`${project?.projectTitle || 'manoscritto'}-revisionato.pdf`);
+
+        } catch(err: any) {
+             const errorMessage = err.message || t('apiErrors.generic');
+            console.error("Error creating PDF file:", errorMessage);
+            setError(errorMessage);
+        } finally {
+            setIsLoadingAction(null);
+        }
+    };
+    
+    const handleDownloadAction = () => {
+        switch (downloadFormat) {
+            case 'docx':
+                handleDownloadDocx('docx');
+                break;
+            case 'doc':
+                handleDownloadDocx('doc');
+                break;
+            case 'pdf':
+                handleDownloadPdf();
+                break;
+            case 'txt':
+                handleDownloadTxt();
+                break;
+        }
+    };
+
     const handleReset = () => {
         updateProject({ manuscript: undefined });
         setManuscriptText('');
@@ -366,14 +464,27 @@ const RevisionTab: React.FC = () => {
                         <span className="ml-2">{hasRegeneratedText ? t('revisionTab.regenerateAgain') : t('revisionTab.regenerateAndDownload')}</span>
                     </button>
                     {hasRegeneratedText && (
-                        <button 
-                            onClick={handleDownload}
-                            disabled={isLoadingAction === 'downloading'}
-                            className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow-md disabled:bg-neutral-medium"
-                        >
-                            {isLoadingAction === 'downloading' ? <LoadingSpinner /> : '🚀'}
-                            <span className="ml-2">{t('revisionTab.downloadButton')}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <select
+                                value={downloadFormat}
+                                onChange={(e) => setDownloadFormat(e.target.value as any)}
+                                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-green-500 focus:border-green-500 p-2.5"
+                                disabled={isLoadingAction === 'downloading'}
+                            >
+                                <option value="docx">DOCX</option>
+                                <option value="doc">DOC</option>
+                                <option value="pdf">PDF</option>
+                                <option value="txt">TXT</option>
+                            </select>
+                            <button 
+                                onClick={handleDownloadAction}
+                                disabled={isLoadingAction === 'downloading'}
+                                className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow-md disabled:bg-neutral-medium"
+                            >
+                                {isLoadingAction === 'downloading' ? <LoadingSpinner /> : '🚀'}
+                                <span className="ml-2">{t('revisionTab.downloadButton')}</span>
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>

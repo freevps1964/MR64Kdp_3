@@ -294,7 +294,7 @@
     "regenerateAndDownload": "Regenerate Manuscript",
     "regenerating": "Regenerating manuscript...",
     "regeneratedTitle": "Regenerated Manuscript",
-    "downloadButton": "Download (.doc)",
+    "downloadButton": "Download",
     "regenerateAgain": "Regenerate Again"
   },
   "archiveTab": {
