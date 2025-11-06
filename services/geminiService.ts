@@ -841,11 +841,15 @@ ${manuscriptText}
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
  */
 export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un autore e editor esperto. La tua missione è applicare meticolosamente i suggerimenti di revisione forniti per migliorare un manoscritto.
+    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è riscrivere completamente un manoscritto, applicando i suggerimenti di revisione e aggiornandolo con le informazioni più recenti.
 
 Di seguito troverai l'"ANALISI DELL'EDITOR" con un elenco di suggerimenti e il "MANOSCRITTO ORIGINALE".
 
-Il tuo compito è riscrivere l'intero "MANOSCRITTO ORIGINALE" dall'inizio alla fine, incorporando tutte le modifiche strutturali, stilistiche e di chiarezza suggerite nell'/"ANALISI DELL'EDITOR". Il risultato finale deve essere solo il testo completo del manoscritto revisionato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
+Il tuo compito è duplice:
+1.  **APPLICA LE REVISIONI**: Riscrivi l'intero "MANOSCRITTO ORIGINALE" dall'inizio alla fine, incorporando tutte le modifiche strutturali, stilistiche e di chiarezza suggerite nell'"ANALISI DELL'EDITOR".
+2.  **AGGIORNA I CONTENUTI (CRITICO)**: Durante la riscrittura, DEVI aggiornare il contenuto con le informazioni, le statistiche, gli eventi e le scoperte più recenti e attuali disponibili tramite la ricerca web. Rendi il libro completamente aggiornato al momento attuale.
+
+Il risultato finale deve essere solo il testo completo del manoscritto revisionato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
 
 REQUISITI FONDAMENTALI DI FORMATAZIONE E CONTENUTO:
 1.  **Conteggio Parole**: Assicurati che ogni capitolo e sottocapitolo nel manoscritto revisionato contenga un minimo di 1000 parole di testo sostanziale e ben sviluppato.
@@ -863,18 +867,107 @@ MANOSCRITTO ORIGINALE:
 ---
 ${originalText}
 ---
-MANOSCRITTO REVISIONATO:
+MANOSCRITTO REVISIONATO E AGGIORNATO:
 ---
 `;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.5-pro",
             contents: prompt,
+            config: {
+                tools: [{googleSearch: {}}],
+            },
         }));
         return response.text.trim();
     } catch (error) {
         console.error("Error regenerating manuscript:", error);
+        throw error;
+    }
+};
+
+
+/**
+ * Highlights changes in a manuscript based on an editor's analysis.
+ */
+export const highlightManuscriptChanges = async (originalText: string, analysisText: string): Promise<string> => {
+    const prompt = `AGISCI COME un editor esperto che usa la funzione "Revisioni". La tua missione è modificare il "MANOSCRITTO ORIGINALE" applicando i suggerimenti dall'"ANALISI DELL'EDITOR".
+
+Il tuo output DEVE essere il manoscritto completo, ma con le modifiche chiaramente indicate usando i tag HTML <ins> per le aggiunte e <del> per le cancellazioni.
+
+REGOLE FONDAMENTALI:
+1.  **Testo Invariato**: Qualsiasi testo che non viene modificato deve rimanere esattamente com'è, senza alcun tag.
+2.  **Aggiunte**: Racchiudi qualsiasi nuovo testo (parole, frasi) che aggiungi all'interno di tag <ins>...</ins>. Esempio: "Il cielo era <ins>molto</ins> blu."
+3.  **Cancellazioni**: Racchiudi qualsiasi testo che rimuovi all'interno di tag <del>...</del>. Esempio: "<del>Lui era</del> Il protagonista era stanco."
+4.  **Sostituzioni**: Gestisci le sostituzioni come una cancellazione seguita da un'aggiunta. Esempio: "Il suo cappello era <del>rosso</del><ins>blu</ins>."
+5.  **Output Completo**: Restituisci l'INTERO manoscritto dall'inizio alla fine, con i tag di revisione applicati. Non fornire spiegazioni, solo il testo HTML formattato.
+6.  **Formattazione Originale**: Mantieni la formattazione originale del manoscritto (paragrafi, interruzioni di riga).
+
+---
+ANALISI DELL'EDITOR:
+---
+${analysisText}
+---
+MANOSCRITTO ORIGINALE:
+---
+${originalText}
+---
+MANOSCRITTO CON REVISIONI EVIDENZIATE:
+---
+`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-pro",
+            contents: prompt,
+        }));
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error highlighting manuscript changes:", error);
+        throw error;
+    }
+};
+
+/**
+ * Lists specific changes for a manuscript based on an editor's analysis.
+ */
+export const listManuscriptChanges = async (originalText: string, analysisText: string): Promise<string> => {
+    const prompt = `AGISCI COME un assistente editoriale meticoloso. La tua missione è creare una checklist di modifiche specifiche basata sull'"ANALISI DELL'EDITOR" per il "MANOSCRITTO ORIGINALE".
+
+Crea un elenco puntato in formato **Markdown** di azioni concrete e precise che l'autore deve intraprendere. Ogni punto dell'elenco deve essere specifico e facile da applicare.
+
+Esempi di formato desiderato:
+- **Nel Capitolo 3, Paragrafo 2**: Sostituisci la frase "Era molto stanco" con "La stanchezza gli pesava sulle palpebre come macigni" per essere più descrittivo.
+- **Generale**: Rimuovi le occorrenze ripetute della parola "quindi" per migliorare il flusso.
+- **Nel Capitolo 5**: Considera di spostare la rivelazione sul passato del personaggio prima del confronto finale per aumentare la tensione.
+
+REGOLE:
+1.  **Formato**: Usa solo elenchi puntati Markdown (\`- \`).
+2.  **Specificità**: Sii il più specifico possibile, indicando capitoli o sezioni se possibile.
+3.  **Azione**: Formula ogni punto come un'azione chiara.
+4.  **Output**: Fornisci solo l'elenco Markdown, senza introduzioni o conclusioni.
+
+---
+ANALISI DELL'EDITOR:
+---
+${analysisText}
+---
+MANOSCRITTO ORIGINALE:
+---
+${originalText}
+---
+ELENCO DELLE MODIFICHE:
+---
+`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-pro",
+            contents: prompt,
+        }));
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error listing manuscript changes:", error);
         throw error;
     }
 };

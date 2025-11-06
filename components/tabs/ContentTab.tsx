@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import { generateContentStream, processTextWithGemini } from '../../services/geminiService';
@@ -35,7 +35,7 @@ const ContentTab: React.FC = () => {
   
   const structure = project?.bookStructure;
 
-  const getSelectedItem = () => {
+  const getSelectedItem = useCallback(() => {
     if (!selectedChapterId || !structure) return null;
     for (const chapter of structure.chapters) {
       if (chapter.id === selectedChapterId) return chapter;
@@ -43,19 +43,20 @@ const ContentTab: React.FC = () => {
       if (subchapter) return subchapter;
     }
     return null;
-  };
+  }, [selectedChapterId, structure]);
 
   const selectedItem = getSelectedItem();
     
-  const parentChapter = selectedChapterId && structure
-    ? structure.chapters.find(c => c.subchapters.some(s => s.id === selectedChapterId) || c.id === selectedChapterId)
-    : null;
+  const parentChapter = useMemo(() => {
+    if (!selectedChapterId || !structure) return null;
+    return structure.chapters.find(c => c.subchapters.some(s => s.id === selectedChapterId) || c.id === selectedChapterId) || null;
+  }, [selectedChapterId, structure]);
 
 
   useEffect(() => {
     const item = getSelectedItem();
     setContent(item?.content || '');
-  }, [selectedChapterId, structure]);
+  }, [selectedChapterId, structure, getSelectedItem]);
   
   useEffect(() => {
     // Funzione di pulizia per cancellare il timeout quando il componente si smonta
@@ -83,6 +84,19 @@ const ContentTab: React.FC = () => {
         }
     }, 1000);
   };
+  
+  // Periodic auto-save to prevent data loss on long editing sessions or if the tab is closed.
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      const item = getSelectedItem();
+      // Check for a selected item and if the current editor content differs from the saved content.
+      if (item && selectedChapterId && item.content !== content) {
+        updateNodeContent(selectedChapterId, content);
+      }
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [content, selectedChapterId, getSelectedItem, updateNodeContent]);
 
   const handleGenerate = async (isRegeneration = false) => {
     if (!project?.topic || !selectedItem || !parentChapter) return;

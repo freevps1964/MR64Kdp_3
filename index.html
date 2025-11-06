@@ -77,6 +77,20 @@
         border-radius: 0.25rem;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
       }
+      
+      /* Styles for revision highlighting */
+      ins {
+        background-color: #d4edda; /* Light green */
+        text-decoration: none;
+        padding: 0.1em;
+        border-radius: 0.2em;
+      }
+      del {
+          background-color: #f8d7da; /* Light red */
+          text-decoration: line-through;
+          padding: 0.1em;
+          border-radius: 0.2em;
+      }
 
 
       /* Layout: Classic */
@@ -206,14 +220,7 @@
         }
       }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.7.1/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://unpkg.com/html-to-docx@1.8.0/dist/html-to-docx.js"></script>
-    <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    
   <script type="importmap">
 {
   "imports": {
@@ -234,6 +241,16 @@
 </head>
   <body class="bg-neutral-light font-sans">
     <div id="root"></div>
+    
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/mammoth@1.7.1/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://unpkg.com/html-to-docx@1.8.0/dist/html-to-docx.js"></script>
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    </script>
+    
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

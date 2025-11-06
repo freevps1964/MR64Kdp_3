@@ -19,6 +19,7 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
 
   const TABS: { key: TabKey, label: string, isEnabled: boolean }[] = [
     { key: 'research', label: t('tabs.research'), isEnabled: true },
+    { key: 'marketTrends', label: t('tabs.marketTrends'), isEnabled: true },
     { key: 'revision', label: t('tabs.revision'), isEnabled: true },
     { key: 'structure', label: t('tabs.structure'), isEnabled: isResearchComplete },
     { key: 'metadata', label: t('tabs.metadata'), isEnabled: isStructureComplete },

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Header from './components/Header';
 import Tabs from './components/Tabs';
 import ResearchTab from './components/tabs/ResearchTab';
+import MarketTrendsTab from './components/tabs/MarketTrendsTab';
 import StructureTab from './components/tabs/StructureTab';
 import ContentTab from './components/tabs/ContentTab';
 import LayoutTab from './components/tabs/LayoutTab';
@@ -23,6 +24,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'research':
         return <ResearchTab />;
+      case 'marketTrends':
+        return <MarketTrendsTab setActiveTab={setActiveTab} />;
       case 'structure':
         return <StructureTab />;
       case 'metadata':

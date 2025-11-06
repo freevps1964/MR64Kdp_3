@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { analyzeManuscript, regenerateManuscript } from '../../services/geminiService';
+import { analyzeManuscript, regenerateManuscript, highlightManuscriptChanges, listManuscriptChanges } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
+// FIX: Import the 'Project' type to resolve a TypeScript error.
+import type { Project } from '../../types';
 
 declare const mammoth: any;
 declare const pdfjsLib: any;
@@ -17,7 +19,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
             if (line.startsWith('### ')) {
                 if (inList) { html += '</ul>'; inList = false; }
                 html += `<h3 class="text-xl font-semibold text-brand-dark mt-4 mb-2">${line.substring(4)}</h3>`;
-            } else if (line.startsWith('* ')) {
+            } else if (line.startsWith('* ') || line.startsWith('- ')) {
                 if (!inList) { html += '<ul>'; inList = true; }
                 html += `<li class="ml-5 list-disc">${line.substring(2)}</li>`;
             } else if (line.trim() === '---') {
@@ -38,58 +40,58 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     return <div className="space-y-2 text-neutral-dark" dangerouslySetInnerHTML={{ __html: processLines(content) }} />;
 };
 
-const waitForLibraries = (libs: ('htmlToDocx' | 'html2canvas' | 'jspdf')[], timeout = 15000): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        const checkLibs = () => {
-            return libs.every(lib => {
-                switch(lib) {
-                    case 'htmlToDocx': return typeof (window as any).htmlToDocx?.asBlob === 'function';
-                    case 'html2canvas': return typeof (window as any).html2canvas === 'function';
-                    case 'jspdf': return typeof (window as any).jspdf?.jsPDF === 'function';
-                    default: return false;
-                }
-            });
-        };
-
-        if (checkLibs()) {
-            return resolve();
-        }
-
-        const startTime = Date.now();
-        const intervalId = setInterval(() => {
-            if (checkLibs()) {
-                clearInterval(intervalId);
-                return resolve();
-            }
-            if (Date.now() - startTime > timeout) {
-                clearInterval(intervalId);
-                const missing = libs.filter(lib => {
-                    switch(lib) {
-                        case 'htmlToDocx': return typeof (window as any).htmlToDocx?.asBlob !== 'function';
-                        case 'html2canvas': return typeof (window as any).html2canvas !== 'function';
-                        case 'jspdf': return typeof (window as any).jspdf?.jsPDF !== 'function';
-                        default: return true;
-                    }
-                });
-                return reject(new Error(`Le seguenti librerie non si sono caricate: ${missing.join(', ')}. Controlla la tua connessione o prova a disabilitare gli ad-blocker.`));
-            }
-        }, 250);
-    });
-};
-
-
 const RevisionTab: React.FC = () => {
     const { t } = useLocalization();
     const { project, updateProject } = useProject();
 
     const [manuscriptText, setManuscriptText] = useState(project?.manuscript?.text || '');
-    const [regeneratedText, setRegeneratedText] = useState(project?.manuscript?.regenerated || '');
-    const [isLoading, setIsLoading] = useState(false); // For Gemini analysis
-    const [isParsing, setIsParsing] = useState(false); // For file text extraction
-    const [isLoadingAction, setIsLoadingAction] = useState<'regenerating' | 'downloading' | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isParsing, setIsParsing] = useState(false);
     const [fileName, setFileName] = useState('');
     const [error, setError] = useState<string | null>(null);
+    
+    type RevisionAction = 'regenerate' | 'highlight' | 'list';
+    const [revisionAction, setRevisionAction] = useState<RevisionAction>('regenerate');
+    const [isApplying, setIsApplying] = useState(false);
+
+    const [isLoadingDownload, setIsLoadingDownload] = useState(false);
     const [downloadFormat, setDownloadFormat] = useState<'docx' | 'doc' | 'pdf' | 'txt'>('docx');
+
+    const waitForLibraries = (libs: ('htmlToDocx' | 'html2canvas' | 'jspdf')[], timeout = 15000): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const checkLibs = () => {
+                return libs.every(lib => {
+                    switch(lib) {
+                        case 'htmlToDocx': return typeof (window as any).htmlToDocx === 'function';
+                        case 'html2canvas': return typeof (window as any).html2canvas === 'function';
+                        case 'jspdf': return typeof (window as any).jspdf?.jsPDF === 'function';
+                        default: return false;
+                    }
+                });
+            };
+
+            if (checkLibs()) return resolve();
+            const startTime = Date.now();
+            const intervalId = setInterval(() => {
+                if (checkLibs()) {
+                    clearInterval(intervalId);
+                    return resolve();
+                }
+                if (Date.now() - startTime > timeout) {
+                    clearInterval(intervalId);
+                    const missing = libs.filter(lib => {
+                        switch(lib) {
+                            case 'htmlToDocx': return typeof (window as any).htmlToDocx !== 'function';
+                            case 'html2canvas': return typeof (window as any).html2canvas !== 'function';
+                            case 'jspdf': return typeof (window as any).jspdf?.jsPDF !== 'function';
+                            default: return true;
+                        }
+                    });
+                    return reject(new Error(t('revisionTab.libraryLoadError', { libs: missing.join(', ') })));
+                }
+            }, 250);
+        });
+    };
 
     const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
         const pdf = await pdfjsLib.getDocument({ data }).promise;
@@ -97,8 +99,7 @@ const RevisionTab: React.FC = () => {
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            const pageText = textContent.items.map((item: any) => item.str).join(' ');
-            fullText += pageText + '\n\n';
+            fullText += textContent.items.map((item: any) => item.str).join(' ') + '\n\n';
         }
         return fullText;
     };
@@ -116,18 +117,11 @@ const RevisionTab: React.FC = () => {
         setFileName(file.name);
         setError(null);
         setManuscriptText('');
-        setRegeneratedText('');
+        updateProject({ manuscript: undefined });
 
         try {
             const arrayBuffer = await file.arrayBuffer();
-            let text = '';
-            if (file.type === 'application/pdf') {
-                text = await extractPdfText(arrayBuffer);
-            } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
-                text = await extractDocxText(arrayBuffer);
-            } else {
-                throw new Error('Unsupported file type.');
-            }
+            const text = file.type === 'application/pdf' ? await extractPdfText(arrayBuffer) : await extractDocxText(arrayBuffer);
             setManuscriptText(text);
         } catch (err) {
             console.error(err);
@@ -148,240 +142,89 @@ const RevisionTab: React.FC = () => {
                 manuscript: {
                     text: manuscriptText,
                     analysis: analysisResult,
-                    regenerated: '',
                 },
             });
-            setRegeneratedText(''); // Clear any previous regenerated text
         } catch (err: any) {
-            const errorMessage = err.toString().toLowerCase();
-            if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
-                setError(t('apiErrors.rateLimit'));
-            } else {
-                setError(t('apiErrors.generic'));
-            }
+            setError(err.toString().toLowerCase().includes('429') ? t('apiErrors.rateLimit') : t('apiErrors.generic'));
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleRegenerate = async () => {
-        if (!project?.manuscript?.text || !project.manuscript.analysis) return;
+    const handleApplyRevision = async () => {
+        const { text, analysis } = project?.manuscript || {};
+        if (!text || !analysis) return;
         
-        setIsLoadingAction('regenerating');
+        setIsApplying(true);
         setError(null);
-        
         try {
-            const result = await regenerateManuscript(project.manuscript.text, project.manuscript.analysis);
-            setRegeneratedText(result);
-            updateProject({
-                manuscript: {
-                    ...project.manuscript,
-                    regenerated: result,
-                }
-            });
+            let result;
+            let updates: Partial<Project['manuscript']> = {};
+
+            switch (revisionAction) {
+                case 'regenerate':
+                    result = await regenerateManuscript(text, analysis);
+                    updates = { regenerated: result, highlighted: undefined, changeList: undefined };
+                    break;
+                case 'highlight':
+                    result = await highlightManuscriptChanges(text, analysis);
+                    updates = { highlighted: result, regenerated: undefined, changeList: undefined };
+                    break;
+                case 'list':
+                    result = await listManuscriptChanges(text, analysis);
+                    updates = { changeList: result, regenerated: undefined, highlighted: undefined };
+                    break;
+            }
+            updateProject({ manuscript: { ...project!.manuscript!, ...updates } });
         } catch (err) {
-            const errorMessage = (err as Error).toString().toLowerCase();
-            if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
-                setError(t('apiErrors.rateLimit'));
-            } else {
-                setError(t('apiErrors.generic'));
-            }
+            setError(err.toString().toLowerCase().includes('429') ? t('apiErrors.rateLimit') : t('apiErrors.generic'));
         } finally {
-            setIsLoadingAction(null);
+            setIsApplying(false);
         }
     };
-    
+
     const createHtmlForDocx = (text: string): string => {
-        const kdpStyles = `
-            <style>
-                @page {
-                    size: 6in 9in;
-                    margin: 0.5in;
-                }
-                body {
-                    font-family: 'Georgia', serif;
-                    font-size: 14pt;
-                    line-height: 1.5;
-                }
-                /* Titolo 1 (Capitolo) */
-                h2 {
-                    font-family: 'Georgia', serif;
-                    font-weight: bold;
-                    font-size: 20pt;
-                    text-align: center;
-                    margin-top: 2em;
-                    margin-bottom: 1.5em;
-                    page-break-before: always;
-                }
-                /* Titolo 2 (Secondario) */
-                h3 {
-                    font-family: 'Georgia', serif;
-                    font-weight: bold;
-                    font-size: 16pt;
-                    margin-top: 1.5em;
-                    margin-bottom: 1em;
-                }
-                /* Sottotitolo */
-                h4 {
-                    font-family: 'Georgia', serif;
-                    font-weight: bold;
-                    font-size: 14pt;
-                    font-style: italic;
-                    margin-top: 1.2em;
-                    margin-bottom: 0.8em;
-                }
-                p {
-                    text-indent: 0.5in;
-                    margin-bottom: 0;
-                    margin-top: 0;
-                    text-align: justify;
-                }
-                /* Nessun rientro per il primo paragrafo dopo un titolo */
-                h2 + p, h3 + p, h4 + p, body > p:first-of-type {
-                    text-indent: 0;
-                }
-            </style>
-        `;
-
-        const escapeHtml = (unsafe: string): string => {
-            return unsafe
-                 .replace(/&/g, "&amp;")
-                 .replace(/</g, "&lt;")
-                 .replace(/>/g, "&gt;")
-                 .replace(/"/g, "&quot;")
-                 .replace(/'/g, "&#039;");
-        };
-
-        const lines = text.split('\n');
-        let contentHtml = '';
-
-        for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('## ')) {
-                const title = trimmedLine.substring(3).trim();
-                contentHtml += `<h2>${escapeHtml(title)}</h2>`;
-            } else if (trimmedLine.startsWith('### ')) {
-                const title = trimmedLine.substring(4).trim();
-                contentHtml += `<h3>${escapeHtml(title)}</h3>`;
-            } else if (trimmedLine.startsWith('#### ')) {
-                const title = trimmedLine.substring(5).trim();
-                contentHtml += `<h4>${escapeHtml(title)}</h4>`;
-            } else if (trimmedLine) {
-                contentHtml += `<p>${escapeHtml(trimmedLine)}</p>`;
-            }
-        }
-        
-        return `<!DOCTYPE html><html><head><meta charset="UTF-8">${kdpStyles}</head><body>${contentHtml}</body></html>`;
-    };
-    
-    const handleDownloadTxt = () => {
-        if (!regeneratedText) return;
-        const plainText = regeneratedText.replace(/^#+\s/gm, '');
-        const blob = new Blob([plainText], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${project?.projectTitle || 'manoscritto'}-revisionato.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const kdpStyles = `<style>@page{size:6in 9in;margin:.5in}body{font-family:Georgia,serif;font-size:14pt;line-height:1.5}h2{font-weight:700;font-size:20pt;text-align:center;margin-top:2em;margin-bottom:1.5em;page-break-before:always}h3{font-weight:700;font-size:16pt;margin-top:1.5em;margin-bottom:1em}h4{font-weight:700;font-size:14pt;font-style:italic;margin-top:1.2em;margin-bottom:.8em}p{text-indent:.5in;margin:0;text-align:justify}h2+p,h3+p,h4+p,body>p:first-of-type{text-indent:0}</style>`;
+        const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        let content = text.split('\n').map(line => {
+            if (line.startsWith('## ')) return `<h2>${escape(line.substring(3))}</h2>`;
+            if (line.startsWith('### ')) return `<h3>${escape(line.substring(4))}</h3>`;
+            if (line.startsWith('#### ')) return `<h4>${escape(line.substring(5))}</h4>`;
+            return line ? `<p>${escape(line)}</p>` : '';
+        }).join('');
+        return `<!DOCTYPE html><html><head><meta charset="UTF-8">${kdpStyles}</head><body>${content}</body></html>`;
     };
 
-    const handleDownloadDocx = async (extension: 'docx' | 'doc') => {
-        if (!regeneratedText) return;
+    const handleDownload = async () => {
+        const textToDownload = project?.manuscript?.regenerated;
+        if (!textToDownload) return;
         
-        setIsLoadingAction('downloading');
-        setError(null);
-        
-        try {
-            await waitForLibraries(['htmlToDocx']);
-            const htmlToDocx = (window as any).htmlToDocx;
-            
-            const htmlContent = createHtmlForDocx(regeneratedText);
-            const fileBuffer = await htmlToDocx.asBlob(htmlContent, { orientation: 'portrait' });
-            
-            const url = URL.createObjectURL(fileBuffer);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${project?.projectTitle || 'manoscritto'}-revisionato.${extension}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-        } catch (err: any) {
-            const errorMessage = err.message || t('apiErrors.generic');
-            console.error("Error creating DOCX file:", errorMessage);
-            setError(errorMessage);
-        } finally {
-            setIsLoadingAction(null);
-        }
-    };
-    
-    const handleDownloadPdf = async () => {
-        if (!regeneratedText) return;
-        setIsLoadingAction('downloading');
+        setIsLoadingDownload(true);
         setError(null);
         try {
-            await waitForLibraries(['html2canvas', 'jspdf']);
-            const { html2canvas } = window as any;
-            const { jsPDF } = (window as any).jspdf;
-
-            const container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.left = '-9999px';
-            container.style.width = '210mm'; // A4 width
-            container.innerHTML = createHtmlForDocx(regeneratedText).replace(/@page\s*{[^}]+}/, '@page { size: A4 portrait; margin: 1in; }');
-            document.body.appendChild(container);
-
-            const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-            const canvas = await html2canvas(container, { scale: 2, useCORS: true });
-            document.body.removeChild(container);
-            
-            const imgData = canvas.toDataURL('image/png');
-            const imgProps= pdf.getImageProperties(imgData);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-            let heightLeft = pdfHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - pdfHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-                heightLeft -= pageHeight;
+            if (downloadFormat === 'txt') {
+                const blob = new Blob([textToDownload.replace(/^#+\s/gm, '')], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${project?.projectTitle || 'manuscript'}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                await waitForLibraries(['htmlToDocx']);
+                const htmlContent = createHtmlForDocx(textToDownload);
+                const fileBuffer = await (window as any).htmlToDocx(htmlContent, null, { orientation: 'portrait' });
+                const url = URL.createObjectURL(fileBuffer);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${project?.projectTitle || 'manuscript'}.${downloadFormat}`;
+                a.click();
+                URL.revokeObjectURL(url);
             }
-            pdf.save(`${project?.projectTitle || 'manoscritto'}-revisionato.pdf`);
-
         } catch(err: any) {
-             const errorMessage = err.message || t('apiErrors.generic');
-            console.error("Error creating PDF file:", errorMessage);
-            setError(errorMessage);
+            setError(err.message || t('apiErrors.generic'));
         } finally {
-            setIsLoadingAction(null);
-        }
-    };
-    
-    const handleDownloadAction = () => {
-        switch (downloadFormat) {
-            case 'docx':
-                handleDownloadDocx('docx');
-                break;
-            case 'doc':
-                handleDownloadDocx('doc');
-                break;
-            case 'pdf':
-                handleDownloadPdf();
-                break;
-            case 'txt':
-                handleDownloadTxt();
-                break;
+            setIsLoadingDownload(false);
         }
     };
 
@@ -390,154 +233,116 @@ const RevisionTab: React.FC = () => {
         setManuscriptText('');
         setFileName('');
         setError(null);
-        setRegeneratedText('');
     };
 
-    const hasAnalysis = project?.manuscript?.analysis;
+    const manuscript = project?.manuscript;
+    const hasAnalysis = !!manuscript?.analysis;
     const hasExtractedText = manuscriptText.trim() !== '';
-    const hasRegeneratedText = regeneratedText.trim() !== '';
 
     const renderInitialView = () => (
         <div className="animate-fade-in">
             <p className="text-neutral-medium mb-6">{t('revisionTab.description')}</p>
-            <div className="flex items-center justify-center w-full">
-                <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg className="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-4-4V7a4 4 0 014-4h2a4 4 0 014 4v5a4 4 0 01-4 4H7z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9l-3 3m0 0l3 3m-3-3h12"></path></svg>
-                        <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">{t('revisionTab.uploadPrompt')}</span></p>
-                        <p className="text-xs text-gray-500">{t('revisionTab.acceptedFiles')}</p>
-                    </div>
-                    <input id="dropzone-file" type="file" className="hidden" onChange={handleFileSelect} accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                </label>
-            </div>
+            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <div className="text-center">
+                    <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">{t('revisionTab.uploadPrompt')}</span></p>
+                    <p className="text-xs text-gray-500">{t('revisionTab.acceptedFiles')}</p>
+                </div>
+                <input id="dropzone-file" type="file" className="hidden" onChange={handleFileSelect} accept=".pdf,.docx"/>
+            </label>
         </div>
     );
-
-    const renderParsingView = () => (
-        <div className="text-center py-16">
-            <LoadingSpinner className="h-12 w-12 text-brand-primary mx-auto" />
-            <p className="mt-4 text-neutral-medium font-semibold">{t('revisionTab.parsingFile')}</p>
-            <p className="text-sm text-neutral-medium">{fileName}</p>
-        </div>
-    );
-
-    const renderPreviewView = () => (
+    
+    const renderPreview = () => (
         <div className="animate-fade-in">
             <div className="flex justify-between items-center mb-2">
                 <h4 className="font-semibold text-green-700">{t('revisionTab.textExtracted')}</h4>
                 <p className="text-sm text-gray-500 font-mono">{fileName}</p>
             </div>
-            <div className="w-full h-80 p-3 border border-gray-300 rounded-md bg-neutral-light/50 overflow-y-auto font-sans text-sm">
+            <div className="h-80 p-3 border rounded-md bg-neutral-light/50 overflow-y-auto text-sm">
                 {manuscriptText.split('\n').map((line, i) => <p key={i}>{line || <br/>}</p>)}
             </div>
-            <div className="mt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
-                <button
-                    onClick={handleAnalyze}
-                    className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-6 rounded-md transition-colors shadow"
-                >
+            <div className="mt-4 flex gap-4 justify-center">
+                <button onClick={handleAnalyze} className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-6 rounded-md">
                     {t('revisionTab.analyzeButton')}
                 </button>
-                 <button
-                    onClick={handleReset}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm transition-colors"
-                >
+                 <button onClick={handleReset} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md">
                    {t('revisionTab.uploadDifferentFile')}
                 </button>
             </div>
         </div>
     );
 
-    const renderAnalysisView = () => (
-        <div className="animate-fade-in">
-            <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h3 className="text-xl font-bold text-brand-dark">{t('revisionTab.resultsTitle')}</h3>
-                <div className="flex items-center gap-4">
-                    <button onClick={handleReset} className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm transition-colors">
-                        {t('revisionTab.startRevision')}
-                    </button>
-                     <button 
-                        onClick={handleRegenerate}
-                        disabled={isLoadingAction === 'regenerating'}
-                        className="flex items-center justify-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-2 px-4 rounded-md transition-colors shadow-md disabled:bg-neutral-medium"
-                    >
-                        {isLoadingAction === 'regenerating' ? <LoadingSpinner className="text-brand-dark" /> : '✨'}
-                        <span className="ml-2">{hasRegeneratedText ? t('revisionTab.regenerateAgain') : t('revisionTab.regenerateAndDownload')}</span>
-                    </button>
-                    {hasRegeneratedText && (
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={downloadFormat}
-                                onChange={(e) => setDownloadFormat(e.target.value as any)}
-                                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-green-500 focus:border-green-500 p-2.5"
-                                disabled={isLoadingAction === 'downloading'}
-                            >
-                                <option value="docx">DOCX</option>
-                                <option value="doc">DOC</option>
-                                <option value="pdf">PDF</option>
-                                <option value="txt">TXT</option>
-                            </select>
-                            <button 
-                                onClick={handleDownloadAction}
-                                disabled={isLoadingAction === 'downloading'}
-                                className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors shadow-md disabled:bg-neutral-medium"
-                            >
-                                {isLoadingAction === 'downloading' ? <LoadingSpinner /> : '🚀'}
-                                <span className="ml-2">{t('revisionTab.downloadButton')}</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
+    const renderAnalysis = () => (
+        <div className="animate-fade-in space-y-8">
+            <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-brand-dark">{t('revisionTab.resultsTitle')}</h3>
+                <button onClick={handleReset} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md">
+                    {t('revisionTab.startRevision')}
+                </button>
             </div>
-            {isLoadingAction === 'regenerating' && (
-                 <div className="text-center my-4 p-3 text-blue-700 bg-blue-100 rounded-md">
-                    <p className="font-semibold">{t('revisionTab.regenerating')}</p>
-                 </div>
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="p-4 border rounded-lg bg-neutral-light/50"><h4 className="text-lg font-semibold mb-2">{t('revisionTab.originalTitle')}</h4><div className="text-sm max-h-[60vh] overflow-y-auto p-2 bg-white rounded border">{manuscript?.text.split('\n').map((p, i) => <p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div></div>
+                <div className="p-4 border rounded-lg bg-white"><h4 className="text-lg font-semibold mb-2">{t('revisionTab.feedbackTitle')}</h4><div className="max-h-[60vh] overflow-y-auto p-2"><MarkdownRenderer content={manuscript!.analysis} /></div></div>
+            </div>
+            <div className="p-4 border-2 border-brand-light rounded-lg bg-brand-light/10">
+                 <h4 className="text-lg font-semibold text-brand-dark mb-4">{t('revisionTab.applyRevisionsTitle')}</h4>
+                 <div className="flex flex-col lg:flex-row items-start gap-6">
+                    <div className="flex-grow space-y-3">
+                        {([
+                            { id: 'regenerate', label: t('revisionTab.actionRegenerate'), description: t('revisionTab.actionRegenerateDescription') },
+                            { id: 'highlight', label: t('revisionTab.actionHighlight'), description: t('revisionTab.actionHighlightDescription') },
+                            { id: 'list', label: t('revisionTab.actionList'), description: t('revisionTab.actionListDescription') },
+                        ] as const).map(action => (
+                            <label key={action.id} className={`flex items-start gap-3 cursor-pointer p-3 rounded-lg border-2 transition-colors ${revisionAction === action.id ? 'bg-brand-light/10 border-brand-light' : 'border-transparent hover:bg-gray-100'}`}>
+                                <input
+                                    type="radio"
+                                    name="revAction"
+                                    value={action.id}
+                                    checked={revisionAction === action.id}
+                                    onChange={() => setRevisionAction(action.id)}
+                                    className="form-radio text-brand-primary mt-1 h-5 w-5"
+                                />
+                                <div>
+                                    <span className="font-semibold text-brand-dark">{action.label}</span>
+                                    <p className="text-sm text-neutral-medium">{action.description}</p>
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+                    <div className="flex-shrink-0 lg:mt-4">
+                        <button
+                            onClick={handleApplyRevision}
+                            disabled={isApplying}
+                            className="flex items-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-3 px-8 rounded-lg shadow-md disabled:bg-neutral-medium"
+                        >
+                            {isApplying ? <LoadingSpinner className="text-brand-dark"/> : '✨'}
+                            <span className="ml-2">{t('revisionTab.applyButton')}</span>
+                        </button>
+                    </div>
+                </div>
+                 {isApplying && <p className="text-center mt-3 text-sm">{t('revisionTab.applying')}</p>}
+            </div>
+            {(manuscript?.regenerated || manuscript?.highlighted || manuscript?.changeList) && (
+                <div className="animate-fade-in">
+                    {manuscript.regenerated && <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50"><div className="flex justify-between items-center mb-2"><h4 className="text-lg font-semibold text-green-800">{t('revisionTab.regeneratedTitle')}</h4><div className="flex items-center gap-2"><select value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)} className="bg-white border rounded-md p-2" disabled={isLoadingDownload}><option value="docx">DOCX</option><option value="doc">DOC</option><option value="txt">TXT</option></select><button onClick={handleDownload} disabled={isLoadingDownload} className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">{isLoadingDownload ? <LoadingSpinner/> : '🚀'}<span className="ml-2">{t('revisionTab.downloadButton')}</span></button></div></div><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">{manuscript.regenerated.split('\n').map((p,i)=><p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div></div>}
+                    {manuscript.highlighted && <div className="p-4 border-2 border-blue-300 rounded-lg bg-blue-50"><h4 className="text-lg font-semibold text-blue-800 mb-2">{t('revisionTab.highlightedTitle')}</h4><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border" dangerouslySetInnerHTML={{__html:manuscript.highlighted.replace(/\n/g,'<br/>')}}></div></div>}
+                    {manuscript.changeList && <div className="p-4 border-2 border-purple-300 rounded-lg bg-purple-50"><h4 className="text-lg font-semibold text-purple-800 mb-2">{t('revisionTab.changeListTitle')}</h4><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border"><MarkdownRenderer content={manuscript.changeList}/></div></div>}
+                </div>
             )}
-            <div className={`grid grid-cols-1 ${hasRegeneratedText ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
-                <div className="p-4 border rounded-lg bg-neutral-light/50">
-                    <h4 className="text-lg font-semibold text-neutral-dark mb-2">{t('revisionTab.originalTitle')}</h4>
-                    <div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">
-                        {project?.manuscript?.text.split('\n').map((p, i) => <p className="mb-2" key={i}>{p || <span>&nbsp;</span>}</p>)}
-                    </div>
-                </div>
-                <div className="p-4 border rounded-lg bg-white">
-                     <h4 className="text-lg font-semibold text-neutral-dark mb-2">{t('revisionTab.feedbackTitle')}</h4>
-                     <div className="text-neutral-dark max-h-[70vh] overflow-y-auto p-2">
-                        <MarkdownRenderer content={project!.manuscript!.analysis} />
-                     </div>
-                </div>
-                 {hasRegeneratedText && (
-                    <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50 animate-fade-in">
-                        <h4 className="text-lg font-semibold text-green-800 mb-2">{t('revisionTab.regeneratedTitle')}</h4>
-                        <div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">
-                             {regeneratedText.split('\n').map((p, i) => <p className="mb-2" key={i}>{p || <span>&nbsp;</span>}</p>)}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-    
-    const renderLoadingView = () => (
-        <div className="text-center py-16">
-            <LoadingSpinner className="h-12 w-12 text-brand-primary mx-auto" />
-            <p className="mt-4 text-neutral-medium font-semibold">{t('revisionTab.loading')}</p>
         </div>
     );
 
+    const renderLoading = (text: string) => <div className="text-center py-16"><LoadingSpinner className="h-12 w-12 text-brand-primary mx-auto"/><p className="mt-4 font-semibold">{text}</p>{fileName&&<p className="text-sm">{fileName}</p>}</div>;
 
     return (
         <Card>
             <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('revisionTab.title')}</h2>
-            
-            {error && <p className="text-center my-4 p-3 text-red-700 bg-red-100 rounded-md">{error}</p>}
-            
-            {isLoading ? renderLoadingView() :
-             hasAnalysis ? renderAnalysisView() :
-             isParsing ? renderParsingView() :
-             hasExtractedText ? renderPreviewView() :
-             renderInitialView()
-            }
+            {error && <p className="my-4 p-3 text-red-700 bg-red-100 rounded-md">{error}</p>}
+            {isParsing ? renderLoading(t('revisionTab.parsingFile')) :
+             isLoading ? renderLoading(t('revisionTab.loading')) :
+             hasAnalysis ? renderAnalysis() :
+             hasExtractedText ? renderPreview() :
+             renderInitialView()}
         </Card>
     );
 };

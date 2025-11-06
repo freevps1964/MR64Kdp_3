@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { researchTopic, discoverTrends, fetchAmazonCategories } from '../../services/geminiService';
+import { researchTopic } from '../../services/geminiService';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import Card from '../common/Card';
-import type { GroundingSource, Trend } from '../../types';
+import type { GroundingSource } from '../../types';
 
 const StatCard: React.FC<{ value: number; label: string }> = ({ value, label }) => (
   <div>
@@ -14,57 +14,21 @@ const StatCard: React.FC<{ value: number; label: string }> = ({ value, label }) 
 );
 
 const ResearchTab: React.FC = () => {
-  const { t, locale } = useLocalization();
+  const { t } = useLocalization();
   const { project, updateProject } = useProject();
   const [topic, setTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // New state for trends
-  const [isDiscoveringTrends, setIsDiscoveringTrends] = useState(false);
-  const [trendsError, setTrendsError] = useState<string | null>(null);
-  const [trendsResult, setTrendsResult] = useState<{ trends: Trend[], sources: GroundingSource[] } | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedMarket, setSelectedMarket] = useState<string>('Italy');
-  
-  const [amazonCategories, setAmazonCategories] = useState<string[]>([]);
-  const [isFetchingCategories, setIsFetchingCategories] = useState(false);
-  
   const topicInputRef = useRef<HTMLInputElement>(null);
   
   const markets = ['Italy', 'USA', 'UK', 'Germany', 'France', 'Spain', 'Canada', 'Japan'];
-  const marketToDomain: { [key: string]: string } = {
-      'Italy': 'amazon.it',
-      'USA': 'amazon.com',
-      'UK': 'amazon.co.uk',
-      'Germany': 'amazon.de',
-      'France': 'amazon.fr',
-      'Spain': 'amazon.es',
-      'Canada': 'amazon.ca',
-      'Japan': 'amazon.co.jp',
-  };
-  const amazonDomain = marketToDomain[selectedMarket] || 'amazon.com';
-
-  useEffect(() => {
-    const loadCategories = async () => {
-        if (!locale) return;
-        setIsFetchingCategories(true);
-        const cats = await fetchAmazonCategories(locale);
-        setAmazonCategories([t('researchTab.allCategories'), ...cats]);
-        setIsFetchingCategories(false);
-    };
-    loadCategories();
-  }, [locale, t]);
 
   useEffect(() => {
     if (project?.topic) {
       setTopic(project.topic);
     }
   }, [project?.topic]);
-
-  useEffect(() => {
-    setSelectedCategory(t('researchTab.allCategories'));
-  }, [t]);
 
   const handleResearch = async (e?: React.FormEvent, researchTopicOverride?: string) => {
     if (e) e.preventDefault();
@@ -75,18 +39,13 @@ const ResearchTab: React.FC = () => {
     setError(null);
     updateProject({ researchData: null, topic: currentTopic.trim() });
 
-    // scroll to topic input
-    topicInputRef.current?.scrollIntoView({ behavior: 'smooth' });
-
     try {
       const { result } = await researchTopic(currentTopic.trim(), selectedMarket);
       if (result) {
-        // Sort results client-side as a fallback, as markdown parsing doesn't guarantee order
         result.titles.sort((a, b) => b.relevance - a.relevance);
         result.subtitles.sort((a, b) => b.relevance - a.relevance);
         result.keywords.sort((a, b) => b.relevance - a.relevance);
         
-        // Since we removed relevance ranking, we'll pre-select all found sources.
         const allValidSources = result.sources;
 
         updateProject({
@@ -111,39 +70,13 @@ const ResearchTab: React.FC = () => {
     }
   };
 
-  const handleDiscoverTrends = async () => {
-    setIsDiscoveringTrends(true);
-    setTrendsError(null);
-    setTrendsResult(null);
-    try {
-      const { trends, sources } = await discoverTrends(selectedCategory, selectedMarket);
-      if (trends) {
-        // Sort trends by trendScore descending
-        trends.sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0));
-        setTrendsResult({ trends, sources });
-      } else {
-        throw new Error('No trends returned from analysis.');
-      }
-    } catch (err: any) {
-      const errorMessage = err.toString().toLowerCase();
-      if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted')) {
-        setTrendsError(t('apiErrors.rateLimit'));
-      } else if (errorMessage.includes('400') || errorMessage.includes('invalid argument')) {
-        setTrendsError(t('apiErrors.invalidInput'));
-      } else {
-        setTrendsError(t('apiErrors.generic'));
-      }
-      console.error(err);
-    } finally {
-      setIsDiscoveringTrends(false);
+  useEffect(() => {
+    // If a topic is set from another tab (like Market Trends) and research is needed,
+    // and we aren't already loading, start the research automatically.
+    if (project?.topic && project.researchData === null && !isLoading) {
+      handleResearch(undefined, project.topic);
     }
-  };
-  
-  const handleSelectTrend = (trendTopic: string) => {
-    setTopic(trendTopic);
-    handleResearch(undefined, trendTopic);
-  };
-
+  }, [project?.topic, project?.researchData]);
 
   const handleSourceSelectionChange = (source: GroundingSource, isSelected: boolean) => {
     const currentSelected = project?.selectedSources || [];
@@ -191,113 +124,41 @@ const ResearchTab: React.FC = () => {
 
   return (
     <Card>
-      {/* New Trend Research Section */}
-      <div className="mb-12 p-6 border border-brand-light/50 rounded-lg bg-brand-light/10">
-        <h3 className="text-xl font-bold text-brand-dark mb-3">{t('researchTab.trendsTitle')}</h3>
-        <p className="text-neutral-medium mb-4">{t('researchTab.trendsDescription', { amazonDomain })}</p>
-        <div className="flex flex-col sm:flex-row items-end gap-4">
-            <div className="w-full sm:w-auto flex-grow">
-                <label htmlFor="market-select" className="block text-sm font-medium text-gray-700 mb-1">{t('researchTab.selectMarketLabel')}</label>
-                <select
-                    id="market-select"
-                    value={selectedMarket}
-                    onChange={(e) => setSelectedMarket(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
-                    disabled={isDiscoveringTrends}
-                >
-                    {markets.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-            </div>
-            <div className="w-full sm:w-auto flex-grow">
-                <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-1">{t('researchTab.selectCategoryLabel')}</label>
-                <select
-                    id="category-select"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
-                    disabled={isFetchingCategories || isDiscoveringTrends}
-                >
-                    {isFetchingCategories ? (
-                      <option>{t('metadataTab.fetchingCategories')}</option>
-                    ) : (
-                      amazonCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)
-                    )}
-                </select>
-            </div>
-          <button
-            onClick={handleDiscoverTrends}
-            disabled={isDiscoveringTrends || isFetchingCategories}
-            className="w-full sm:w-auto flex items-center justify-center bg-brand-accent hover:bg-yellow-500 text-brand-dark font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
-          >
-            {isDiscoveringTrends ? <LoadingSpinner className="animate-spin h-5 w-5 text-brand-dark" /> : `💡 ${t('researchTab.discoverTrendsButton')}`}
-          </button>
-        </div>
-        {isDiscoveringTrends && <p className="text-center mt-4 text-neutral-medium">{t('researchTab.trendsLoading')}</p>}
-        {trendsError && <p className="text-center mt-4 text-red-600">{trendsError}</p>}
-        
-        {trendsResult && (
-          <div className="mt-6 animate-fade-in space-y-4">
-             <h4 className="text-lg font-semibold text-brand-dark">{t('researchTab.trendingTopics')}</h4>
-             <div className="space-y-3">
-               {trendsResult.trends.map((trend, index) => (
-                 <div key={index} className="p-4 bg-white border rounded-md shadow-sm">
-                   <div className="flex justify-between items-start gap-4">
-                     <div>
-                       <div className="flex items-center gap-3">
-                          <h5 className="font-bold text-brand-primary">{trend.topic}</h5>
-                          <span className="text-sm font-bold text-brand-accent bg-yellow-100 px-2 py-1 rounded-full">{trend.trendScore}%</span>
-                       </div>
-                       <p className="text-sm text-neutral-dark mt-1"><strong className="text-neutral-medium">{t('researchTab.trendReason')}:</strong> {trend.reason}</p>
-                     </div>
-                     <button
-                        onClick={() => handleSelectTrend(trend.topic)}
-                        className="bg-brand-secondary hover:bg-brand-dark text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors flex-shrink-0"
-                      >
-                       {t('researchTab.researchThisTopic')}
-                     </button>
-                   </div>
-                 </div>
-               ))}
-             </div>
-             {trendsResult.sources.length > 0 && (
-                <div className="pt-4 mt-4 border-t">
-                    <h5 className="text-base font-semibold text-brand-dark mb-2">{t('researchTab.trendSources')}</h5>
-                    <ul className="list-disc list-inside text-sm space-y-1">
-                        {trendsResult.sources.map((source, index) => (
-                           source.web?.uri && (
-                             <li key={index}>
-                                <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-brand-secondary hover:underline">
-                                    {source.web.title || source.web.uri}
-                                </a>
-                             </li>
-                           )
-                        ))}
-                    </ul>
-                </div>
-             )}
-          </div>
-        )}
-      </div>
-
       <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('researchTab.title')}</h2>
       <p className="text-neutral-medium mb-6">
         {t('researchTab.description')}
       </p>
       <form onSubmit={handleResearch}>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <input
-            ref={topicInputRef}
-            type="text"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder={t('researchTab.placeholder')}
-            className="flex-grow p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
-            aria-label="Book topic"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-grow">
+              <label htmlFor="topic-input" className="sr-only">{t('researchTab.placeholder')}</label>
+              <input
+                ref={topicInputRef}
+                id="topic-input"
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder={t('researchTab.placeholder')}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none"
+                aria-label="Book topic"
+              />
+          </div>
+          <div className="w-full sm:w-auto">
+              <label htmlFor="market-select-research" className="block text-sm font-medium text-gray-700 mb-1">{t('researchTab.selectMarketLabel')}</label>
+              <select
+                  id="market-select-research"
+                  value={selectedMarket}
+                  onChange={(e) => setSelectedMarket(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
+                  disabled={isLoading}
+              >
+                  {markets.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+          </div>
           <button
             type="submit"
             disabled={isLoading || !topic.trim()}
-            className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
+            className="w-full sm:w-auto flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-6 rounded-md transition-colors shadow disabled:bg-neutral-medium disabled:cursor-not-allowed"
           >
             {isLoading ? <LoadingSpinner /> : t('researchTab.button')}
           </button>
