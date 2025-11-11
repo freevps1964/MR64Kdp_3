@@ -4,11 +4,15 @@ import { useProject } from '../../hooks/useProject';
 import { analyzeManuscript, regenerateManuscript, highlightManuscriptChanges, listManuscriptChanges } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
-// FIX: Import the 'Project' type to resolve a TypeScript error.
 import type { Project } from '../../types';
+import { useToast } from '../../hooks/useToast';
+
 
 declare const mammoth: any;
 declare const pdfjsLib: any;
+declare const HTMLtoDOCX: any;
+declare const jspdf: any;
+
 
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     const processLines = (text: string) => {
@@ -43,6 +47,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
 const RevisionTab: React.FC = () => {
     const { t } = useLocalization();
     const { project, updateProject } = useProject();
+    const { showToast } = useToast();
 
     const [manuscriptText, setManuscriptText] = useState(project?.manuscript?.text || '');
     const [isLoading, setIsLoading] = useState(false);
@@ -57,13 +62,12 @@ const RevisionTab: React.FC = () => {
     const [isLoadingDownload, setIsLoadingDownload] = useState(false);
     const [downloadFormat, setDownloadFormat] = useState<'docx' | 'doc' | 'pdf' | 'txt'>('docx');
 
-    const waitForLibraries = (libs: ('htmlToDocx' | 'html2canvas' | 'jspdf')[], timeout = 15000): Promise<void> => {
+    const waitForLibraries = (libs: ('HTMLtoDOCX' | 'jspdf')[], timeout = 15000): Promise<void> => {
         return new Promise((resolve, reject) => {
             const checkLibs = () => {
                 return libs.every(lib => {
                     switch(lib) {
-                        case 'htmlToDocx': return typeof (window as any).htmlToDocx === 'function';
-                        case 'html2canvas': return typeof (window as any).html2canvas === 'function';
+                        case 'HTMLtoDOCX': return typeof (window as any).HTMLtoDOCX === 'function';
                         case 'jspdf': return typeof (window as any).jspdf?.jsPDF === 'function';
                         default: return false;
                     }
@@ -81,8 +85,7 @@ const RevisionTab: React.FC = () => {
                     clearInterval(intervalId);
                     const missing = libs.filter(lib => {
                         switch(lib) {
-                            case 'htmlToDocx': return typeof (window as any).htmlToDocx !== 'function';
-                            case 'html2canvas': return typeof (window as any).html2canvas !== 'function';
+                            case 'HTMLtoDOCX': return typeof (window as any).HTMLtoDOCX !== 'function';
                             case 'jspdf': return typeof (window as any).jspdf?.jsPDF !== 'function';
                             default: return true;
                         }
@@ -183,15 +186,24 @@ const RevisionTab: React.FC = () => {
         }
     };
 
-    const createHtmlForDocx = (text: string): string => {
-        const kdpStyles = `<style>@page{size:6in 9in;margin:.5in}body{font-family:Georgia,serif;font-size:14pt;line-height:1.5}h2{font-weight:700;font-size:20pt;text-align:center;margin-top:2em;margin-bottom:1.5em;page-break-before:always}h3{font-weight:700;font-size:16pt;margin-top:1.5em;margin-bottom:1em}h4{font-weight:700;font-size:14pt;font-style:italic;margin-top:1.2em;margin-bottom:.8em}p{text-indent:.5in;margin:0;text-align:justify}h2+p,h3+p,h4+p,body>p:first-of-type{text-indent:0}</style>`;
+    const createHtmlForExport = (text: string, forPrint: boolean = false): string => {
+        const printStyles = forPrint ? `
+            @page { size: 6in 9in; margin: 0.75in; }
+            body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; }
+            h2, h3 { page-break-before: always; }
+        ` : '';
+
+        const kdpStyles = `<style>${printStyles}h2{font-weight:700;font-size:20pt;text-align:center;margin-top:2em;margin-bottom:1.5em}h3{font-weight:700;font-size:16pt;margin-top:1.5em;margin-bottom:1em}h4{font-weight:700;font-size:14pt;font-style:italic;margin-top:1.2em;margin-bottom:.8em}p{margin:0; text-align:justify}</style>`;
+        
         const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
         let content = text.split('\n').map(line => {
             if (line.startsWith('## ')) return `<h2>${escape(line.substring(3))}</h2>`;
             if (line.startsWith('### ')) return `<h3>${escape(line.substring(4))}</h3>`;
             if (line.startsWith('#### ')) return `<h4>${escape(line.substring(5))}</h4>`;
-            return line ? `<p>${escape(line)}</p>` : '';
+            return line.trim() ? `<p>${escape(line)}</p>` : '';
         }).join('');
+        
         return `<!DOCTYPE html><html><head><meta charset="UTF-8">${kdpStyles}</head><body>${content}</body></html>`;
     };
 
@@ -210,11 +222,36 @@ const RevisionTab: React.FC = () => {
                 a.download = `${project?.projectTitle || 'manuscript'}.txt`;
                 a.click();
                 URL.revokeObjectURL(url);
-            } else {
-                await waitForLibraries(['htmlToDocx']);
-                const htmlContent = createHtmlForDocx(textToDownload);
-                const fileBuffer = await (window as any).htmlToDocx(htmlContent, null, { orientation: 'portrait' });
-                const url = URL.createObjectURL(fileBuffer);
+
+            } else if (downloadFormat === 'pdf') {
+                const printContainer = document.createElement('div');
+                printContainer.id = "print-container-revision";
+                printContainer.style.position = 'fixed';
+                printContainer.style.left = '-9999px';
+                printContainer.innerHTML = createHtmlForExport(textToDownload, true);
+                document.body.appendChild(printContainer);
+
+                const printStyles = document.createElement('style');
+                printStyles.innerHTML = `
+                    @media print {
+                        body * { visibility: hidden; }
+                        #print-container-revision, #print-container-revision * { visibility: visible; }
+                        #print-container-revision { position: absolute; left: 0; top: 0; width: 100%; }
+                    }
+                `;
+                document.head.appendChild(printStyles);
+
+                window.print();
+
+                document.body.removeChild(printContainer);
+                document.head.removeChild(printStyles);
+                
+            } else { // docx, doc
+                await waitForLibraries(['HTMLtoDOCX']);
+                const htmlContent = createHtmlForExport(textToDownload);
+                const fileBuffer = await HTMLtoDOCX(htmlContent, null, { orientation: 'portrait' });
+                const blob = new Blob([fileBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `${project?.projectTitle || 'manuscript'}.${downloadFormat}`;
@@ -223,6 +260,7 @@ const RevisionTab: React.FC = () => {
             }
         } catch(err: any) {
             setError(err.message || t('apiErrors.generic'));
+            showToast(err.message || t('apiErrors.generic'), 'error');
         } finally {
             setIsLoadingDownload(false);
         }
@@ -324,7 +362,7 @@ const RevisionTab: React.FC = () => {
             </div>
             {(manuscript?.regenerated || manuscript?.highlighted || manuscript?.changeList) && (
                 <div className="animate-fade-in">
-                    {manuscript.regenerated && <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50"><div className="flex justify-between items-center mb-2"><h4 className="text-lg font-semibold text-green-800">{t('revisionTab.regeneratedTitle')}</h4><div className="flex items-center gap-2"><select value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)} className="bg-white border rounded-md p-2" disabled={isLoadingDownload}><option value="docx">DOCX</option><option value="doc">DOC</option><option value="txt">TXT</option></select><button onClick={handleDownload} disabled={isLoadingDownload} className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">{isLoadingDownload ? <LoadingSpinner/> : '🚀'}<span className="ml-2">{t('revisionTab.downloadButton')}</span></button></div></div><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">{manuscript.regenerated.split('\n').map((p,i)=><p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div></div>}
+                    {manuscript.regenerated && <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50"><div className="flex justify-between items-center mb-2"><h4 className="text-lg font-semibold text-green-800">{t('revisionTab.regeneratedTitle')}</h4><div className="flex items-center gap-2"><select value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)} className="bg-white border rounded-md p-2" disabled={isLoadingDownload}><option value="docx">DOCX</option><option value="doc">DOC</option><option value="pdf">PDF</option><option value="txt">TXT</option></select><button onClick={handleDownload} disabled={isLoadingDownload} className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">{isLoadingDownload ? <LoadingSpinner/> : '🚀'}<span className="ml-2">{t('revisionTab.downloadButton')}</span></button></div></div><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">{manuscript.regenerated.split('\n').map((p,i)=><p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div></div>}
                     {manuscript.highlighted && <div className="p-4 border-2 border-blue-300 rounded-lg bg-blue-50"><h4 className="text-lg font-semibold text-blue-800 mb-2">{t('revisionTab.highlightedTitle')}</h4><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border" dangerouslySetInnerHTML={{__html:manuscript.highlighted.replace(/\n/g,'<br/>')}}></div></div>}
                     {manuscript.changeList && <div className="p-4 border-2 border-purple-300 rounded-lg bg-purple-50"><h4 className="text-lg font-semibold text-purple-800 mb-2">{t('revisionTab.changeListTitle')}</h4><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border"><MarkdownRenderer content={manuscript.changeList}/></div></div>}
                 </div>

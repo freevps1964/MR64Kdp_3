@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
@@ -7,6 +7,26 @@ import BookPreview from '../PromptForm';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import { useToast } from '../../hooks/useToast';
 import { translateFullProject } from '../../services/geminiService';
+
+declare const HTMLtoDOCX: any;
+
+const waitForLibrary = (name: string, timeout = 5000): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const check = () => (window as any)[name] && typeof (window as any)[name] === 'function';
+    if (check()) return resolve();
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      if (check()) {
+        clearInterval(interval);
+        return resolve();
+      }
+      if (Date.now() - startTime > timeout) {
+        clearInterval(interval);
+        return reject(new Error(`Library ${name} did not load within ${timeout}ms.`));
+      }
+    }, 100);
+  });
+};
 
 const LayoutTemplateCard: React.FC<{
   name: LayoutTemplate;
@@ -57,6 +77,10 @@ const LayoutTab: React.FC = () => {
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationProgress, setTranslationProgress] = useState(0);
   const [translatedProject, setTranslatedProject] = useState<Project | null>(null);
+  
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     if (project?.customStyles) {
@@ -72,6 +96,16 @@ const LayoutTab: React.FC = () => {
         return () => clearTimeout(handler);
     }
   }, [customStyles, project?.layoutTemplate, updateProject]);
+  
+   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const templates: { name: LayoutTemplate, description: string }[] = [
     { name: 'Classic', description: t('layoutTab.classic') },
@@ -113,117 +147,146 @@ const LayoutTab: React.FC = () => {
         setIsTranslating(false);
     }
   };
-
-  const waitForLibraries = (timeout = 5000): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        const checkLibs = () => {
-            if ((window as any).html2canvas && (window as any).jspdf) {
-                return true;
-            }
-            return false;
-        }
-
-        if (checkLibs()) {
-            return resolve();
-        }
-
-        const startTime = Date.now();
-        const intervalId = setInterval(() => {
-            if (checkLibs()) {
-                clearInterval(intervalId);
-                return resolve();
-            }
-            if (Date.now() - startTime > timeout) {
-                clearInterval(intervalId);
-                return reject(new Error("PDF generation libraries failed to load."));
-            }
-        }, 200);
-    });
-};
-
+  
   const handleExportPDF = async () => {
     if (!project) return;
-    
+    setIsExportMenuOpen(false);
     setIsExporting(true);
     setShowFullRender(true);
 
-    setTimeout(async () => {
-        try {
-            await waitForLibraries();
-
-            const { html2canvas } = window as any;
-            const { jsPDF } = (window as any).jspdf;
-
-            const fullBookContainer = document.getElementById('full-book-render-for-export');
-            if (!fullBookContainer) {
-                throw new Error("Full book render container not found.");
-            }
-
-            const pages = fullBookContainer.querySelectorAll('.book-page');
-            if (pages.length === 0) {
-                throw new Error("No pages found to export.");
-            }
-
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'pt',
-                format: project.pageSize === '6x9' ? [432, 648] : [504, 720],
-            });
-
-            for (let i = 0; i < pages.length; i++) {
-                const page = pages[i] as HTMLElement;
-                const canvas = await html2canvas(page, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    width: page.offsetWidth,
-                    height: page.offsetHeight,
-                });
-
-                const imgData = canvas.toDataURL('image/png');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                
-                if (i > 0) {
-                    pdf.addPage();
-                }
-                
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            }
-
-            pdf.save(`${project.projectTitle || 'book'}.pdf`);
-
-        } catch (error: any) {
-            console.error("Error exporting PDF:", error);
-            showToast(`Error exporting PDF: ${error.message}`, 'error');
-        } finally {
-            setIsExporting(false);
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => {
             setShowFullRender(false);
-        }
+            setIsExporting(false);
+        }, 500);
     }, 500);
   };
     
-    const handleExportImage = async () => {
-        const previewElement = document.getElementById('book-preview-content');
-        if (!previewElement) return;
+  const getBookAsHtmlString = (): string => {
+    const projectToRender = translatedProject || project;
+    if (!projectToRender) return '';
 
-        try {
-            await waitForLibraries();
-            const { html2canvas } = window as any;
-            const canvas = await html2canvas(previewElement, {
-                backgroundColor: null, // Transparent background
-                useCORS: true,
-            });
-            const image = canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.href = image;
-            link.download = `${project?.projectTitle || 'book-preview'}.png`;
-            link.click();
-        } catch (error) {
-            console.error('Error exporting image:', error);
-            showToast('Failed to export image.', 'error');
-        }
+    const titlePage = `
+        <div style="text-align: center; page-break-after: always;">
+            <h1>${projectToRender.bookTitle || ''}</h1>
+            <h2>${projectToRender.subtitle || ''}</h2>
+            <p><em>di ${projectToRender.author || ''}</em></p>
+        </div>
+    `;
+
+    const chaptersHtml = projectToRender.bookStructure?.chapters.map(chapter => `
+        <div style="page-break-before: always;">
+            <h3>${chapter.title}</h3>
+            <div>${chapter.content || ''}</div>
+            ${chapter.subchapters.map(sub => `
+                <h4>${sub.title}</h4>
+                <div>${sub.content || ''}</div>
+            `).join('')}
+        </div>
+    `).join('') || '';
+
+    const appendicesHtml = projectToRender.contentBlocks?.map(block => `
+         <div style="page-break-before: always;">
+            <h3>${block.title}</h3>
+             <div>${block.textContent.replace(/\n/g, '<br />')}</div>
+         </div>
+    `).join('') || '';
+
+    return `
+        <html><head><meta charset="UTF-8">
+        <style>
+            body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+            h1 { font-size: 24pt; font-weight: bold; }
+            h2 { font-size: 18pt; font-style: italic; }
+            h3 { font-size: 18pt; font-weight: bold; }
+            h4 { font-size: 14pt; font-weight: bold; }
+        </style>
+        </head><body>
+            ${titlePage}
+            ${chaptersHtml}
+            ${appendicesHtml}
+        </body></html>
+    `;
+  };
+  
+  const getBookAsTxtString = (): string => {
+    const projectToRender = translatedProject || project;
+    if (!projectToRender) return '';
+
+    const brToNewline = (html: string) => {
+        const div = document.createElement('div');
+        div.innerHTML = html.replace(/<br\s*\/?>/gi, '\n');
+        return div.textContent || div.innerText || '';
     };
+
+    const titlePage = `${projectToRender.bookTitle || ''}\n${projectToRender.subtitle || ''}\ndi ${projectToRender.author || ''}\n\n\n`;
+
+    const chaptersTxt = projectToRender.bookStructure?.chapters.map(chapter => 
+        `--- CAPITOLO: ${chapter.title} ---\n\n${brToNewline(chapter.content || '')}\n\n` +
+        chapter.subchapters.map(sub => 
+            `--- Sottocapitolo: ${sub.title} ---\n\n${brToNewline(sub.content || '')}\n\n`
+        ).join('')
+    ).join('') || '';
+
+    const appendicesTxt = projectToRender.contentBlocks?.map(block => 
+        `--- APPENDICE: ${block.title} ---\n\n${block.textContent}\n\n`
+    ).join('') || '';
+
+    return titlePage + chaptersTxt + appendicesTxt;
+  };
+
+  const handleExportDoc = async (format: 'docx' | 'doc') => {
+    const projectToRender = translatedProject || project;
+    if (!projectToRender) return;
+    setIsExportMenuOpen(false);
+    setIsExporting(true);
+
+    try {
+        await waitForLibrary('HTMLtoDOCX');
+        const htmlString = getBookAsHtmlString();
+        const fileBuffer = await HTMLtoDOCX(htmlString, null, {
+            orientation: 'portrait',
+            margins: { top: 720, right: 720, bottom: 720, left: 720 },
+        });
+
+        const blob = new Blob([fileBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${projectToRender.projectTitle || 'book'}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error: any) {
+        console.error(`Error exporting ${format}:`, error);
+        showToast(`Errore esportazione ${format}: Libreria HTML-to-DOCX non caricata.`, 'error');
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
+  const handleExportTxt = () => {
+    const projectToRender = translatedProject || project;
+    if (!projectToRender) return;
+    setIsExportMenuOpen(false);
+    setIsExporting(true);
+    
+    try {
+        const textContent = getBookAsTxtString();
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${projectToRender.projectTitle || 'book'}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error: any) {
+        console.error("Error exporting TXT:", error);
+        showToast(`Errore esportazione TXT: ${error.message}`, 'error');
+    } finally {
+        setIsExporting(false);
+    }
+  };
 
     const handleCustomStyleChange = (field: keyof CustomStyles, value: string | number) => {
         setCustomStyles(prev => ({ ...prev, [field]: value }));
@@ -267,13 +330,39 @@ const LayoutTab: React.FC = () => {
   }
 
   const selectedPageSize = project?.pageSize || '6x9';
+  const projectToRender = translatedProject || project;
 
   return (
+    <>
     <Card>
-      <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('layoutTab.title')}</h2>
-      <p className="text-neutral-medium mb-6">
-        {t('layoutTab.description')}
-      </p>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-brand-dark">{t('layoutTab.title')}</h2>
+          <p className="text-neutral-medium mt-1">
+            {t('layoutTab.description')}
+          </p>
+        </div>
+        <div className="relative" ref={exportMenuRef}>
+            <button
+                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                disabled={isExporting}
+                className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center gap-2 disabled:bg-neutral-medium"
+            >
+                {isExporting ? <LoadingSpinner /> : '🚀'}
+                <span>Esporta</span>
+                <svg className={`w-4 h-4 transition-transform ${isExportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            {isExportMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
+                    <button onClick={handleExportPDF} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">PDF</button>
+                    <button onClick={() => handleExportDoc('docx')} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">DOCX</button>
+                    <button onClick={() => handleExportDoc('doc')} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">DOC</button>
+                    <button onClick={handleExportTxt} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">TXT</button>
+                </div>
+            )}
+        </div>
+      </div>
+
 
     <div className="flex flex-col xl:flex-row gap-6 mb-8">
       <div className="w-full xl:w-2/3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -339,77 +428,59 @@ const LayoutTab: React.FC = () => {
                     <select value={customStyles.bodyFont} onChange={e => handleCustomStyleChange('bodyFont', e.target.value)} className="w-full mt-1 p-1 border rounded-md text-sm">
                         {googleFonts.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
-                    <input type="number" value={customStyles.bodySize} onChange={e => handleCustomStyleChange('bodySize', parseInt(e.target.value, 10))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.fontSize')} />
-                    <input type="number" step="0.1" value={customStyles.lineHeight} onChange={e => handleCustomStyleChange('lineHeight', parseFloat(e.target.value))} className="w-full mt-1 p-1 border rounded-md text-sm" placeholder={t('layoutTab.lineHeight')} />
+                    <div className="flex gap-2 mt-1">
+                        <input type="number" value={customStyles.bodySize} onChange={e => handleCustomStyleChange('bodySize', parseInt(e.target.value, 10))} className="w-1/2 p-1 border rounded-md text-sm" placeholder={t('layoutTab.fontSize')} />
+                        <input type="number" step="0.1" value={customStyles.lineHeight} onChange={e => handleCustomStyleChange('lineHeight', parseFloat(e.target.value))} className="w-1/2 p-1 border rounded-md text-sm" placeholder={t('layoutTab.lineHeight')} />
+                    </div>
                 </div>
             </div>
         </div>
     )}
-      
-       <div className="mt-8">
-         <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-            <h3 className="text-xl font-bold text-brand-dark">{t('layoutTab.previewTitle')}</h3>
-            <div className="flex items-center gap-2">
-                 <div className="flex items-center gap-2 border-r pr-2 mr-2 border-gray-300">
-                    <select
-                        value={targetLang}
-                        onChange={(e) => handleLanguageChange(e.target.value)}
-                        className="p-2 border border-gray-300 rounded-md bg-white text-sm focus:ring-brand-light focus:border-brand-light"
-                        disabled={isTranslating}
-                    >
-                        <option value="it">Italiano (Originale)</option>
-                        <option value="en">Inglese</option>
-                    </select>
-                    <button
-                        onClick={handleTranslate}
-                        disabled={isTranslating || targetLang === 'it'}
-                        className="flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed"
-                    >
-                        {isTranslating ? <LoadingSpinner /> : 'Traduci'}
-                    </button>
-                </div>
-                <button
-                    onClick={handleExportImage}
-                    disabled={isExporting}
-                    className="flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium"
-                >
-                    {t('layoutTab.exportImage')}
-                </button>
-                <button
-                onClick={handleExportPDF}
-                disabled={isExporting || !project?.bookStructure || isTranslating}
-                className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none"
-                >
-                {isExporting ? <LoadingSpinner /> : t('layoutTab.exportPDF')}
-                </button>
+
+    <div className="p-4 border-t mt-6">
+        <h3 className="text-lg font-semibold text-brand-dark mb-4">Traduzione (Opzionale)</h3>
+        <div className="flex items-end gap-4">
+            <div className="flex-grow">
+                <label htmlFor="lang-select" className="block text-sm font-medium text-gray-700">Traduci il libro in:</label>
+                <select id="lang-select" value={targetLang} onChange={e => handleLanguageChange(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-light focus:border-brand-light sm:text-sm" disabled={isTranslating}>
+                    <option value="it">Italiano (Originale)</option>
+                    <option value="en">Inglese</option>
+                    <option value="de">Tedesco</option>
+                </select>
             </div>
-         </div>
-         {isTranslating && (
-            <div className="my-4">
-                <p className="text-center text-sm text-neutral-medium mb-1">Traduzione in corso... {translationProgress}%</p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${translationProgress}%` }}></div>
-                </div>
-            </div>
-          )}
-        <BookPreview 
-            project={translatedProject || project} 
-            layout={project?.layoutTemplate || 'Modern'}
-            pageSize={selectedPageSize}
-         />
-      </div>
-      
-      {showFullRender && project && (
-          <div id="full-book-render-for-export">
-              <BookPreview 
-                  project={project} 
-                  layout={project.layoutTemplate}
-                  pageSize={project.pageSize}
-                  renderAllPages={true}
-              />
-          </div>
-      )}
+            <button onClick={handleTranslate} disabled={isTranslating || targetLang === 'it'} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center gap-2 disabled:bg-neutral-medium">
+                {isTranslating ? <LoadingSpinner/> : '🌍'} Traduci
+            </button>
+        </div>
+        {isTranslating && (
+             <div className="mt-3">
+                <p className="text-sm text-center">Traduzione in corso... {translationProgress}%</p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1"><div className="bg-green-600 h-2.5 rounded-full" style={{width: `${translationProgress}%`}}></div></div>
+             </div>
+        )}
+    </div>
+
+    <h3 className="text-xl font-bold text-brand-dark mt-8 mb-4">{t('layoutTab.previewTitle')}</h3>
+      <BookPreview
+        project={projectToRender}
+        layout={project?.layoutTemplate || 'Classic'}
+        pageSize={selectedPageSize}
+      />
     </Card>
+    
+    {showFullRender && (
+      <div id="full-book-render-for-export">
+        {projectToRender && (
+           <BookPreview
+              project={projectToRender}
+              layout={projectToRender.layoutTemplate}
+              pageSize={projectToRender.pageSize}
+              renderAllPages={true}
+          />
+        )}
+      </div>
+    )}
+    </>
   );
 };
 

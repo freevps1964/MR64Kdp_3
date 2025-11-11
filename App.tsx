@@ -17,7 +17,7 @@ import ArchiveTab from './components/tabs/ArchiveTab';
 import RevisionTab from './components/tabs/RevisionTab';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('research');
+  const [activeTab, setActiveTab] = useState<TabKey>('marketTrends');
   const { project, isProjectStarted } = useProject();
 
   const renderActiveTab = () => {
@@ -45,7 +45,7 @@ const App: React.FC = () => {
       case 'archive':
         return <ArchiveTab />;
       default:
-        return <ResearchTab />;
+        return <MarketTrendsTab setActiveTab={setActiveTab} />;
     }
   };
 

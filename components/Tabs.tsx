@@ -18,15 +18,15 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
   const isContentComplete = isStructureComplete; 
 
   const TABS: { key: TabKey, label: string, isEnabled: boolean }[] = [
-    { key: 'research', label: t('tabs.research'), isEnabled: true },
     { key: 'marketTrends', label: t('tabs.marketTrends'), isEnabled: true },
-    { key: 'revision', label: t('tabs.revision'), isEnabled: true },
+    { key: 'research', label: t('tabs.research'), isEnabled: true },
     { key: 'structure', label: t('tabs.structure'), isEnabled: isResearchComplete },
     { key: 'metadata', label: t('tabs.metadata'), isEnabled: isStructureComplete },
     { key: 'cover', label: t('tabs.cover'), isEnabled: isStructureComplete },
     { key: 'content', label: t('tabs.content'), isEnabled: isStructureComplete },
     { key: 'appendices', label: t('tabs.appendices'), isEnabled: isStructureComplete },
     { key: 'layout', label: t('tabs.layout'), isEnabled: isContentComplete },
+    { key: 'revision', label: t('tabs.revision'), isEnabled: true },
     { key: 'validation', label: t('tabs.validation'), isEnabled: isContentComplete },
     { key: 'archive', label: t('tabs.archive'), isEnabled: isResearchComplete },
   ];

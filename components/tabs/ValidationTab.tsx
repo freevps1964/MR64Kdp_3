@@ -11,6 +11,7 @@ const ValidationTab: React.FC = () => {
   const { t } = useLocalization();
   const { project } = useProject();
   const [isExporting, setIsExporting] = useState(false);
+  const [showFullRender, setShowFullRender] = useState(false);
   const { showToast } = useToast();
 
   const isResearchComplete = !!project?.researchData;
@@ -41,91 +42,28 @@ const ValidationTab: React.FC = () => {
   
   const isReadyForExport = checklistItems.every(item => item.checked);
 
-  const waitForLibraries = (timeout = 5000): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        const checkLibs = () => {
-            if ((window as any).html2canvas && (window as any).jspdf) {
-                return true;
-            }
-            return false;
-        }
-
-        if (checkLibs()) {
-            return resolve();
-        }
-
-        const startTime = Date.now();
-        const intervalId = setInterval(() => {
-            if (checkLibs()) {
-                clearInterval(intervalId);
-                return resolve();
-            }
-            if (Date.now() - startTime > timeout) {
-                clearInterval(intervalId);
-                return reject(new Error("PDF generation libraries failed to load."));
-            }
-        }, 200);
-    });
-  };
-
   const handleExportPDF = async () => {
-    if (!project) return;
+    if (!isReadyForExport) return;
     setIsExporting(true);
+    setShowFullRender(true);
 
-    try {
-        await waitForLibraries();
-
-        const { html2canvas } = window as any;
-        const { jsPDF } = (window as any).jspdf;
-
-        const fullBookContainer = document.getElementById('validation-export-container');
-        if (!fullBookContainer) {
-            throw new Error("Full book render container not found.");
+    // Usa la funzione di stampa del browser che è più stabile per contenuti lunghi
+    setTimeout(() => {
+        try {
+            window.print();
+        } catch (error) {
+            console.error("Print function failed:", error);
+            showToast('Failed to open print dialog.', 'error');
+        } finally {
+            // Nascondi il container di rendering dopo la stampa
+            setTimeout(() => {
+                setShowFullRender(false);
+                setIsExporting(false);
+            }, 500);
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const pages = fullBookContainer.querySelectorAll('.book-page');
-        if (pages.length === 0) {
-            throw new Error("No pages found to export.");
-        }
-
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'pt',
-            format: project.pageSize === '6x9' ? [432, 648] : [504, 720],
-        });
-
-        for (let i = 0; i < pages.length; i++) {
-            const page = pages[i] as HTMLElement;
-            const canvas = await html2canvas(page, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                width: page.offsetWidth,
-                height: page.offsetHeight,
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            if (i > 0) {
-                pdf.addPage();
-            }
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        }
-
-        pdf.save(`${project.projectTitle || 'book'}-print-ready.pdf`);
-
-    } catch (error: any) {
-        console.error("Error exporting PDF:", error);
-        showToast(`Error exporting PDF: ${error.message}`, 'error');
-    } finally {
-        setIsExporting(false);
-    }
+    }, 500); // A small delay to ensure rendering is complete
   };
+
 
   return (
     <>
@@ -162,16 +100,18 @@ const ValidationTab: React.FC = () => {
         </div>
       </Card>
       
-      <div id="validation-export-container">
-        {project && (
-           <BookPreview
-              project={project}
-              layout={project.layoutTemplate}
-              pageSize={project.pageSize}
-              renderAllPages={true}
-          />
-        )}
-      </div>
+      {showFullRender && (
+          <div id="validation-export-container">
+            {project && (
+               <BookPreview
+                  project={project}
+                  layout={project.layoutTemplate}
+                  pageSize={project.pageSize}
+                  renderAllPages={true}
+              />
+            )}
+          </div>
+      )}
     </>
   );
 };
