@@ -8,26 +8,6 @@ import LoadingSpinner from '../icons/LoadingSpinner';
 import { useToast } from '../../hooks/useToast';
 import { translateFullProject } from '../../services/geminiService';
 
-declare const HTMLtoDOCX: any;
-
-const waitForLibrary = (name: string, timeout = 5000): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const check = () => (window as any)[name] && typeof (window as any)[name] === 'function';
-    if (check()) return resolve();
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      if (check()) {
-        clearInterval(interval);
-        return resolve();
-      }
-      if (Date.now() - startTime > timeout) {
-        clearInterval(interval);
-        return reject(new Error(`Library ${name} did not load within ${timeout}ms.`));
-      }
-    }, 100);
-  });
-};
-
 const LayoutTemplateCard: React.FC<{
   name: LayoutTemplate;
   description: string;
@@ -70,7 +50,6 @@ const LayoutTab: React.FC = () => {
   const { showToast } = useToast();
 
   const [isExporting, setIsExporting] = useState(false);
-  const [showFullRender, setShowFullRender] = useState(false);
   const [customStyles, setCustomStyles] = useState<CustomStyles>(project?.customStyles || defaultCustomStyles);
   
   const [targetLang, setTargetLang] = useState('it');
@@ -148,21 +127,6 @@ const LayoutTab: React.FC = () => {
     }
   };
   
-  const handleExportPDF = async () => {
-    if (!project) return;
-    setIsExportMenuOpen(false);
-    setIsExporting(true);
-    setShowFullRender(true);
-
-    setTimeout(() => {
-        window.print();
-        setTimeout(() => {
-            setShowFullRender(false);
-            setIsExporting(false);
-        }, 500);
-    }, 500);
-  };
-    
   const getBookAsHtmlString = (): string => {
     const projectToRender = translatedProject || project;
     if (!projectToRender) return '';
@@ -236,30 +200,24 @@ const LayoutTab: React.FC = () => {
     return titlePage + chaptersTxt + appendicesTxt;
   };
 
-  const handleExportDoc = async (format: 'docx' | 'doc') => {
+  const handleExportHtml = () => {
     const projectToRender = translatedProject || project;
     if (!projectToRender) return;
     setIsExportMenuOpen(false);
     setIsExporting(true);
 
     try {
-        await waitForLibrary('HTMLtoDOCX');
-        const htmlString = getBookAsHtmlString();
-        const fileBuffer = await HTMLtoDOCX(htmlString, null, {
-            orientation: 'portrait',
-            margins: { top: 720, right: 720, bottom: 720, left: 720 },
-        });
-
-        const blob = new Blob([fileBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const htmlContent = getBookAsHtmlString();
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `${projectToRender.projectTitle || 'book'}.${format}`;
+        link.download = `${projectToRender.projectTitle || 'book'}.html`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     } catch (error: any) {
-        console.error(`Error exporting ${format}:`, error);
-        showToast(`Errore esportazione ${format}: Libreria HTML-to-DOCX non caricata.`, 'error');
+        console.error("Error exporting HTML:", error);
+        showToast(`Errore esportazione HTML: ${error.message}`, 'error');
     } finally {
         setIsExporting(false);
     }
@@ -354,10 +312,8 @@ const LayoutTab: React.FC = () => {
             </button>
             {isExportMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
-                    <button onClick={handleExportPDF} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">PDF</button>
-                    <button onClick={() => handleExportDoc('docx')} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">DOCX</button>
-                    <button onClick={() => handleExportDoc('doc')} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">DOC</button>
-                    <button onClick={handleExportTxt} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">TXT</button>
+                    <button onClick={handleExportHtml} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">HTML (.html)</button>
+                    <button onClick={handleExportTxt} className="w-full text-left px-4 py-2 text-sm text-neutral-dark hover:bg-neutral-light">Testo (.txt)</button>
                 </div>
             )}
         </div>
@@ -467,19 +423,6 @@ const LayoutTab: React.FC = () => {
         pageSize={selectedPageSize}
       />
     </Card>
-    
-    {showFullRender && (
-      <div id="full-book-render-for-export">
-        {projectToRender && (
-           <BookPreview
-              project={projectToRender}
-              layout={projectToRender.layoutTemplate}
-              pageSize={projectToRender.pageSize}
-              renderAllPages={true}
-          />
-        )}
-      </div>
-    )}
     </>
   );
 };

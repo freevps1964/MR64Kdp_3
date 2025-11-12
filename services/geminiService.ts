@@ -5,21 +5,28 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * Esegue una chiamata API asincrona con una logica di tentativi esponenziali di backoff.
- * Specifico per errori di rate limit (429).
+ * Questa funzione gestisce errori recuperabili come:
+ * - Rate limiting (codice 429)
+ * - Errori del server (codici 5xx)
+ * - Errori di rete transienti (spesso riportati con http status code 0)
  */
 async function withRetry<T>(
   apiCall: () => Promise<T>,
   maxRetries = 5,
-  initialDelay = 61000
+  initialDelay = 61000 // Inizia con un ritardo di ~1 minuto per rispettare i limiti
 ): Promise<T> {
   let retries = 0;
   while (true) {
     try {
       return await apiCall();
     } catch (error: any) {
-      const errorMessage = error.toString();
-      // Controlla se l'errore è un errore di rate limit
-      if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('resource_exhausted')) {
+      const errorMessage = error.toString().toLowerCase();
+      
+      const isRateLimitError = errorMessage.includes('429') || errorMessage.includes('resource_exhausted');
+      const isNetworkError = errorMessage.includes('http status code: 0');
+      const isServerError = errorMessage.includes('500') || errorMessage.includes('503') || errorMessage.includes('backend error');
+
+      if (isRateLimitError || isNetworkError || isServerError) {
         retries++;
         if (retries > maxRetries) {
           console.error("Massimo numero di tentativi raggiunto. L'operazione non è riuscita.", error);
@@ -27,10 +34,11 @@ async function withRetry<T>(
         }
         // Calcola il ritardo con backoff esponenziale e un po' di jitter
         const delay = initialDelay * (2 ** (retries - 1)) + Math.random() * 1000;
-        console.warn(`Rate limit raggiunto. Nuovo tentativo in ${Math.round(delay / 1000)}s... (Tentativo ${retries}/${maxRetries})`);
+        console.warn(`Errore recuperabile rilevato: "${error.message}". Nuovo tentativo in ${Math.round(delay / 1000)}s... (Tentativo ${retries}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         // Errore non recuperabile, lancia immediatamente
+        console.error("Errore non recuperabile durante la chiamata API, l'operazione verrà interrotta.", error);
         throw error;
       }
     }
@@ -841,22 +849,22 @@ ${manuscriptText}
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
  */
 export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è riscrivere completamente un manoscritto, applicando i suggerimenti di revisione e aggiornandolo con le informazioni più recenti.
+    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è revisionare il "MANOSCRITTO ORIGINALE" applicando i suggerimenti di revisione dell'"ANALISI DELL'EDITOR" e aggiornandolo con le informazioni più recenti.
 
-Di seguito troverai l'"ANALISI DELL'EDITOR" con un elenco di suggerimenti e il "MANOSCRITTO ORIGINALE".
+Di seguito troverai l'"ANALISI DELL'EDITOR" e il "MANOSCRITTO ORIGINALE".
 
-Il tuo compito è duplice:
-1.  **APPLICA LE REVISIONI**: Riscrivi l'intero "MANOSCRITTO ORIGINALE" dall'inizio alla fine, incorporando tutte le modifiche strutturali, stilistiche e di chiarezza suggerite nell'"ANALISI DELL'EDITOR".
-2.  **AGGIORNA I CONTENUTI (CRITICO)**: Durante la riscrittura, DEVI aggiornare il contenuto con le informazioni, le statistiche, gli eventi e le scoperte più recenti e attuali disponibili tramite la ricerca web. Rendi il libro completamente aggiornato al momento attuale.
+Il tuo compito è riscrivere il manoscritto seguendo queste REGOLE FONDAMENTALI:
+1.  **Preservazione delle Informazioni**: TUTTE le informazioni, i concetti e le idee presenti nel "MANOSCRITTO ORIGINALE" DEVONO essere conservati. Puoi riformulare, riorganizzare e migliorare la prosa, ma non devi eliminare alcun argomento trattato.
+2.  **Integrazione e Aggiornamento**: Integra i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiorna il contenuto con le informazioni, le statistiche e gli eventi più recenti disponibili tramite ricerca web. Queste nuove informazioni devono arricchire il testo esistente.
+3.  **Mantenimento della Lunghezza**: Il manoscritto finale deve avere un conteggio di parole **molto simile** a quello del manoscritto originale. Per ogni capitolo e sottocapitolo, la lunghezza del testo revisionato dovrebbe corrispondere strettamente a quella originale. Bilancia le aggiunte di nuovo materiale condensando o riformulando altre parti, senza sacrificare la chiarezza o le informazioni originali.
 
-Il risultato finale deve essere solo il testo completo del manoscritto revisionato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
+Il risultato finale deve essere solo il testo completo del manoscritto revisionato e riscritto. Non includere alcun commento o intestazione aggiuntiva.
 
-REQUISITI FONDAMENTALI DI FORMATAZIONE E CONTENUTO:
-1.  **Conteggio Parole**: Assicurati che ogni capitolo e sottocapitolo nel manoscritto revisionato contenga un minimo di 1000 parole di testo sostanziale e ben sviluppato.
-2.  **Formattazione Titoli**: Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
-    - Per i **Titoli dei Capitoli (Titolo 1)**, usa '## ' seguito dal titolo (es. '## Capitolo 1: L'Inizio').
-    - Per i **Titoli Secondari (Titolo 2)** all'interno di un capitolo, usa '### ' seguito dal titolo (es. '### La Prima Sfida').
-    - Per i **Sottotitoli (corsivo)** all'interno di una sezione, usa '#### ' seguito dal sottotitolo (es. '#### Un nuovo punto di vista').
+REQUISITI DI FORMATAZIONE:
+- Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
+    - Per i **Titoli dei Capitoli (Titolo 1)**, usa '## ' seguito dal titolo.
+    - Per i **Titoli Secondari (Titolo 2)**, usa '### ' seguito dal titolo.
+    - Per i **Sottotitoli (corsivo)**, usa '#### ' seguito dal sottotitolo.
 
 ---
 ANALISI DELL'EDITOR:
@@ -867,7 +875,7 @@ MANOSCRITTO ORIGINALE:
 ---
 ${originalText}
 ---
-MANOSCRITTO REVISIONATO E AGGIORNATO:
+MANOSCRITTO REVISIONATO E AGGIORNATO (CON LUNGHEZZA SIMILE ALL'ORIGINALE):
 ---
 `;
 

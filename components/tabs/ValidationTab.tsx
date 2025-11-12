@@ -1,18 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
-import BookPreview from '../PromptForm';
-import LoadingSpinner from '../icons/LoadingSpinner';
-import type { LayoutTemplate, PageSize } from '../../types';
-import { useToast } from '../../hooks/useToast';
 
 const ValidationTab: React.FC = () => {
   const { t } = useLocalization();
   const { project } = useProject();
-  const [isExporting, setIsExporting] = useState(false);
-  const [showFullRender, setShowFullRender] = useState(false);
-  const { showToast } = useToast();
 
   const isResearchComplete = !!project?.researchData;
   const isStructureComplete = !!project?.bookStructure && project.bookStructure.chapters.length > 0;
@@ -40,31 +33,6 @@ const ValidationTab: React.FC = () => {
     { label: t('validationTab.item4'), checked: !!project?.layoutTemplate },
   ];
   
-  const isReadyForExport = checklistItems.every(item => item.checked);
-
-  const handleExportPDF = async () => {
-    if (!isReadyForExport) return;
-    setIsExporting(true);
-    setShowFullRender(true);
-
-    // Usa la funzione di stampa del browser che è più stabile per contenuti lunghi
-    setTimeout(() => {
-        try {
-            window.print();
-        } catch (error) {
-            console.error("Print function failed:", error);
-            showToast('Failed to open print dialog.', 'error');
-        } finally {
-            // Nascondi il container di rendering dopo la stampa
-            setTimeout(() => {
-                setShowFullRender(false);
-                setIsExporting(false);
-            }, 500);
-        }
-    }, 500); // A small delay to ensure rendering is complete
-  };
-
-
   return (
     <>
       <Card>
@@ -88,30 +56,7 @@ const ValidationTab: React.FC = () => {
             ))}
           </ul>
         </div>
-
-        <div className="mt-8 text-center">
-          <button
-            onClick={handleExportPDF}
-            disabled={!isReadyForExport || isExporting}
-            className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-8 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center mx-auto"
-          >
-            {isExporting ? <LoadingSpinner /> : t('validationTab.exportButton')}
-          </button>
-        </div>
       </Card>
-      
-      {showFullRender && (
-          <div id="validation-export-container">
-            {project && (
-               <BookPreview
-                  project={project}
-                  layout={project.layoutTemplate}
-                  pageSize={project.pageSize}
-                  renderAllPages={true}
-              />
-            )}
-          </div>
-      )}
     </>
   );
 };
