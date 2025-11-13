@@ -7,10 +7,6 @@ import LoadingSpinner from '../icons/LoadingSpinner';
 import type { Project } from '../../types';
 import { useToast } from '../../hooks/useToast';
 
-
-declare const mammoth: any;
-declare const pdfjsLib: any;
-
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     const processLines = (text: string) => {
         const lines = text.split('\n');
@@ -73,7 +69,7 @@ const RevisionTab: React.FC = () => {
 
 
     const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
-        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const pdf = await (window as any).pdfjsLib.getDocument({ data }).promise;
         let fullText = '';
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
@@ -84,7 +80,7 @@ const RevisionTab: React.FC = () => {
     };
 
     const extractDocxText = async (data: ArrayBuffer): Promise<string> => {
-        const result = await mammoth.extractRawText({ arrayBuffer: data });
+        const result = await (window as any).mammoth.extractRawText({ arrayBuffer: data });
         return result.value.replace(/\n\n/g, '\n');
     };
 
@@ -100,11 +96,24 @@ const RevisionTab: React.FC = () => {
 
         try {
             const arrayBuffer = await file.arrayBuffer();
-            const text = file.type === 'application/pdf' ? await extractPdfText(arrayBuffer) : await extractDocxText(arrayBuffer);
+            let text;
+            if (file.type === 'application/pdf') {
+                 if (typeof (window as any).pdfjsLib === 'undefined') {
+                    throw new Error("pdf.js library not loaded. Please check your internet connection and try again.");
+                }
+                text = await extractPdfText(arrayBuffer);
+            } else {
+                if (typeof (window as any).mammoth === 'undefined') {
+                    throw new Error("mammoth.js library not loaded. Please check your internet connection and try again.");
+                }
+                text = await extractDocxText(arrayBuffer);
+            }
             setManuscriptText(text);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setError(t('revisionTab.fileError'));
+            const errorMessage = err.message || t('revisionTab.fileError');
+            setError(errorMessage);
+            showToast(errorMessage, 'error');
             setFileName('');
         } finally {
             setIsParsing(false);

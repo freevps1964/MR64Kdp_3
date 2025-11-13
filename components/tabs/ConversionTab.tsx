@@ -8,10 +8,6 @@ import DocxIcon from '../icons/DocxIcon';
 import PdfIcon from '../icons/PdfIcon';
 import OdtIcon from '../icons/OdtIcon';
 
-// Declare global libraries from index.html
-declare const htmlToDocx: any;
-declare const jspdf: any;
-
 const ConversionTab: React.FC = () => {
   const { t } = useLocalization();
   const { project } = useProject();
@@ -49,10 +45,14 @@ const ConversionTab: React.FC = () => {
 
   const handleConvertToDocx = async () => {
     if (!manuscriptText) return;
+    if (typeof (window as any).htmlToDocx === 'undefined') {
+        showToast('DOCX conversion library not loaded. Please try again.', 'error');
+        return;
+    }
     setIsConverting('docx');
     try {
       const htmlContent = getFullManuscriptAsHTML(manuscriptText);
-      const fileBuffer = await htmlToDocx.asBlob(htmlContent);
+      const fileBuffer = await (window as any).htmlToDocx.asBlob(htmlContent);
       const url = URL.createObjectURL(fileBuffer);
       const a = document.createElement('a');
       a.href = url;
@@ -71,9 +71,13 @@ const ConversionTab: React.FC = () => {
 
   const handleConvertToPdf = async () => {
     if (!manuscriptText) return;
+    if (typeof (window as any).jspdf === 'undefined') {
+        showToast('PDF conversion library not loaded. Please try again.', 'error');
+        return;
+    }
     setIsConverting('pdf');
     try {
-        const { jsPDF } = jspdf;
+        const { jsPDF } = (window as any).jspdf;
         const pdf = new jsPDF('p', 'pt', 'a4');
         const htmlContent = getFullManuscriptAsHTML(manuscriptText);
 
@@ -84,7 +88,9 @@ const ConversionTab: React.FC = () => {
             <p style="font-size: 18pt; font-style: italic;">${project?.subtitle || ''}</p>
             <p style="font-size: 14pt; margin-top: 3em;">${project?.author || ''}</p>
         </div>`;
-        container.innerHTML = titlePage + htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i)[1];
+        const bodyContentMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        container.innerHTML = titlePage + (bodyContentMatch ? bodyContentMatch[1] : '');
+
 
         // Basic styling for rendering
         container.style.width = '210mm'; // A4 width
@@ -92,7 +98,7 @@ const ConversionTab: React.FC = () => {
         document.body.appendChild(container);
 
         await pdf.html(container, {
-            callback: function(doc) {
+            callback: function(doc: any) {
                 doc.save(`${project?.projectTitle || 'manuscript'}.pdf`);
                 document.body.removeChild(container);
             },
