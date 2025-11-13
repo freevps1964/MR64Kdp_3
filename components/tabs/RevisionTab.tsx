@@ -151,12 +151,46 @@ const RevisionTab: React.FC = () => {
 
     const createHtmlForExport = (text: string): string => {
         const kdpStyles = `<style>
-            body { font-family: 'Times New Roman', Times, serif; font-size: 1em; line-height: 1.5; }
-            h2 { font-weight: 700; font-size: 1.6em; text-align: center; margin-top: 2em; margin-bottom: 1.5em; page-break-before: always; }
-            h3 { font-weight: 700; font-size: 1.4em; margin-top: 1.5em; margin-bottom: 1em; }
-            h4 { font-weight: 700; font-size: 1.2em; font-style: italic; margin-top: 1.2em; margin-bottom: 0.8em; }
-            p { margin: 0 0 1em 0; text-align: justify; text-indent: 1.5em; }
-            p:first-of-type, h2+p, h3+p, h4+p { text-indent: 0; }
+            /* General Body Style */
+            body { 
+                font-family: 'Times New Roman', Times, serif; 
+                font-size: 1em; /* Using em for scalability */
+                line-height: 1.5; 
+            }
+            /* Chapter Title */
+            h2 { 
+                font-weight: 700; 
+                font-size: 1.6em; 
+                text-align: center; 
+                margin-top: 2em; 
+                margin-bottom: 1.5em; 
+                page-break-before: always; /* Start new chapters on a new page */
+            }
+            /* Subchapter Title */
+            h3 { 
+                font-weight: 700; 
+                font-size: 1.4em; 
+                margin-top: 1.5em; 
+                margin-bottom: 1em; 
+            }
+            /* Sub-subchapter Title */
+            h4 { 
+                font-weight: 700; 
+                font-size: 1.2em; 
+                font-style: italic; 
+                margin-top: 1.2em; 
+                margin-bottom: 0.8em; 
+            }
+            /* Paragraphs */
+            p { 
+                margin: 0 0 1em 0; 
+                text-align: justify; 
+                text-indent: 1.5em; /* Standard indentation */
+            }
+            /* Remove indentation for first paragraph after any heading */
+            p:first-of-type, h2+p, h3+p, h4+p { 
+                text-indent: 0; 
+            }
         </style>`;
         
         const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
