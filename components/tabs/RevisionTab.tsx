@@ -41,6 +41,15 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     return <div className="space-y-2 text-neutral-dark" dangerouslySetInnerHTML={{ __html: processLines(content) }} />;
 };
 
+type RevisionAction = 'regenerate' | 'highlight' | 'list';
+
+interface TextStats {
+    words: number;
+    chapters: number;
+    subchapters: number;
+    pages: number; // Approximate
+}
+
 const RevisionTab: React.FC = () => {
     const { t } = useLocalization();
     const { project, updateProject } = useProject();
@@ -52,12 +61,16 @@ const RevisionTab: React.FC = () => {
     const [fileName, setFileName] = useState('');
     const [error, setError] = useState<string | null>(null);
     
-    type RevisionAction = 'regenerate' | 'highlight' | 'list';
     const [revisionAction, setRevisionAction] = useState<RevisionAction>('regenerate');
     const [isApplying, setIsApplying] = useState(false);
 
     const [isLoadingDownload, setIsLoadingDownload] = useState(false);
     const [downloadFormat, setDownloadFormat] = useState<'txt' | 'html'>('html');
+
+    const [proposedRevision, setProposedRevision] = useState<{ type: RevisionAction; content: string } | null>(null);
+    const [originalStats, setOriginalStats] = useState<TextStats | null>(null);
+    const [revisedStats, setRevisedStats] = useState<TextStats | null>(null);
+
 
     const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
         const pdf = await pdfjsLib.getDocument({ data }).promise;
@@ -117,6 +130,16 @@ const RevisionTab: React.FC = () => {
         }
     };
 
+    const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+    const analyzeTextStats = (text: string): TextStats => {
+        const words = countWords(text);
+        const chapters = (text.match(/^##\s/gm) || []).length;
+        const subchapters = (text.match(/^###\s/gm) || []).length + (text.match(/^####\s/gm) || []).length;
+        const pages = Math.ceil(words / 250); // Rough estimate
+        return { words, chapters, subchapters, pages };
+    };
+
+
     const handleApplyRevision = async () => {
         const { text, analysis } = project?.manuscript || {};
         if (!text || !analysis) return;
@@ -124,29 +147,52 @@ const RevisionTab: React.FC = () => {
         setIsApplying(true);
         setError(null);
         try {
-            let result;
+            let result: string;
             let updates: Partial<Project['manuscript']> = {};
 
             switch (revisionAction) {
                 case 'regenerate':
                     result = await regenerateManuscript(text, analysis);
-                    updates = { regenerated: result, highlighted: undefined, changeList: undefined };
                     break;
                 case 'highlight':
                     result = await highlightManuscriptChanges(text, analysis);
-                    updates = { highlighted: result, regenerated: undefined, changeList: undefined };
                     break;
                 case 'list':
                     result = await listManuscriptChanges(text, analysis);
-                    updates = { changeList: result, regenerated: undefined, highlighted: undefined };
                     break;
             }
-            updateProject({ manuscript: { ...project!.manuscript!, ...updates } });
+            setOriginalStats(analyzeTextStats(text));
+            setRevisedStats(analyzeTextStats(result));
+            setProposedRevision({ type: revisionAction, content: result });
         } catch (err) {
             setError(err.toString().toLowerCase().includes('429') ? t('apiErrors.rateLimit') : t('apiErrors.generic'));
         } finally {
             setIsApplying(false);
         }
+    };
+
+    const handleAcceptRevision = () => {
+        if (!proposedRevision || !project?.manuscript) return;
+    
+        let updates: Partial<Project['manuscript']> = {};
+        switch (proposedRevision.type) {
+            case 'regenerate':
+                updates = { regenerated: proposedRevision.content, highlighted: undefined, changeList: undefined };
+                break;
+            case 'highlight':
+                updates = { highlighted: proposedRevision.content, regenerated: undefined, changeList: undefined };
+                break;
+            case 'list':
+                updates = { changeList: proposedRevision.content, regenerated: undefined, highlighted: undefined };
+                break;
+        }
+        updateProject({ manuscript: { ...project.manuscript, ...updates } });
+        setProposedRevision(null);
+        showToast('Revisione applicata con successo!', 'success');
+    };
+    
+    const handleCancelRevision = () => {
+        setProposedRevision(null);
     };
 
     const createHtmlForExport = (text: string): string => {
@@ -366,8 +412,73 @@ const RevisionTab: React.FC = () => {
 
     const renderLoading = (text: string) => <div className="text-center py-16"><LoadingSpinner className="h-12 w-12 text-brand-primary mx-auto"/><p className="mt-4 font-semibold">{text}</p>{fileName&&<p className="text-sm">{fileName}</p>}</div>;
 
+    const StatsRow: React.FC<{label: string, originalValue: number, revisedValue: number}> = ({ label, originalValue, revisedValue }) => {
+        const change = revisedValue - originalValue;
+        const changeColor = change > 0 ? 'text-green-700' : change < 0 ? 'text-red-700' : 'text-gray-500';
+        const changeSign = change > 0 ? '+' : '';
+
+        return (
+            <tr className="border-b last:border-b-0">
+                <td className="py-2 font-semibold text-neutral-dark">{label}</td>
+                <td className="py-2 text-center font-mono">{originalValue}</td>
+                <td className="py-2 text-center font-mono font-bold text-neutral-dark">{revisedValue} <span className={`text-xs ${changeColor}`}>({changeSign}{change})</span></td>
+            </tr>
+        );
+    };
+
+    const renderPreviewContent = () => {
+        if (!proposedRevision) return null;
+        switch (proposedRevision.type) {
+            case 'highlight':
+                return <div dangerouslySetInnerHTML={{ __html: proposedRevision.content.replace(/\n/g, '<br/>') }} />;
+            case 'list':
+                return <MarkdownRenderer content={proposedRevision.content} />;
+            case 'regenerate':
+            default:
+                return proposedRevision.content.split('\n').map((p, i) => <p className="mb-2" key={i}>{p || <>&nbsp;</>}</p>);
+        }
+    };
+
+
     return (
         <Card>
+            {proposedRevision && originalStats && revisedStats && (
+                <div className="fixed inset-0 bg-black/60 z-30 flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="revision-title">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                        <h3 id="revision-title" className="text-xl font-bold p-4 border-b text-brand-dark">{t('revisionTab.confirmRevisionTitle')}</h3>
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto">
+                            <div className="md:col-span-1 space-y-4">
+                                <h4 className="font-semibold text-lg mb-2 border-b pb-2">{t('revisionTab.revisionStats')}</h4>
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-2">Metrica</th>
+                                            <th className="text-center py-2">{t('revisionTab.original')}</th>
+                                            <th className="text-center py-2">{t('revisionTab.revised')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <StatsRow label={t('revisionTab.words')} originalValue={originalStats.words} revisedValue={revisedStats.words} />
+                                        <StatsRow label={t('revisionTab.chapters')} originalValue={originalStats.chapters} revisedValue={revisedStats.chapters} />
+                                        <StatsRow label={t('revisionTab.subchapters')} originalValue={originalStats.subchapters} revisedValue={revisedStats.subchapters} />
+                                        <StatsRow label={t('revisionTab.pages_approx')} originalValue={originalStats.pages} revisedValue={revisedStats.pages} />
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="md:col-span-2">
+                                <h4 className="font-semibold text-lg mb-2 border-b pb-2">{t('revisionTab.revisionPreview')}</h4>
+                                <div className="h-96 overflow-y-auto p-3 border rounded-md bg-gray-50 text-sm">
+                                    {renderPreviewContent()}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t flex justify-end gap-4 bg-gray-50 rounded-b-lg">
+                            <button onClick={handleCancelRevision} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md">{t('revisionTab.cancel')}</button>
+                            <button onClick={handleAcceptRevision} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md">{t('revisionTab.acceptAndApply')}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <h2 className="text-2xl font-bold text-brand-dark mb-4">{t('revisionTab.title')}</h2>
             {error && <p className="my-4 p-3 text-red-700 bg-red-100 rounded-md">{error}</p>}
             {isParsing ? renderLoading(t('revisionTab.parsingFile')) :

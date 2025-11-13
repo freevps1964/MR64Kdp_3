@@ -1,4 +1,3 @@
-
 {
   "header": {
     "title": "BookForge AI",
@@ -309,10 +308,21 @@
     "actionHighlightDescription": "Mostra le aggiunte (in verde) e le rimozioni (in rosso) direttamente nel testo, come la funzione 'Revisioni' di Word.",
     "actionList": "Elenca integrazioni specifiche",
     "actionListDescription": "Fornisce una checklist di azioni concrete da intraprendere per migliorare il manoscritto manualmente.",
-    "applyButton": "Applica",
+    "applyButton": "Genera Anteprima Revisione",
     "applying": "Applicazione delle revisioni...",
     "highlightedTitle": "Manoscritto con Evidenziazioni",
-    "changeListTitle": "Elenco delle Modifiche"
+    "changeListTitle": "Elenco delle Modifiche",
+    "acceptAndApply": "Accetta e Applica",
+    "cancel": "Annulla",
+    "confirmRevisionTitle": "Conferma Revisione",
+    "revisionStats": "Statistiche di Revisione",
+    "original": "Originale",
+    "revised": "Revisionato",
+    "words": "Parole",
+    "chapters": "Capitoli",
+    "subchapters": "Sottocapitoli",
+    "pages_approx": "Pagine (stima)",
+    "revisionPreview": "Anteprima Revisione"
   },
   "archiveTab": {
     "title": "Archivio del Progetto",

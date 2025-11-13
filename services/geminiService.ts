@@ -854,8 +854,8 @@ export const regenerateManuscript = async (originalText: string, analysisText: s
 Di seguito troverai l'"ANALISI DELL'EDITOR" e il "MANOSCRITTO ORIGINALE".
 
 Il tuo compito è quello di prendere il "MANOSCRITTO ORIGINALE" come base e aggiungere miglioramenti, senza rimuovere alcun contenuto esistente. Segui queste REGOLE FONDAMENTALI:
-1.  **Approccio Additivo (REGOLA CRUCIALE)**: Non riscrivere o rimuovere il testo originale. Copia il testo originale di ogni capitolo e sottocapitolo e **integra** al suo interno le nuove informazioni, le correzioni e i miglioramenti. Le modifiche devono essere solo **aggiunte** o riformulazioni che espandono il testo, mai cancellazioni.
-2.  **Integrazione e Aggiornamento**: Integra i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiorna il contenuto con le informazioni, le statistiche e gli eventi più recenti disponibili tramite ricerca web. Queste nuove informazioni devono arricchire e completare il testo esistente.
+1.  **APPROCCIO SOLO ADDITIVO (REGOLA NON NEGOZIABILE)**: Il manoscritto originale è la base immutabile. **NON DEVI MAI RIMUOVERE, CANCELLARE O SOSTITUIRE** alcuna parte del testo originale. Il tuo unico compito è **AGGIUNGERE** nuovo testo, frasi o paragrafi per arricchire, chiarire ed espandere il contenuto esistente. Il manoscritto finale deve contenere il 100% del testo originale più le tue integrazioni. La lunghezza di ogni sezione può solo aumentare, mai diminuire.
+2.  **Integrazione e Aggiornamento**: Integra i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiorna il contenuto con le informazioni, le statistiche e gli eventi più recenti disponibili tramite ricerca web. Queste nuove informazioni devono arricchire e completare il testo esistente, sempre in forma additiva.
 3.  **Preservazione Totale**: TUTTE le informazioni, i concetti e le idee originali DEVONO essere conservati. Il manoscritto finale deve contenere tutto il testo originale più i tuoi miglioramenti.
 
 Il risultato finale deve essere solo il testo completo del manoscritto migliorato e integrato. Non includere alcun commento o intestazione aggiuntiva.
@@ -898,17 +898,16 @@ MANOSCRITTO INTEGRATO E MIGLIORATO (SOLO AGGIUNTE, NESSUNA CANCELLAZIONE):
  * Highlights changes in a manuscript based on an editor's analysis.
  */
 export const highlightManuscriptChanges = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un editor esperto che usa la funzione "Revisioni". La tua missione è modificare il "MANOSCRITTO ORIGINALE" applicando i suggerimenti dall'"ANALISI DELL'EDITOR".
+    const prompt = `AGISCI COME un editor esperto che usa la funzione "Revisioni" in modalità solo aggiunta. La tua missione è modificare il "MANOSCRITTO ORIGINALE" applicando i suggerimenti dall'"ANALISI DELL'EDITOR" esclusivamente tramite aggiunte.
 
-Il tuo output DEVE essere il manoscritto completo, ma con le modifiche chiaramente indicate usando i tag HTML <ins> per le aggiunte e <del> per le cancellazioni.
+Il tuo output DEVE essere il manoscritto completo, ma con le modifiche indicate usando **SOLO** i tag HTML <ins> per le aggiunte.
 
 REGOLE FONDAMENTALI:
-1.  **Testo Invariato**: Qualsiasi testo che non viene modificato deve rimanere esattamente com'è, senza alcun tag.
-2.  **Aggiunte**: Racchiudi qualsiasi nuovo testo (parole, frasi) che aggiungi all'interno di tag <ins>...</ins>. Esempio: "Il cielo era <ins>molto</ins> blu."
-3.  **Cancellazioni**: Racchiudi qualsiasi testo che rimuovi all'interno di tag <del>...</del>. Esempio: "<del>Lui era</del> Il protagonista era stanco."
-4.  **Sostituzioni**: Gestisci le sostituzioni come una cancellazione seguita da un'aggiunta. Esempio: "Il suo cappello era <del>rosso</del><ins>blu</ins>."
-5.  **Output Completo**: Restituisci l'INTERO manoscritto dall'inizio alla fine, con i tag di revisione applicati. Non fornire spiegazioni, solo il testo HTML formattato.
-6.  **Formattazione Originale**: Mantieni la formattazione originale del manoscritto (paragrafi, interruzioni di riga).
+1.  **NIENTE CANCELLAZIONI**: Non è permesso usare i tag <del> o rimuovere testo. Il testo originale deve rimanere intatto.
+2.  **Solo Aggiunte**: Racchiudi qualsiasi nuovo testo (parole, frasi) che aggiungi all'interno di tag <ins>...</ins>. Esempio: "Il cielo era <ins>molto</ins> blu."
+3.  **Testo Invariato**: Qualsiasi testo che non viene modificato deve rimanere esattamente com'è, senza alcun tag.
+4.  **Output Completo**: Restituisci l'INTERO manoscritto dall'inizio alla fine, con i tag di revisione applicati. Non fornire spiegazioni, solo il testo HTML formattato.
+5.  **Formattazione Originale**: Mantieni la formattazione originale del manoscritto (paragrafi, interruzioni di riga).
 
 ---
 ANALISI DELL'EDITOR:
@@ -939,20 +938,21 @@ MANOSCRITTO CON REVISIONI EVIDENZIATE:
  * Lists specific changes for a manuscript based on an editor's analysis.
  */
 export const listManuscriptChanges = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un assistente editoriale meticoloso. La tua missione è creare una checklist di modifiche specifiche basata sull'"ANALISI DELL'EDITOR" per il "MANOSCRITTO ORIGINALE".
+    const prompt = `AGISCI COME un assistente editoriale meticoloso. La tua missione è creare una checklist di **integrazioni e aggiunte** basata sull'"ANALISI DELL'EDITOR" per il "MANOSCRITTO ORIGINALE". Le modifiche proposte devono solo aggiungere contenuto, non rimuoverlo o sostituirlo.
 
 Crea un elenco puntato in formato **Markdown** di azioni concrete e precise che l'autore deve intraprendere. Ogni punto dell'elenco deve essere specifico e facile da applicare.
 
-Esempi di formato desiderato:
-- **Nel Capitolo 3, Paragrafo 2**: Sostituisci la frase "Era molto stanco" con "La stanchezza gli pesava sulle palpebre come macigni" per essere più descrittivo.
-- **Generale**: Rimuovi le occorrenze ripetute della parola "quindi" per migliorare il flusso.
-- **Nel Capitolo 5**: Considera di spostare la rivelazione sul passato del personaggio prima del confronto finale per aumentare la tensione.
+Esempi di formato desiderato (solo aggiunte):
+- **Nel Capitolo 3, Paragrafo 2**: Dopo la frase "Era stanco", aggiungi "La stanchezza gli pesava sulle palpebre come macigni" per essere più descrittivo.
+- **Generale**: Valuta di aggiungere esempi pratici dopo le definizioni teoriche per migliorare la chiarezza.
+- **Nel Capitolo 5**: Considera di inserire un nuovo paragrafo che descriva il passato del personaggio prima del confronto finale per aumentare la tensione.
 
 REGOLE:
-1.  **Formato**: Usa solo elenchi puntati Markdown (\`- \`).
-2.  **Specificità**: Sii il più specifico possibile, indicando capitoli o sezioni se possibile.
-3.  **Azione**: Formula ogni punto come un'azione chiara.
-4.  **Output**: Fornisci solo l'elenco Markdown, senza introduzioni o conclusioni.
+1.  **Approccio Additivo**: Suggerisci solo aggiunte, integrazioni o espansioni. NON suggerire di rimuovere o sostituire testo.
+2.  **Formato**: Usa solo elenchi puntati Markdown (\`- \`).
+3.  **Specificità**: Sii il più specifico possibile, indicando capitoli o sezioni se possibile.
+4.  **Azione**: Formula ogni punto come un'azione chiara di "aggiungere", "integrare", "espandere".
+5.  **Output**: Fornisci solo l'elenco Markdown, senza introduzioni o conclusioni.
 
 ---
 ANALISI DELL'EDITOR:

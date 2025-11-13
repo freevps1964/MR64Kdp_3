@@ -1,5 +1,3 @@
-
-
 {
   "header": {
     "title": "BookForge AI",
@@ -310,10 +308,21 @@
     "actionHighlightDescription": "Shows additions (in green) and deletions (in red) directly in the text, similar to Word's 'Track Changes'.",
     "actionList": "List specific integrations",
     "actionListDescription": "Provides a checklist of concrete actions to take to improve the manuscript manually.",
-    "applyButton": "Apply",
+    "applyButton": "Generate Revision Preview",
     "applying": "Applying revisions...",
     "highlightedTitle": "Highlighted Manuscript",
-    "changeListTitle": "List of Changes"
+    "changeListTitle": "List of Changes",
+    "acceptAndApply": "Accept and Apply",
+    "cancel": "Cancel",
+    "confirmRevisionTitle": "Confirm Revision",
+    "revisionStats": "Revision Statistics",
+    "original": "Original",
+    "revised": "Revised",
+    "words": "Words",
+    "chapters": "Chapters",
+    "subchapters": "Subchapters",
+    "pages_approx": "Pages (est.)",
+    "revisionPreview": "Revision Preview"
   },
   "archiveTab": {
     "title": "Project Archive",
