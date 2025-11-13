@@ -15,6 +15,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import type { TabKey } from './types';
 import ArchiveTab from './components/tabs/ArchiveTab';
 import RevisionTab from './components/tabs/RevisionTab';
+import ConversionTab from './components/tabs/ConversionTab';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('marketTrends');
@@ -42,6 +43,8 @@ const App: React.FC = () => {
         return <RevisionTab />;
       case 'validation':
         return <ValidationTab />;
+      case 'conversion':
+        return <ConversionTab />;
       case 'archive':
         return <ArchiveTab />;
       default:

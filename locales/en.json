@@ -1,4 +1,5 @@
 
+
 {
   "header": {
     "title": "BookForge AI",
@@ -42,6 +43,7 @@
     "validation": "Validation",
     "archive": "Archive",
     "revision": "Revision",
+    "conversion": "Conversion",
     "disabledTooltip": "Complete previous steps to unlock"
   },
   "toast": {
@@ -343,5 +345,17 @@
         "confirmDelete": "Are you sure you want to delete the term \"{term}\"?",
         "errorEmpty": "Term and definition cannot be empty."
     }
+  },
+  "conversionTab": {
+    "title": "Advanced Conversion & Export",
+    "description": "Convert your final manuscript into various formats ready for publishing or distribution. Conversions are performed locally in your browser.",
+    "sourceTitle": "Data Source",
+    "sourceDescription": "The conversion will use the 'Regenerated Manuscript' text from the Revision section.",
+    "sourceNotAvailable": "Regenerated Manuscript not available. Please complete the process in the 'Revision' tab to enable conversion.",
+    "wordCount": "{count} words",
+    "outputTitle": "Output Formats",
+    "convertTo": "Convert to {format}",
+    "convertingTo": "Converting to {format}...",
+    "odtInfo": "ODT conversion typically requires a third-party API and is not implemented in this demo. This button shows where the functionality would be integrated."
   }
 }

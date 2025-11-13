@@ -42,6 +42,7 @@
     "validation": "Validazione",
     "archive": "Archivio",
     "revision": "Revisione",
+    "conversion": "Conversione",
     "disabledTooltip": "Completa i passaggi precedenti per sbloccare"
   },
   "toast": {
@@ -343,5 +344,17 @@
         "confirmDelete": "Sei sicuro di voler eliminare il termine \"{term}\"?",
         "errorEmpty": "Il termine e la definizione non possono essere vuoti."
     }
+  },
+  "conversionTab": {
+    "title": "Conversione e Esportazione Avanzata",
+    "description": "Converti il tuo manoscritto finale in vari formati pronti per la pubblicazione o la distribuzione. Le conversioni vengono eseguite localmente nel tuo browser.",
+    "sourceTitle": "Sorgente Dati",
+    "sourceDescription": "La conversione utilizzerà il testo del 'Manoscritto Rigenerato' dalla sezione Revisione.",
+    "sourceNotAvailable": "Manoscritto Rigenerato non disponibile. Per favore, completa il processo nella scheda 'Revisione' per abilitare la conversione.",
+    "wordCount": "{count} parole",
+    "outputTitle": "Formati di Output",
+    "convertTo": "Converti in {format}",
+    "convertingTo": "Conversione in {format}...",
+    "odtInfo": "La conversione in ODT richiede tipicamente un'API di terze parti e non è implementata in questa demo. Questo pulsante mostra dove verrebbe integrata la funzionalità."
   }
 }
