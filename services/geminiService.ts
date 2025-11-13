@@ -849,23 +849,22 @@ ${manuscriptText}
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
  */
 export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è revisionare il "MANOSCRITTO ORIGINALE" applicando i suggerimenti di revisione dell'"ANALISI DELL'EDITOR" e aggiornandolo con le informazioni più recenti.
+    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è migliorare il "MANOSCRITTO ORIGINALE" integrando i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiornandolo con le informazioni più recenti.
 
 Di seguito troverai l'"ANALISI DELL'EDITOR" e il "MANOSCRITTO ORIGINALE".
 
-Il tuo compito è riscrivere il manoscritto seguendo queste REGOLE FONDAMENTALI:
-1.  **Preservazione delle Informazioni**: TUTTE le informazioni, i concetti e le idee presenti nel "MANOSCRITTO ORIGINALE" DEVONO essere conservati. Puoi riformulare, riorganizzare e migliorare la prosa, ma non devi eliminare alcun argomento trattato.
-2.  **Integrazione e Aggiornamento**: Integra i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiorna il contenuto con le informazioni, le statistiche e gli eventi più recenti disponibili tramite ricerca web. Queste nuove informazioni devono arricchire il testo esistente.
-3.  **Mantenimento della Lunghezza**: Il manoscritto finale deve avere un conteggio di parole **molto simile** a quello del manoscritto originale. Per ogni capitolo e sottocapitolo, la lunghezza del testo revisionato dovrebbe corrispondere strettamente a quella originale. Bilancia le aggiunte di nuovo materiale condensando o riformulando altre parti, senza sacrificare la chiarezza o le informazioni originali.
+Il tuo compito è quello di prendere il "MANOSCRITTO ORIGINALE" come base e aggiungere miglioramenti, senza rimuovere alcun contenuto esistente. Segui queste REGOLE FONDAMENTALI:
+1.  **Approccio Additivo (REGOLA CRUCIALE)**: Non riscrivere o rimuovere il testo originale. Copia il testo originale di ogni capitolo e sottocapitolo e **integra** al suo interno le nuove informazioni, le correzioni e i miglioramenti. Le modifiche devono essere solo **aggiunte** o riformulazioni che espandono il testo, mai cancellazioni.
+2.  **Integrazione e Aggiornamento**: Integra i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiorna il contenuto con le informazioni, le statistiche e gli eventi più recenti disponibili tramite ricerca web. Queste nuove informazioni devono arricchire e completare il testo esistente.
+3.  **Preservazione Totale**: TUTTE le informazioni, i concetti e le idee originali DEVONO essere conservati. Il manoscritto finale deve contenere tutto il testo originale più i tuoi miglioramenti.
 
-Il risultato finale deve essere solo il testo completo del manoscritto revisionato e riscritto. Non includere alcun commento o intestazione aggiuntiva.
+Il risultato finale deve essere solo il testo completo del manoscritto migliorato e integrato. Non includere alcun commento o intestazione aggiuntiva.
 
 REQUISITI DI FORMATAZIONE:
 - Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
     - Per i **Titoli dei Capitoli (Titolo 1)**, usa '## ' seguito dal titolo.
     - Per i **Titoli Secondari (Titolo 2)**, usa '### ' seguito dal titolo.
     - Per i **Sottotitoli (corsivo)**, usa '#### ' seguito dal sottotitolo.
-
 ---
 ANALISI DELL'EDITOR:
 ---
@@ -875,7 +874,7 @@ MANOSCRITTO ORIGINALE:
 ---
 ${originalText}
 ---
-MANOSCRITTO REVISIONATO E AGGIORNATO (CON LUNGHEZZA SIMILE ALL'ORIGINALE):
+MANOSCRITTO INTEGRATO E MIGLIORATO (SOLO AGGIUNTE, NESSUNA CANCELLAZIONE):
 ---
 `;
 

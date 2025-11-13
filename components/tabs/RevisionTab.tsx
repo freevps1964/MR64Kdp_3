@@ -149,14 +149,15 @@ const RevisionTab: React.FC = () => {
         }
     };
 
-    const createHtmlForExport = (text: string, forPrint: boolean = false): string => {
-        const printStyles = forPrint ? `
-            @page { size: 6in 9in; margin: 0.75in; }
-            body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; }
-            h2, h3 { page-break-before: always; }
-        ` : '';
-
-        const kdpStyles = `<style>${printStyles}h2{font-weight:700;font-size:20pt;text-align:center;margin-top:2em;margin-bottom:1.5em}h3{font-weight:700;font-size:16pt;margin-top:1.5em;margin-bottom:1em}h4{font-weight:700;font-size:14pt;font-style:italic;margin-top:1.2em;margin-bottom:.8em}p{margin:0; text-align:justify}</style>`;
+    const createHtmlForExport = (text: string): string => {
+        const kdpStyles = `<style>
+            body { font-family: 'Times New Roman', Times, serif; font-size: 1em; line-height: 1.5; }
+            h2 { font-weight: 700; font-size: 1.6em; text-align: center; margin-top: 2em; margin-bottom: 1.5em; page-break-before: always; }
+            h3 { font-weight: 700; font-size: 1.4em; margin-top: 1.5em; margin-bottom: 1em; }
+            h4 { font-weight: 700; font-size: 1.2em; font-style: italic; margin-top: 1.2em; margin-bottom: 0.8em; }
+            p { margin: 0 0 1em 0; text-align: justify; text-indent: 1.5em; }
+            p:first-of-type, h2+p, h3+p, h4+p { text-indent: 0; }
+        </style>`;
         
         const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         
@@ -304,7 +305,24 @@ const RevisionTab: React.FC = () => {
             </div>
             {(manuscript?.regenerated || manuscript?.highlighted || manuscript?.changeList) && (
                 <div className="animate-fade-in">
-                    {manuscript.regenerated && <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50"><div className="flex justify-between items-center mb-2"><h4 className="text-lg font-semibold text-green-800">{t('revisionTab.regeneratedTitle')}</h4><div className="flex items-center gap-2"><select value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)} className="bg-white border rounded-md p-2" disabled={isLoadingDownload}><option value="html">HTML (.html)</option><option value="txt">Testo (.txt)</option></select><button onClick={handleDownload} disabled={isLoadingDownload} className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">{isLoadingDownload ? <LoadingSpinner/> : '🚀'}<span className="ml-2">{t('revisionTab.downloadButton')}</span></button></div></div><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">{manuscript.regenerated.split('\n').map((p,i)=><p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div></div>}
+                    {manuscript.regenerated && 
+                        <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="text-lg font-semibold text-green-800">{t('revisionTab.regeneratedTitle')}</h4>
+                                <div className="flex items-center gap-2">
+                                    <select value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)} className="bg-white border rounded-md p-2" disabled={isLoadingDownload}>
+                                        <option value="html">HTML (.html)</option>
+                                        <option value="txt">Testo (.txt)</option>
+                                    </select>
+                                    <button onClick={handleDownload} disabled={isLoadingDownload} className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">
+                                        {isLoadingDownload ? <LoadingSpinner/> : '🚀'}
+                                        <span className="ml-2">{t('revisionTab.downloadButton')}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">{manuscript.regenerated.split('\n').map((p,i)=><p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div>
+                        </div>
+                    }
                     {manuscript.highlighted && <div className="p-4 border-2 border-blue-300 rounded-lg bg-blue-50"><h4 className="text-lg font-semibold text-blue-800 mb-2">{t('revisionTab.highlightedTitle')}</h4><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border" dangerouslySetInnerHTML={{__html:manuscript.highlighted.replace(/\n/g,'<br/>')}}></div></div>}
                     {manuscript.changeList && <div className="p-4 border-2 border-purple-300 rounded-lg bg-purple-50"><h4 className="text-lg font-semibold text-purple-800 mb-2">{t('revisionTab.changeListTitle')}</h4><div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border"><MarkdownRenderer content={manuscript.changeList}/></div></div>}
                 </div>
