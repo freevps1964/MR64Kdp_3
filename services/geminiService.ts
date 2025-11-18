@@ -526,7 +526,7 @@ export const generateContentBlockPrompt = async (project: Project, contentType: 
             typeInstruction = "Per un 'esercizio', deve essere una singola attività, ad esempio: 'Un esercizio di respirazione per ridurre lo stress, spiegato passo dopo passo.'";
             break;
         case 'bonus':
-            typeInstruction = "Per un 'bonus', deve essere un singolo contenuto aggiuntivo, ad esempio: 'Una checklist stampabile per la routine mattutina suggerita nel capitolo 3.'";
+            typeInstruction = "Per un 'bonus', deve essere un singolo contenuto aggiuntivo, ad esempio: 'Una checklist stampabile per la routine mattinina suggerita nel capitolo 3.'";
             break;
     }
 
@@ -853,13 +853,12 @@ export const regenerateManuscript = async (originalText: string, analysisText: s
 
 Di seguito troverai l'"ANALISI DELL'EDITOR" e il "MANOSCRITTO ORIGINALE".
 
-Il tuo compito è quello di prendere il "MANOSCRITTO ORIGINALE" come base e applicare i miglioramenti ESCLUSIVAMENTE tramite aggiunte. Segui queste REGOLE FONDAMENTALI E NON NEGOZIABILI:
-1.  **APPROCCIO SOLO ADDITIVO**: Il manoscritto originale è la base immutabile. **NON DEVI MAI RIMUOVERE, CANCELLARE, SOSTITUIRE O RISCRIVERE** alcuna parte del testo originale. Il tuo unico compito è **AGGIUNGERE** nuovo testo, frasi o paragrafi per arricchire, chiarire ed espandere il contenuto esistente. Il manoscritto finale deve contenere il 100% del testo originale più le tue integrazioni.
-2.  **L'output DEVE essere più lungo dell'originale**: Poiché aggiungi solo contenuto, il manoscritto finale DEVE essere più lungo di quello originale. Questa è una verifica fondamentale del tuo lavoro.
-3.  **Integrazione come Aggiunta**: Quando integri i suggerimenti dell'"ANALISI DELL'EDITOR" o aggiorni le informazioni, fallo aggiungendo nuovo testo. Per esempio, se un dato è obsoleto, NON sostituirlo. Aggiungi una frase come: "(Aggiornamento: il nuovo dato è X)". Inserisci le tue aggiunte dove sono più pertinenti nel testo.
-4.  **Preservazione Totale**: TUTTE le informazioni, i concetti, le idee e la formattazione (titoli, paragrafi) originali DEVONO essere conservati intatti.
+**REGOLA FONDAMENTALE E ASSOLUTA: MODALITÀ SOLO ADDITIVA.** Il tuo compito è prendere il "MANOSCRITTO ORIGINALE" come base e applicare i miglioramenti **ESCLUSIVAMENTE tramite aggiunte**. Segui queste regole non negoziabili:
+1.  **APPROCCIO SOLO ADDITIVO**: Il manoscritto originale è la base immutabile. **È ASSOLUTAMENTE VIETATO RIMUOVERE, CANCELLARE, SOSTITUIRE O RISCRIVERE** qualsiasi parte del testo originale. Il tuo unico compito è **AGGIUNGERE** nuovo testo (frasi o paragrafi) per arricchire, chiarire ed espandere il contenuto esistente.
+2.  **L'OUTPUT DEVE ESSERE PIÙ LUNGO**: Poiché il tuo unico intervento è aggiungere contenuto, il manoscritto finale **DEVE OBBLIGATORIAMENTE** essere più lungo di quello originale. Questa è la verifica più importante del tuo lavoro.
+3.  **PRESERVAZIONE TOTALE**: Il manoscritto finale deve contenere il 100% del testo originale più le tue integrazioni. TUTTE le informazioni, i concetti, le idee e la formattazione originali DEVONO essere conservati intatti.
 
-Il risultato finale deve essere solo il testo completo del manoscritto espanso e integrato. Non includere alcun commento o intestazione aggiuntiva.
+Il risultato finale deve essere solo il testo completo del manoscritto espanso e integrato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
 
 REQUISITI DI FORMATAZIONE:
 - Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
