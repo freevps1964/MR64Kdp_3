@@ -849,16 +849,17 @@ ${manuscriptText}
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
  */
 export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è migliorare il "MANOSCRITTO ORIGINALE" integrando i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiornandolo con le informazioni più recenti.
+    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è espandere e arricchire il "MANOSCRITTO ORIGINALE" integrando i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiungendo informazioni più recenti.
 
 Di seguito troverai l'"ANALISI DELL'EDITOR" e il "MANOSCRITTO ORIGINALE".
 
-Il tuo compito è quello di prendere il "MANOSCRITTO ORIGINALE" come base e aggiungere miglioramenti, senza rimuovere alcun contenuto esistente. Segui queste REGOLE FONDAMENTALI:
-1.  **APPROCCIO SOLO ADDITIVO (REGOLA NON NEGOZIABILE)**: Il manoscritto originale è la base immutabile. **NON DEVI MAI RIMUOVERE, CANCELLARE O SOSTITUIRE** alcuna parte del testo originale. Il tuo unico compito è **AGGIUNGERE** nuovo testo, frasi o paragrafi per arricchire, chiarire ed espandere il contenuto esistente. Il manoscritto finale deve contenere il 100% del testo originale più le tue integrazioni. La lunghezza di ogni sezione può solo aumentare, mai diminuire.
-2.  **Integrazione e Aggiornamento**: Integra i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiorna il contenuto con le informazioni, le statistiche e gli eventi più recenti disponibili tramite ricerca web. Queste nuove informazioni devono arricchire e completare il testo esistente, sempre in forma additiva.
-3.  **Preservazione Totale**: TUTTE le informazioni, i concetti e le idee originali DEVONO essere conservati. Il manoscritto finale deve contenere tutto il testo originale più i tuoi miglioramenti.
+Il tuo compito è quello di prendere il "MANOSCRITTO ORIGINALE" come base e applicare i miglioramenti ESCLUSIVAMENTE tramite aggiunte. Segui queste REGOLE FONDAMENTALI E NON NEGOZIABILI:
+1.  **APPROCCIO SOLO ADDITIVO**: Il manoscritto originale è la base immutabile. **NON DEVI MAI RIMUOVERE, CANCELLARE, SOSTITUIRE O RISCRIVERE** alcuna parte del testo originale. Il tuo unico compito è **AGGIUNGERE** nuovo testo, frasi o paragrafi per arricchire, chiarire ed espandere il contenuto esistente. Il manoscritto finale deve contenere il 100% del testo originale più le tue integrazioni.
+2.  **L'output DEVE essere più lungo dell'originale**: Poiché aggiungi solo contenuto, il manoscritto finale DEVE essere più lungo di quello originale. Questa è una verifica fondamentale del tuo lavoro.
+3.  **Integrazione come Aggiunta**: Quando integri i suggerimenti dell'"ANALISI DELL'EDITOR" o aggiorni le informazioni, fallo aggiungendo nuovo testo. Per esempio, se un dato è obsoleto, NON sostituirlo. Aggiungi una frase come: "(Aggiornamento: il nuovo dato è X)". Inserisci le tue aggiunte dove sono più pertinenti nel testo.
+4.  **Preservazione Totale**: TUTTE le informazioni, i concetti, le idee e la formattazione (titoli, paragrafi) originali DEVONO essere conservati intatti.
 
-Il risultato finale deve essere solo il testo completo del manoscritto migliorato e integrato. Non includere alcun commento o intestazione aggiuntiva.
+Il risultato finale deve essere solo il testo completo del manoscritto espanso e integrato. Non includere alcun commento o intestazione aggiuntiva.
 
 REQUISITI DI FORMATAZIONE:
 - Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
@@ -874,7 +875,7 @@ MANOSCRITTO ORIGINALE:
 ---
 ${originalText}
 ---
-MANOSCRITTO INTEGRATO E MIGLIORATO (SOLO AGGIUNTE, NESSUNA CANCELLAZIONE):
+MANOSCRITTO INTEGRATO E MIGLIORATO (SOLO AGGIUNTE, NESSUNA CANCELLAZIONE O SOSTITUZIONE):
 ---
 `;
 
