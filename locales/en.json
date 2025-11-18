@@ -42,6 +42,7 @@
     "archive": "Archive",
     "revision": "Revision",
     "conversion": "Conversion",
+    "audiobook": "Audiobook",
     "disabledTooltip": "Complete previous steps to unlock"
   },
   "toast": {
@@ -366,5 +367,17 @@
     "convertTo": "Convert to {format}",
     "convertingTo": "Converting to {format}...",
     "odtInfo": "ODT conversion typically requires a third-party API and is not implemented in this demo. This button shows where the functionality would be integrated."
+  },
+  "audiobookTab": {
+    "title": "Audiobook Generation",
+    "description": "Transform your manuscript into an engaging audiobook using AI voices. Generate audio for specific chapters or the entire book.",
+    "sourceLabel": "Select Content",
+    "fullBook": "Full Manuscript (Regenerated)",
+    "voiceLabel": "Select Voice",
+    "generateButton": "Generate Audio",
+    "generating": "Generating audio...",
+    "downloadWav": "Download WAV",
+    "noTextAvailable": "No text available for the selected content. Please generate or write content first.",
+    "audioPlayerTitle": "Audio Preview"
   }
 }

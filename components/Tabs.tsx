@@ -16,6 +16,8 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
   
   // Content writing can start once the structure is defined
   const isContentComplete = isStructureComplete; 
+  // Audiobook requires written content or generated manuscript
+  const isAudiobookReady = isContentComplete || !!project?.manuscript?.regenerated;
 
   const TABS: { key: TabKey, label: string, isEnabled: boolean }[] = [
     { key: 'marketTrends', label: t('tabs.marketTrends'), isEnabled: true },
@@ -27,6 +29,7 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
     { key: 'appendices', label: t('tabs.appendices'), isEnabled: isStructureComplete },
     { key: 'layout', label: t('tabs.layout'), isEnabled: isContentComplete },
     { key: 'revision', label: t('tabs.revision'), isEnabled: true },
+    { key: 'audiobook', label: t('tabs.audiobook'), isEnabled: isAudiobookReady },
     { key: 'validation', label: t('tabs.validation'), isEnabled: isContentComplete },
     { key: 'conversion', label: t('tabs.conversion'), isEnabled: true },
     { key: 'archive', label: t('tabs.archive'), isEnabled: isResearchComplete },
@@ -39,14 +42,14 @@ const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab, project }) => {
   };
 
   return (
-    <div className="border-b border-gray-200">
-      <nav className="-mb-px flex flex-wrap space-x-2 sm:space-x-4 md:space-x-8" aria-label="Tabs">
+    <div className="border-b border-gray-200 overflow-x-auto">
+      <nav className="-mb-px flex space-x-2 sm:space-x-4 md:space-x-6 px-2" aria-label="Tabs">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => handleTabClick(tab)}
             disabled={!tab.isEnabled}
-            className={`whitespace-nowrap py-3 px-2 sm:px-3 md:px-4 border-b-2 font-semibold text-sm sm:text-base focus:outline-none transition-colors duration-200 ease-in-out
+            className={`whitespace-nowrap py-3 px-2 sm:px-3 border-b-2 font-semibold text-sm sm:text-base focus:outline-none transition-colors duration-200 ease-in-out flex-shrink-0
               ${
                 activeTab === tab.key
                   ? 'border-brand-primary text-brand-primary'

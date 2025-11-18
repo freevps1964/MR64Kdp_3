@@ -16,6 +16,7 @@ import type { TabKey } from './types';
 import ArchiveTab from './components/tabs/ArchiveTab';
 import RevisionTab from './components/tabs/RevisionTab';
 import ConversionTab from './components/tabs/ConversionTab';
+import AudiobookTab from './components/tabs/AudiobookTab';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('marketTrends');
@@ -41,6 +42,8 @@ const App: React.FC = () => {
         return <LayoutTab />;
       case 'revision':
         return <RevisionTab />;
+      case 'audiobook':
+        return <AudiobookTab />;
       case 'validation':
         return <ValidationTab />;
       case 'conversion':

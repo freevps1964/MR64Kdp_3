@@ -1,6 +1,6 @@
 import type { GenerateContentResponse } from "@google/genai";
 
-export type TabKey = 'research' | 'marketTrends' | 'structure' | 'content' | 'appendices' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive' | 'revision' | 'conversion';
+export type TabKey = 'research' | 'marketTrends' | 'structure' | 'content' | 'appendices' | 'layout' | 'cover' | 'metadata' | 'validation' | 'archive' | 'revision' | 'conversion' | 'audiobook';
 
 export interface GroundingSource {
   web?: {

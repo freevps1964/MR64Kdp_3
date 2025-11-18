@@ -42,6 +42,7 @@
     "archive": "Archivio",
     "revision": "Revisione",
     "conversion": "Conversione",
+    "audiobook": "Audiolibro",
     "disabledTooltip": "Completa i passaggi precedenti per sbloccare"
   },
   "toast": {
@@ -366,5 +367,17 @@
     "convertTo": "Converti in {format}",
     "convertingTo": "Conversione in {format}...",
     "odtInfo": "La conversione in ODT richiede tipicamente un'API di terze parti e non è implementata in questa demo. Questo pulsante mostra dove verrebbe integrata la funzionalità."
+  },
+  "audiobookTab": {
+    "title": "Generazione Audiolibro",
+    "description": "Trasforma il tuo manoscritto in un audiolibro coinvolgente utilizzando voci AI. Genera l'audio per capitoli specifici o per l'intero libro.",
+    "sourceLabel": "Seleziona Contenuto",
+    "fullBook": "Manoscritto Completo (Rigenerato)",
+    "voiceLabel": "Seleziona Voce",
+    "generateButton": "Genera Audio",
+    "generating": "Generazione audio...",
+    "downloadWav": "Scarica WAV",
+    "noTextAvailable": "Nessun testo disponibile per il contenuto selezionato. Genera o scrivi prima il contenuto.",
+    "audioPlayerTitle": "Anteprima Audio"
   }
 }
