@@ -3,6 +3,11 @@ import type { BookStructure, ResearchResult, Keyword, GroundingSource, Project, 
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+const cleanText = (text: string): string => {
+  if (!text) return '';
+  return text.replace(/\*+/g, '').trim();
+};
+
 /**
  * Esegue una chiamata API asincrona con una logica di tentativi esponenziali di backoff.
  * Questa funzione gestisce errori recuperabili come:
@@ -158,9 +163,9 @@ Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
             .map(line => {
                 const match = line.match(/(.+) \(Rilevanza:\s*(\d+)%\)/i);
                 if (match) {
-                    return { text: match[1].trim(), relevance: parseInt(match[2], 10) };
+                    return { text: cleanText(match[1].trim()), relevance: parseInt(match[2], 10) };
                 }
-                return { text: line, relevance: 0 };
+                return { text: cleanText(line), relevance: 0 };
             })
             .filter(item => item.text);
     };
@@ -172,7 +177,7 @@ Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
                 const match = line.match(/(.+) \(Rilevanza:\s*(\d+)%,\s*Volume:\s*([^,]+),\s*Competizione:\s*([^)]+)\)/i);
                 if (match) {
                     return {
-                        keyword: match[1].trim(),
+                        keyword: cleanText(match[1].trim()),
                         relevance: parseInt(match[2], 10),
                         searchVolume: match[3].trim(),
                         competition: match[4].trim(),
@@ -182,7 +187,7 @@ Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
                 const oldMatch = line.match(/(.+) \(Rilevanza:\s*(\d+)%\)/i);
                 if (oldMatch) {
                     return {
-                        keyword: oldMatch[1].trim(),
+                        keyword: cleanText(oldMatch[1].trim()),
                         relevance: parseInt(oldMatch[2], 10),
                         searchVolume: 'N/A',
                         competition: 'N/A',
@@ -273,7 +278,21 @@ Fornisci la risposta come un singolo oggetto JSON con una chiave "chapters" che 
     }));
 
     const jsonText = response.text.trim();
-    return JSON.parse(jsonText);
+    const structure = JSON.parse(jsonText) as BookStructure;
+
+    // Clean asterisks from titles
+    if (structure && structure.chapters) {
+        structure.chapters = structure.chapters.map(chapter => ({
+            ...chapter,
+            title: cleanText(chapter.title),
+            subchapters: chapter.subchapters.map(sub => ({
+                ...sub,
+                title: cleanText(sub.title)
+            }))
+        }));
+    }
+
+    return structure;
   } catch (error) {
     console.error("Error generating structure:", error);
     return null;
@@ -372,7 +391,7 @@ Final Prompt Requirements:
     *   **Composition and Text Space**: Guide the AI on element placement. **THIS IS CRITICAL**: design the composition (e.g., "using the rule of thirds", "subject off-center to the left") to leave a large, clean area of negative space at the top for the title and subtitle.
     *   **Lighting**: Describe the lighting to create the desired mood (e.g., "dramatic, low-key lighting creating long shadows", "soft, ethereal lighting coming from above", "vibrant neon glow").
     *   **Color Palette**: Define a specific and emotional color palette (e.g., "an analogous color palette of blues and greens to evoke calm, with a single accent of orange for energy", "monochromatic tones of gray with a single bright red element").
--   **Output**: Provide **only the final prompt text**, with no introduction, explanation, analysis, or alternative options.
+    *   **Output**: Provide **only the final prompt text**, with no introduction, explanation, analysis, or alternative options.
 
 Example of a quality output for a book on procrastination:
 "Surrealist digital illustration of an elegant glass hourglass where the falling sand transforms into a flock of paper birds flying away freely. The background is a sunset sky with warm, gradient colors from purple to orange. The lighting is soft and emanates from within the hourglass, creating a magical glow. Detailed painterly style with visible textures. Minimalist composition with the hourglass off-center, leaving ample negative space at the top for text."`;
@@ -601,7 +620,7 @@ Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
                 formattedText += `- ${item.items.join('\n- ')}`;
             }
             return {
-                title: item.title,
+                title: cleanText(item.title),
                 textContent: formattedText,
             };
         });
@@ -785,7 +804,7 @@ Fornisci solo il testo della tagline, nient'altro.`;
             model: "gemini-2.5-flash",
             contents: prompt,
         }));
-        return response.text.trim().replace(/"/g, ''); // Rimuove eventuali virgolette
+        return cleanText(response.text.trim().replace(/"/g, '')); // Rimuove eventuali virgolette e asterischi
     } catch (error) {
         console.error("Error generating cover tagline:", error);
         return "";
