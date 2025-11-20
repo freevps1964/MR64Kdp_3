@@ -5,7 +5,8 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const cleanText = (text: string): string => {
   if (!text) return '';
-  return text.replace(/\*+/g, '').trim();
+  // Rimuove asterischi, cancelletti e altri caratteri markdown comuni dai titoli
+  return text.replace(/[\*#_`]/g, '').trim();
 };
 
 /**
@@ -71,7 +72,7 @@ export const discoverTrends = async (category: string, market: string): Promise<
 Se la categoria è "Tutte le Categorie" o "Libri", analizza il mercato librario nel suo complesso su **${amazonDomain}**. Altrimenti, fornisci risultati specifici per la categoria data.
 
 Per ogni nicchia identificata, fornisci:
-1. "topic": Il nome della nicchia o dell'argomento del libro, conciso e pronto per KDP.
+1. "topic": Il nome della nicchia o dell'argomento del libro, conciso e pronto per KDP. Evita asterischi nel testo.
 2. "reason": Una spiegazione breve (1-2 frasi) e convincente del perché questa nicchia è profittevole, analizzando le tendenze di mercato e identificando opportunità per nuovi autori all'interno della categoria di riferimento ("${category}") e del mercato ("${market}").
 3. "trendScore": un punteggio da 0 a 100 che rappresenta il potenziale di redditività della nicchia. 100 è il massimo potenziale.
 
@@ -129,12 +130,12 @@ Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
 ### Suggested Titles
 - [Titolo 1] (Rilevanza: X%)
 - [Titolo 2] (Rilevanza: X%)
-- ... (Fornisci 5 titoli magnetici che massimizzano il CTR e incorporano parole chiave)
+- ... (Fornisci 5 titoli magnetici che massimizzano il CTR e incorporano parole chiave. NON USARE ASTERISCHI.)
 
 ### Suggested Subtitles
 - [Sottotitolo 1] (Rilevanza: X%)
 - [Sottotitolo 2] (Rilevanza: X%)
-- ... (Fornisci 5 sottotitoli che espandono il titolo e contengono parole chiave)
+- ... (Fornisci 5 sottotitoli che espandono il titolo e contengono parole chiave. NON USARE ASTERISCHI.)
 `;
 
   try {
@@ -238,6 +239,7 @@ La struttura deve seguire rigorosamente i seguenti requisiti:
 1.  Deve contenere esattamente 10 capitoli.
 2.  Ogni capitolo deve contenere esattamente 4 sottocapitoli.
 I titoli dei capitoli e dei sottocapitoli devono essere pertinenti, coprire in modo esauriente l'argomento e includere in modo naturale le seguenti parole chiave per massimizzare la visibilità e le vendite su Amazon: ${keywordList}.
+IMPORTANTE: Non usare asterischi o formattazione Markdown nei valori JSON.
 Fornisci la risposta come un singolo oggetto JSON con una chiave "chapters" che contiene un array di oggetti capitolo.`;
   
   try {
@@ -797,7 +799,7 @@ export const processTextWithGemini = async (
 export const generateCoverTagline = async (project: Project): Promise<string> => {
     const prompt = `AGISCI COME un copywriter specializzato in copertine di libri. Crea una tagline estremamente breve (massimo 10 parole), accattivante e ad alta conversione per un libro intitolato "${project.bookTitle}" sull'argomento "${project.topic}".
 La tagline deve suscitare curiosità o promettere un beneficio immediato. Deve essere perfetta da inserire sulla copertina di un libro per catturare l'attenzione.
-Fornisci solo il testo della tagline, nient'altro.`;
+Fornisci solo il testo della tagline, nient'altro. Evita asterischi.`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -869,22 +871,29 @@ ${manuscriptText}
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
  */
 export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
-    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale. La tua missione è espandere e arricchire il "MANOSCRITTO ORIGINALE" integrando i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiungendo informazioni più recenti.
+    const currentDate = new Date().toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' });
+    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale.
+DATA CORRENTE: ${currentDate}.
 
-Di seguito troverai l'"ANALISI DELL'EDITOR" e il "MANOSCRITTO ORIGINALE".
+La tua missione è espandere e arricchire il "MANOSCRITTO ORIGINALE" applicando i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiornando tutte le informazioni obsolete alla data corrente.
 
-**REGOLA FONDAMENTALE E ASSOLUTA: MODALITÀ SOLO ADDITIVA.** Il tuo compito è prendere il "MANOSCRITTO ORIGINALE" come base e applicare i miglioramenti **ESCLUSIVAMENTE tramite aggiunte**. Segui queste regole non negoziabili:
-1.  **APPROCCIO SOLO ADDITIVO**: Il manoscritto originale è la base immutabile. **È ASSOLUTAMENTE VIETATO RIMUOVERE, CANCELLARE, SOSTITUIRE O RISCRIVERE** qualsiasi parte del testo originale. Il tuo unico compito è **AGGIUNGERE** nuovo testo (frasi o paragrafi) per arricchire, chiarire ed espandere il contenuto esistente.
-2.  **L'OUTPUT DEVE ESSERE PIÙ LUNGO**: Poiché il tuo unico intervento è aggiungere contenuto, il manoscritto finale **DEVE OBBLIGATORIAMENTE** essere più lungo di quello originale. Questa è la verifica più importante del tuo lavoro.
-3.  **PRESERVAZIONE TOTALE**: Il manoscritto finale deve contenere il 100% del testo originale più le tue integrazioni. TUTTE le informazioni, i concetti, le idee e la formattazione originali DEVONO essere conservati intatti.
+**REGOLA FONDAMENTALE E ASSOLUTA: APPEND-ONLY (SOLO AGGIUNTA).**
+Il tuo compito è prendere il "MANOSCRITTO ORIGINALE" e AGGIUNGERE valore.
 
-Il risultato finale deve essere solo il testo completo del manoscritto espanso e integrato. Non includere alcun commento, spiegazione o intestazione aggiuntiva.
+Segui queste regole FERREE:
+1.  **COPIA-INCOLLA OBBLIGATORIO**: Il testo del "MANOSCRITTO ORIGINALE" deve essere presente nel tuo output **PAROLA PER PAROLA**, nello stesso ordine.
+2.  **DIVIETO DI CANCELLAZIONE**: Non rimuovere, riassumere o sostituire nemmeno una frase del testo originale.
+3.  **AGGIORNAMENTO TRAMITE AGGIUNTA**: Se un'informazione nel testo originale è obsoleta, **NON CANCELLARLA**. Invece, aggiungi subito dopo un nuovo paragrafo che inizia con "Aggiornamento al ${currentDate}:" o una frase di collegamento simile, fornendo i dati più recenti.
+4.  **ESPANSIONE**: Inserisci nuovi paragrafi tra quelli esistenti o alla fine delle sezioni per approfondire i concetti, aggiungere esempi o chiarire passaggi oscuri basandoti sull'analisi.
+5.  **RISULTATO FINALE**: Il tuo output deve essere significativamente più lungo del testo originale. Se è più corto o uguale, hai fallito.
+
+Il risultato finale deve essere il manoscritto completo (originale + aggiunte). Non includere commenti o meta-testo.
 
 REQUISITI DI FORMATAZIONE:
-- Utilizza ESATTAMENTE la seguente sintassi Markdown per i titoli:
-    - Per i **Titoli dei Capitoli (Titolo 1)**, usa '## ' seguito dal titolo.
-    - Per i **Titoli Secondari (Titolo 2)**, usa '### ' seguito dal titolo.
-    - Per i **Sottotitoli (corsivo)**, usa '#### ' seguito dal sottotitolo.
+- Mantieni la struttura dei titoli originali.
+- Usa Markdown standard (## Titolo, ### Sottotitolo).
+- Non aggiungere asterischi ai titoli.
+
 ---
 ANALISI DELL'EDITOR:
 ---
@@ -894,7 +903,7 @@ MANOSCRITTO ORIGINALE:
 ---
 ${originalText}
 ---
-MANOSCRITTO INTEGRATO E MIGLIORATO (SOLO AGGIUNTE, NESSUNA CANCELLAZIONE O SOSTITUZIONE):
+MANOSCRITTO ESPANSO E AGGIORNATO (ORIGINALE + NUOVE AGGIUNTE):
 ---
 `;
 

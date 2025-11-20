@@ -71,7 +71,7 @@ const CoverTab: React.FC = () => {
         return y;
     }
     // Rimuovi gli asterischi dal testo visualizzato
-    const cleanText = text.replace(/\*+/g, '').trim();
+    const cleanText = text.replace(/[\*#_`]/g, '').trim();
     
     const words = cleanText.split(' ');
     let line = '';
@@ -121,57 +121,63 @@ const CoverTab: React.FC = () => {
             // Stili del testo (bianco con ombra per la leggibilità)
             ctx.fillStyle = 'white';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = 15;
             ctx.shadowOffsetX = 3;
             ctx.shadowOffsetY = 3;
             ctx.textAlign = 'center';
 
             const margin = canvasWidth * 0.1;
             const contentWidth = canvasWidth - margin * 2;
-            let currentY = canvasHeight * 0.12; // Cursore Y iniziale leggermente più alto
-
+            
+            // Layout rigido per evitare sovrapposizioni
+            const topPadding = canvasHeight * 0.05;
+            let currentY = topPadding; 
             const ptToPx = (pt: number) => pt * 4 / 3;
-
-            // Definizione spaziature fisse per evitare sovrapposizioni
-            const sectionSpacing = 50; 
+            
+            // Spazio verticale minimo garantito tra i blocchi
+            const blockSpacing = 60; 
 
             // --- Draw Title ---
             if (project.bookTitle) {
                 const titleFontSizePt = project.titleFontSize || 60;
                 ctx.font = `bold ${titleFontSizePt}pt 'Georgia', serif`;
-                currentY = wrapText(ctx, project.bookTitle, canvasWidth / 2, currentY, contentWidth, ptToPx(titleFontSizePt) * 1.1);
-                currentY += sectionSpacing; // Aggiungi spaziatura dopo il titolo
+                // Calcola l'altezza del blocco titolo
+                const titleLineHeight = ptToPx(titleFontSizePt) * 1.1;
+                currentY += titleLineHeight; // Sposta il cursore alla baseline della prima riga
+                currentY = wrapText(ctx, project.bookTitle, canvasWidth / 2, currentY, contentWidth, titleLineHeight);
+                currentY += blockSpacing; // Spaziatura post-titolo
             }
             
             // --- Draw Subtitle ---
             if (project.subtitle) {
                 const subtitleFontSizePt = project.subtitleFontSize || 30;
                 ctx.font = `bold ${subtitleFontSizePt}pt 'Georgia', serif`;
-                currentY = wrapText(ctx, project.subtitle, canvasWidth / 2, currentY, contentWidth, ptToPx(subtitleFontSizePt) * 1.2);
-                currentY += sectionSpacing; // Aggiungi spaziatura dopo il sottotitolo
+                const subLineHeight = ptToPx(subtitleFontSizePt) * 1.2;
+                currentY = wrapText(ctx, project.subtitle, canvasWidth / 2, currentY, contentWidth, subLineHeight);
+                currentY += blockSpacing; // Spaziatura post-sottotitolo
             }
             
             // --- Draw Tagline ---
             if (project.coverTagline) {
-                ctx.font = `italic 22pt 'Georgia', serif`;
+                ctx.font = `italic 24pt 'Georgia', serif`;
                 ctx.fillStyle = '#FFDD57'; // Colore accento per la tagline
-                // Assicurati che il tagline parta da una nuova posizione pulita
-                currentY = wrapText(ctx, project.coverTagline, canvasWidth / 2, currentY, contentWidth, ptToPx(22) * 1.1);
-                ctx.fillStyle = 'white';
+                const taglineLineHeight = ptToPx(24) * 1.2;
+                currentY = wrapText(ctx, project.coverTagline, canvasWidth / 2, currentY, contentWidth, taglineLineHeight);
+                ctx.fillStyle = 'white'; // Ripristina colore
             }
 
-            // --- Draw Author (bottom-right) ---
+            // --- Draw Author (bottom-right) - Fixed Position ---
             if (project.author) {
                 ctx.textAlign = 'right';
                 const authorFontSizePt = project.authorFontSize || 18;
                 ctx.font = `normal ${authorFontSizePt}pt 'Georgia', serif`;
-                const authorY = canvasHeight - 60;
+                const authorY = canvasHeight - 80; // Margine fisso dal basso
                 const authorX = canvasWidth - 60;
-                const cleanAuthor = project.author.replace(/\*+/g, '').trim();
+                const cleanAuthor = project.author.replace(/[\*#_]/g, '').trim();
                 ctx.fillText(cleanAuthor, authorX, authorY);
             }
             
-            // --- Draw Bonus Sticker (bottom-left) ---
+            // --- Draw Bonus Sticker (bottom-left) - Fixed Position ---
             if (project.coverBonusCount && project.coverBonusCount > 0 && project.bonusStickerShape !== 'none') {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
                 ctx.shadowBlur = 15;
@@ -180,7 +186,7 @@ const CoverTab: React.FC = () => {
 
                 const bonusNumber = project.coverBonusCount.toString();
                 
-                const stickerRadius = 150;
+                const stickerRadius = 140;
                 const stickerMargin = 50;
                 const stickerCenterX = stickerRadius + stickerMargin;
                 const stickerCenterY = canvasHeight - stickerRadius - stickerMargin;

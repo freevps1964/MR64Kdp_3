@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { analyzeManuscript, regenerateManuscript, highlightManuscriptChanges, listManuscriptChanges } from '../../services/geminiService';
+import { analyzeManuscript, regenerateManuscript, highlightManuscriptChanges, listManuscriptChanges, generateAudioSegment, pcmToWav } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import type { Project } from '../../types';
 import { useToast } from '../../hooks/useToast';
+import AudioIcon from '../icons/AudioIcon';
 
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     const processLines = (text: string) => {
@@ -66,6 +67,17 @@ const RevisionTab: React.FC = () => {
     const [proposedRevision, setProposedRevision] = useState<{ type: RevisionAction; content: string } | null>(null);
     const [originalStats, setOriginalStats] = useState<TextStats | null>(null);
     const [revisedStats, setRevisedStats] = useState<TextStats | null>(null);
+
+    // Audio generation states inside revision
+    const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+    const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+
+
+    useEffect(() => {
+        return () => {
+            if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+        };
+    }, [audioBlobUrl]);
 
 
     const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
@@ -298,11 +310,38 @@ const RevisionTab: React.FC = () => {
         }
     };
 
+    const handleGenerateAudioPreview = async () => {
+        const text = project?.manuscript?.regenerated;
+        if (!text) return;
+        
+        // Limit preview text to avoid long generation times
+        const previewText = text.substring(0, 1000) + "...";
+        
+        setIsGeneratingAudio(true);
+        setAudioBlobUrl(null);
+        try {
+            const pcmBuffer = await generateAudioSegment(previewText, 'Puck');
+             if (pcmBuffer) {
+                const wavBuffer = pcmToWav(pcmBuffer);
+                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                setAudioBlobUrl(url);
+                showToast("Audio preview generato!", "success");
+            }
+        } catch(err) {
+            console.error(err);
+            showToast("Errore durante la generazione audio.", "error");
+        } finally {
+            setIsGeneratingAudio(false);
+        }
+    };
+
     const handleReset = () => {
         updateProject({ manuscript: undefined });
         setManuscriptText('');
         setFileName('');
         setError(null);
+        setAudioBlobUrl(null);
     };
 
     const manuscript = project?.manuscript;
@@ -396,9 +435,13 @@ const RevisionTab: React.FC = () => {
                 <div className="animate-fade-in">
                     {manuscript.regenerated && 
                         <div className="p-4 border-2 border-green-300 rounded-lg bg-green-50">
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                                 <h4 className="text-lg font-semibold text-green-800">{t('revisionTab.regeneratedTitle')}</h4>
                                 <div className="flex items-center gap-2">
+                                     <button onClick={handleGenerateAudioPreview} disabled={isGeneratingAudio} className="flex items-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:opacity-50">
+                                        {isGeneratingAudio ? <LoadingSpinner/> : <AudioIcon className="w-5 h-5" />}
+                                        <span className="ml-2">Ascolta (Anteprima)</span>
+                                    </button>
                                     <select value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)} className="bg-white border rounded-md p-2" disabled={isLoadingDownload}>
                                         <option value="html">HTML (.html)</option>
                                         <option value="txt">Testo (.txt)</option>
@@ -409,6 +452,12 @@ const RevisionTab: React.FC = () => {
                                     </button>
                                 </div>
                             </div>
+                            {audioBlobUrl && (
+                                <div className="mb-4 p-3 bg-white border rounded-md shadow-sm">
+                                    <audio controls src={audioBlobUrl} className="w-full" />
+                                    <p className="text-xs text-neutral-medium mt-1 text-center">Anteprima audio (primi 1000 caratteri)</p>
+                                </div>
+                            )}
                             <div className="text-sm max-h-[70vh] overflow-y-auto p-2 bg-white rounded border">{manuscript.regenerated.split('\n').map((p,i)=><p className="mb-2" key={i}>{p||<>&nbsp;</>}</p>)}</div>
                         </div>
                     }
