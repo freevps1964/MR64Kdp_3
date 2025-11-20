@@ -1012,35 +1012,95 @@ ELENCO DELLE MODIFICHE:
  * Genera l'audio da un testo utilizzando il modello Text-to-Speech di Gemini.
  */
 export const generateAudioSegment = async (text: string, voiceName: string = 'Puck'): Promise<ArrayBuffer | null> => {
-  try {
-    const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: text }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voiceName },
-            },
-        },
-      },
-    }));
-    
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (base64Audio) {
-        const binaryString = atob(base64Audio);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+  // Define chunk size (approx 2000 characters is a safe limit for TTS to avoid 8k token limit and keep latency reasonable)
+  const CHUNK_SIZE = 2000;
+
+  // Helper to split text
+  const splitText = (input: string): string[] => {
+    const chunks: string[] = [];
+    let currentChunk = '';
+    // Split by paragraphs first to keep flow
+    const paragraphs = input.split(/\n+/);
+
+    for (const paragraph of paragraphs) {
+      if ((currentChunk.length + paragraph.length) < CHUNK_SIZE) {
+        currentChunk += (currentChunk ? '\n' : '') + paragraph;
+      } else {
+        if (currentChunk) chunks.push(currentChunk);
+        currentChunk = paragraph;
+        
+        // If a single paragraph is too large, split by sentences
+        if (currentChunk.length >= CHUNK_SIZE) {
+           const sentences = currentChunk.match(/[^.!?]+[.!?]+[\])'"]*|.+/g) || [currentChunk];
+           currentChunk = '';
+           for (const sentence of sentences) {
+             if ((currentChunk.length + sentence.length) < CHUNK_SIZE) {
+               currentChunk += sentence;
+             } else {
+               if (currentChunk) chunks.push(currentChunk);
+               currentChunk = sentence;
+             }
+           }
         }
-        return bytes.buffer;
+      }
     }
-    return null;
-  } catch (error) {
-    console.error("Error generating audio segment:", error);
-    throw error;
+    if (currentChunk) chunks.push(currentChunk);
+    return chunks;
+  };
+
+  const textChunks = splitText(text);
+  const audioBuffers: ArrayBuffer[] = [];
+
+  for (const chunk of textChunks) {
+    if (!chunk.trim()) continue;
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+          model: "gemini-2.5-flash-preview-tts",
+          contents: [{ parts: [{ text: chunk }] }],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: voiceName },
+                },
+            },
+          },
+        }));
+        
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+            const binaryString = atob(base64Audio);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            audioBuffers.push(bytes.buffer);
+        }
+        
+        // Short delay to prevent hitting rate limits too aggressively
+        if (textChunks.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+    } catch (error) {
+        console.error("Error generating audio segment for chunk:", error);
+        throw error; // Re-throw to handle in UI
+    }
   }
+
+  if (audioBuffers.length === 0) return null;
+
+  // Concatenate all audio buffers
+  const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
+  const combinedBuffer = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const buf of audioBuffers) {
+      combinedBuffer.set(new Uint8Array(buf), offset);
+      offset += buf.byteLength;
+  }
+  
+  return combinedBuffer.buffer;
 };
 
 /**
