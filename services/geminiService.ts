@@ -869,57 +869,131 @@ ${manuscriptText}
 
 /**
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
+ * Divide il manoscritto in capitoli per elaborazione granulare e per evitare limiti di token.
  */
-export const regenerateManuscript = async (originalText: string, analysisText: string): Promise<string> => {
+export const regenerateManuscript = async (
+    originalText: string,
+    analysisText: string,
+    onProgress?: (current: number, total: number) => void
+): Promise<string> => {
+    
     const currentDate = new Date().toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' });
-    const prompt = `AGISCI COME un autore e editor esperto di fama mondiale.
+    
+    // Funzione per dividere il testo in capitoli/sezioni
+    const splitManuscriptIntoChunks = (text: string): string[] => {
+        // Cerca intestazioni Markdown o pattern comuni di capitoli
+        const chapterRegex = /(^|\n)(#{1,3}\s.+|Capitolo\s+\d+|Chapter\s+\d+)(\r?\n|$)/i;
+        
+        // Se troviamo intestazioni, dividiamo
+        if (chapterRegex.test(text)) {
+            const chunks = text.split(chapterRegex).filter(chunk => chunk.trim().length > 10); // Filtra spazi vuoti o delimitatori
+             
+             // Ricostruisci i chunks corretti perché split con gruppi di cattura include i delimitatori
+             const rebuiltChunks: string[] = [];
+             let currentBuffer = "";
+             
+             // Un approccio più semplice: split per intestazioni ma mantenendo l'intestazione
+             const lines = text.split('\n');
+             for (const line of lines) {
+                 if (line.match(/^(#{1,3}\s|Capitolo\s+\d+|Chapter\s+\d+)/i)) {
+                     if (currentBuffer.trim()) {
+                         rebuiltChunks.push(currentBuffer);
+                     }
+                     currentBuffer = line + "\n";
+                 } else {
+                     currentBuffer += line + "\n";
+                 }
+             }
+             if (currentBuffer.trim()) {
+                 rebuiltChunks.push(currentBuffer);
+             }
+             
+             // Se abbiamo ottenuto dei chunks sensati, ritornali
+             if (rebuiltChunks.length > 1) {
+                 return rebuiltChunks;
+             }
+        }
+        
+        // Fallback: dividi per lunghezza (es. ogni 15000 caratteri, cercando di spezzare ai paragrafi)
+        const MAX_CHUNK_SIZE = 15000;
+        const chunks: string[] = [];
+        let currentChunk = '';
+        const paragraphs = text.split('\n\n');
+        
+        for (const paragraph of paragraphs) {
+             if ((currentChunk.length + paragraph.length) < MAX_CHUNK_SIZE) {
+                 currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+             } else {
+                 if (currentChunk) chunks.push(currentChunk);
+                 currentChunk = paragraph;
+             }
+        }
+        if (currentChunk) chunks.push(currentChunk);
+        return chunks;
+    };
+
+    const chunks = splitManuscriptIntoChunks(originalText);
+    let fullRegeneratedText = "";
+    
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        if (onProgress) {
+            onProgress(i + 1, chunks.length);
+        }
+
+        const prompt = `AGISCI COME un autore e editor esperto di fama mondiale.
 DATA CORRENTE: ${currentDate}.
 
-La tua missione è espandere e arricchire il "MANOSCRITTO ORIGINALE" applicando i suggerimenti dell'"ANALISI DELL'EDITOR" e aggiornando tutte le informazioni obsolete alla data corrente.
+La tua missione è espandere e arricchire questa SEZIONE SPECIFICA (Capitolo o parte) del manoscritto originale, applicando i suggerimenti pertinenti dell'"ANALISI DELL'EDITOR" e aggiornando tutte le informazioni obsolete.
 
 **REGOLA FONDAMENTALE E ASSOLUTA: APPEND-ONLY (SOLO AGGIUNTA).**
-Il tuo compito è prendere il "MANOSCRITTO ORIGINALE" e AGGIUNGERE valore.
+Il tuo compito è prendere la "SEZIONE ORIGINALE" e AGGIUNGERE valore.
 
 Segui queste regole FERREE:
-1.  **COPIA-INCOLLA OBBLIGATORIO**: Il testo del "MANOSCRITTO ORIGINALE" deve essere presente nel tuo output **PAROLA PER PAROLA**, nello stesso ordine.
+1.  **COPIA-INCOLLA OBBLIGATORIO**: Il testo della "SEZIONE ORIGINALE" deve essere presente nel tuo output **PAROLA PER PAROLA**.
 2.  **DIVIETO DI CANCELLAZIONE**: Non rimuovere, riassumere o sostituire nemmeno una frase del testo originale.
-3.  **AGGIORNAMENTO TRAMITE AGGIUNTA**: Se un'informazione nel testo originale è obsoleta, **NON CANCELLARLA**. Invece, aggiungi subito dopo un nuovo paragrafo che inizia con "Aggiornamento al ${currentDate}:" o una frase di collegamento simile, fornendo i dati più recenti.
-4.  **ESPANSIONE**: Inserisci nuovi paragrafi tra quelli esistenti o alla fine delle sezioni per approfondire i concetti, aggiungere esempi o chiarire passaggi oscuri basandoti sull'analisi.
-5.  **RISULTATO FINALE**: Il tuo output deve essere significativamente più lungo del testo originale. Se è più corto o uguale, hai fallito.
-
-Il risultato finale deve essere il manoscritto completo (originale + aggiunte). Non includere commenti o meta-testo.
-
-REQUISITI DI FORMATAZIONE:
-- Mantieni la struttura dei titoli originali.
-- Usa Markdown standard (## Titolo, ### Sottotitolo).
-- Non aggiungere asterischi ai titoli.
+3.  **AGGIORNAMENTO TRAMITE AGGIUNTA**: Se un'informazione è obsoleta, **NON CANCELLARLA**. Aggiungi subito dopo un nuovo paragrafo che inizia con "Aggiornamento al ${currentDate}:" fornendo i dati recenti.
+4.  **ESPANSIONE**: Inserisci nuovi paragrafi per approfondire i concetti basandoti sull'analisi.
+5.  **FORMATTAZIONE**: Usa Markdown standard (## Titolo). **NON USARE ASTERISCHI** nei titoli o nel testo.
 
 ---
-ANALISI DELL'EDITOR:
+CONTESTO (ANALISI COMPLETA):
 ---
 ${analysisText}
 ---
-MANOSCRITTO ORIGINALE:
+SEZIONE ORIGINALE DA ELABORARE (PARTE ${i + 1} DI ${chunks.length}):
 ---
-${originalText}
+${chunk}
 ---
-MANOSCRITTO ESPANSO E AGGIORNATO (ORIGINALE + NUOVE AGGIUNTE):
+SEZIONE ESPANSA E AGGIORNATA (ORIGINALE + NUOVE AGGIUNTE):
 ---
 `;
 
-    try {
-        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-pro",
-            contents: prompt,
-            config: {
-                tools: [{googleSearch: {}}],
-            },
-        }));
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error regenerating manuscript:", error);
-        throw error;
+        try {
+            const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+                model: "gemini-2.5-pro",
+                contents: prompt,
+                config: {
+                    tools: [{googleSearch: {}}],
+                },
+            }));
+            
+            // Clean asterisks from the generated chunk immediately
+            const cleanedChunk = response.text.trim().replace(/\*\*/g, '');
+            fullRegeneratedText += cleanedChunk + "\n\n";
+            
+            // Short delay between chunks to be nice to the API
+            if (i < chunks.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        } catch (error) {
+            console.error(`Error regenerating chunk ${i + 1}:`, error);
+            // If a chunk fails, append the original to avoid losing data
+            fullRegeneratedText += chunk + "\n\n"; 
+        }
     }
+
+    return fullRegeneratedText.trim();
 };
 
 
@@ -1101,6 +1175,68 @@ export const generateAudioSegment = async (text: string, voiceName: string = 'Pu
   }
   
   return combinedBuffer.buffer;
+};
+
+/**
+ * Parses chapters from a markdown text (regenerated manuscript).
+ * Splits based on standard Markdown headers (## or #).
+ */
+export const parseChaptersFromMarkdown = (text: string): { title: string, content: string }[] => {
+    if (!text) return [];
+    
+    // Split by Header 2 (##) or Header 1 (#) assuming they denote chapters
+    // Using a positive lookahead to keep the delimiter or capturing it
+    const parts = text.split(/(^|\n)##\s+/).filter(p => p.trim().length > 0);
+    
+    const chapters: { title: string, content: string }[] = [];
+    
+    // The split might leave some introductory text before the first chapter
+    // If the text starts with ##, the first element might be empty or newline
+    
+    // Helper to extract title from the first line of a chunk
+    const extractTitleAndContent = (chunk: string) => {
+        const firstLineEnd = chunk.indexOf('\n');
+        if (firstLineEnd === -1) {
+            return { title: chunk.trim(), content: '' };
+        }
+        const title = chunk.substring(0, firstLineEnd).trim();
+        const content = chunk.substring(firstLineEnd).trim();
+        return { title: cleanText(title), content };
+    };
+
+    // If the text didn't start with a header, handle the preamble?
+    // For simplicity, assuming standard format generated by our tools.
+    
+    // Re-implementing split logic to be more robust
+    const lines = text.split('\n');
+    let currentTitle = "Introduzione / Preambolo";
+    let currentContent = "";
+    
+    // Detect if the very first line is a header
+    if (lines.length > 0 && lines[0].match(/^#{1,3}\s/)) {
+        // Will be caught in loop
+        currentTitle = ""; 
+    }
+
+    for (const line of lines) {
+        const headerMatch = line.match(/^#{1,3}\s+(.+)/);
+        if (headerMatch) {
+            if (currentTitle && currentContent.trim()) {
+                chapters.push({ title: currentTitle, content: currentContent.trim() });
+            }
+            currentTitle = cleanText(headerMatch[1]);
+            currentContent = "";
+        } else {
+            currentContent += line + "\n";
+        }
+    }
+    
+    // Push the last chapter
+    if (currentTitle && currentContent.trim()) {
+        chapters.push({ title: currentTitle, content: currentContent.trim() });
+    }
+    
+    return chapters.filter(c => c.content.length > 0);
 };
 
 /**

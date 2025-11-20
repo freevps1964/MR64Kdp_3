@@ -4,90 +4,116 @@ import { useProject } from '../../hooks/useProject';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import { useToast } from '../../hooks/useToast';
-import { generateAudioSegment, pcmToWav } from '../../services/geminiService';
+import { generateAudioSegment, pcmToWav, parseChaptersFromMarkdown } from '../../services/geminiService';
 import AudioIcon from '../icons/AudioIcon';
+
+interface ChapterAudio {
+    title: string;
+    content: string;
+    audioBlobUrl: string | null;
+    status: 'idle' | 'generating' | 'success' | 'error';
+}
 
 const AudiobookTab: React.FC = () => {
     const { t } = useLocalization();
     const { project } = useProject();
     const { showToast } = useToast();
 
-    const [selectedContentId, setSelectedContentId] = useState<string>('full_manuscript');
     const [selectedVoice, setSelectedVoice] = useState<string>('Puck');
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+    const [chapters, setChapters] = useState<ChapterAudio[]>([]);
+    const [isParsing, setIsParsing] = useState(false);
 
     const voices = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
-
-    // Determine available content options
-    const contentOptions = [
-        { id: 'full_manuscript', label: t('audiobookTab.fullBook') },
-        ...(project?.bookStructure?.chapters.map(ch => ({
-            id: ch.id,
-            label: `${t('structureTab.chapter')}: ${ch.title}`
-        })) || [])
-    ];
+    const regeneratedText = project?.manuscript?.regenerated;
 
     useEffect(() => {
-        // Cleanup object URL on unmount
-        return () => {
-            if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
-        };
-    }, [audioBlobUrl]);
-
-    const getTextToConvert = (): string | null => {
-        if (selectedContentId === 'full_manuscript') {
-            return project?.manuscript?.regenerated || null;
-        }
-        const chapter = project?.bookStructure?.chapters.find(c => c.id === selectedContentId);
-        if (chapter) {
-            // Concatenate chapter title, content, and subchapters
-            let text = `${chapter.title}.\n\n${chapter.content || ''}\n\n`;
-            chapter.subchapters.forEach(sub => {
-                text += `${sub.title}.\n${sub.content || ''}\n\n`;
+        // Automatically parse chapters when the tab loads if we have a regenerated manuscript
+        if (regeneratedText) {
+            setIsParsing(true);
+            const parsed = parseChaptersFromMarkdown(regeneratedText);
+            
+            // Initialize state based on parsed chapters
+            // We preserve existing audio URLs if the title matches (simple caching mechanism)
+            setChapters(prevChapters => {
+                return parsed.map(p => {
+                    const existing = prevChapters.find(c => c.title === p.title);
+                    return {
+                        title: p.title,
+                        content: p.content,
+                        audioBlobUrl: existing ? existing.audioBlobUrl : null,
+                        status: existing ? existing.status : 'idle'
+                    };
+                });
             });
-            // Strip HTML tags for cleaner TTS
-            const div = document.createElement('div');
-            div.innerHTML = text;
-            return div.textContent || div.innerText || '';
+            setIsParsing(false);
+        } else {
+            setChapters([]);
         }
-        return null;
-    };
+    }, [regeneratedText]);
 
-    const handleGenerateAudio = async () => {
-        const text = getTextToConvert();
-        if (!text || !text.trim()) {
-            showToast(t('audiobookTab.noTextAvailable'), 'error');
+    useEffect(() => {
+        // Cleanup object URLs on unmount
+        return () => {
+            chapters.forEach(ch => {
+                if (ch.audioBlobUrl) URL.revokeObjectURL(ch.audioBlobUrl);
+            });
+        };
+    }, []); // Empty dependency ensures cleanup on unmount
+
+    const handleGenerateChapterAudio = async (index: number) => {
+        const chapter = chapters[index];
+        if (!chapter.content || !chapter.content.trim()) {
+            showToast("Contenuto vuoto per questo capitolo.", 'error');
             return;
         }
 
-        // Simple length check warning - Gemini Flash TTS has limits
-        if (text.length > 40000) {
-             // This is just a heuristic. Real limits depend on tokens.
-             showToast("Warning: Text might be too long for a single generation. Consider generating by chapter.", 'error');
-        }
-
-        setIsGenerating(true);
-        setAudioBlobUrl(null); // Clear previous
+        // Update status to generating
+        setChapters(prev => prev.map((c, i) => i === index ? { ...c, status: 'generating' } : c));
 
         try {
-            const pcmBuffer = await generateAudioSegment(text, selectedVoice);
+            const pcmBuffer = await generateAudioSegment(chapter.content, selectedVoice);
             if (pcmBuffer) {
                 const wavBuffer = pcmToWav(pcmBuffer);
                 const blob = new Blob([wavBuffer], { type: 'audio/wav' });
                 const url = URL.createObjectURL(blob);
-                setAudioBlobUrl(url);
-                showToast("Audio generated successfully!", "success");
+                
+                // Update state with new URL
+                setChapters(prev => prev.map((c, i) => i === index ? { ...c, status: 'success', audioBlobUrl: url } : c));
+                showToast(`Audio generato per: ${chapter.title}`, "success");
             } else {
-                throw new Error("No audio data returned");
+                throw new Error("Nessun dato audio restituito");
             }
         } catch (error: any) {
-            console.error("Audio generation failed:", error);
+            console.error(`Errore generazione audio capitolo ${index}:`, error);
+            setChapters(prev => prev.map((c, i) => i === index ? { ...c, status: 'error' } : c));
             showToast(t('apiErrors.generic'), 'error');
-        } finally {
-            setIsGenerating(false);
         }
     };
+
+    const handleDownload = (url: string, title: string) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${project?.projectTitle || 'audiobook'} - ${title}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    if (!regeneratedText) {
+         return (
+            <Card>
+                <div className="flex flex-col items-center justify-center p-10 text-center space-y-4">
+                    <div className="p-4 bg-gray-100 rounded-full text-gray-400">
+                        <AudioIcon className="w-12 h-12" />
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-dark">Nessun Manoscritto Trovato</h2>
+                    <p className="text-neutral-medium max-w-md">
+                        Per creare l'audiolibro, devi prima completare la fase di <strong>Revisione</strong> e generare il manoscritto finale.
+                    </p>
+                </div>
+            </Card>
+        );
+    }
 
     return (
         <Card>
@@ -101,75 +127,94 @@ const AudiobookTab: React.FC = () => {
                  </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                    <label htmlFor="content-select" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('audiobookTab.sourceLabel')}
-                    </label>
-                    <select
-                        id="content-select"
-                        value={selectedContentId}
-                        onChange={(e) => setSelectedContentId(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
-                        disabled={isGenerating}
-                    >
-                        {contentOptions.map(opt => (
-                            <option key={opt.id} value={opt.id}>{opt.label}</option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="voice-select" className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('audiobookTab.voiceLabel')}
-                    </label>
-                    <select
-                        id="voice-select"
-                        value={selectedVoice}
-                        onChange={(e) => setSelectedVoice(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-light focus:outline-none bg-white"
-                        disabled={isGenerating}
-                    >
-                        {voices.map(voice => (
-                            <option key={voice} value={voice}>{voice}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            <div className="flex justify-center mb-8">
-                <button
-                    onClick={handleGenerateAudio}
-                    disabled={isGenerating}
-                    className="flex items-center justify-center bg-brand-primary hover:bg-brand-secondary text-white font-bold py-3 px-8 rounded-lg transition-colors shadow-lg disabled:bg-neutral-medium disabled:cursor-not-allowed"
-                >
-                    {isGenerating ? <LoadingSpinner /> : `🎧 ${t('audiobookTab.generateButton')}`}
-                </button>
-            </div>
-
-            {isGenerating && (
-                <div className="text-center text-neutral-medium animate-pulse">
-                    <p>{t('audiobookTab.generating')}</p>
-                </div>
-            )}
-
-            {audioBlobUrl && (
-                <div className="bg-neutral-light/50 border border-gray-200 rounded-lg p-6 animate-fade-in">
-                    <h3 className="text-lg font-semibold text-brand-dark mb-4 text-center">{t('audiobookTab.audioPlayerTitle')}</h3>
-                    <audio controls className="w-full mb-4" src={audioBlobUrl}>
-                        Your browser does not support the audio element.
-                    </audio>
-                    <div className="flex justify-center">
-                        <a
-                            href={audioBlobUrl}
-                            download={`${project?.projectTitle || 'audiobook'}_${selectedContentId}.wav`}
-                            className="flex items-center gap-2 text-brand-primary font-semibold hover:underline"
+            <div className="mb-8 p-4 bg-neutral-light/50 rounded-lg border border-gray-200">
+                <label htmlFor="voice-select" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('audiobookTab.voiceLabel')}
+                </label>
+                <div className="flex flex-wrap gap-3">
+                    {voices.map(voice => (
+                        <button
+                            key={voice}
+                            onClick={() => setSelectedVoice(voice)}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                                selectedVoice === voice 
+                                ? 'bg-brand-primary text-white shadow-md' 
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                            }`}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                            {t('audiobookTab.downloadWav')}
-                        </a>
-                    </div>
+                            {selectedVoice === voice ? '✓ ' : ''}{voice}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {isParsing ? (
+                <div className="text-center py-10">
+                    <LoadingSpinner className="w-8 h-8 text-brand-primary mx-auto mb-2" />
+                    <p className="text-neutral-medium">Analisi dei capitoli in corso...</p>
+                </div>
+            ) : (
+                <div className="space-y-4 animate-fade-in">
+                    <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">
+                        Capitoli Rilevati ({chapters.length})
+                    </h3>
+                    
+                    {chapters.map((chapter, index) => (
+                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex-grow">
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-brand-light/10 text-brand-primary text-xs font-bold px-2 py-1 rounded">
+                                            #{index + 1}
+                                        </span>
+                                        <h4 className="font-bold text-neutral-dark">{chapter.title}</h4>
+                                    </div>
+                                    <p className="text-xs text-neutral-medium mt-1 truncate max-w-md">
+                                        {chapter.content.substring(0, 60)}...
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                    {chapter.status === 'generating' ? (
+                                        <div className="flex items-center gap-2 text-brand-primary text-sm font-medium px-4 py-2 bg-brand-light/5 rounded-md">
+                                            <LoadingSpinner className="w-4 h-4" />
+                                            Generazione...
+                                        </div>
+                                    ) : chapter.audioBlobUrl ? (
+                                        <div className="flex items-center gap-3 w-full md:w-auto">
+                                            <audio controls src={chapter.audioBlobUrl} className="h-8 w-48" />
+                                            <button 
+                                                onClick={() => handleDownload(chapter.audioBlobUrl!, chapter.title)}
+                                                className="text-green-600 hover:text-green-800 p-2 rounded-full hover:bg-green-50"
+                                                title="Scarica WAV"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                             <button 
+                                                onClick={() => handleGenerateChapterAudio(index)}
+                                                className="text-xs text-neutral-medium hover:text-brand-primary underline"
+                                            >
+                                                Rigenera
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleGenerateChapterAudio(index)}
+                                            className="flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-secondary text-white text-sm font-bold py-2 px-4 rounded-md transition-colors"
+                                        >
+                                            <AudioIcon className="w-4 h-4" />
+                                            Genera Audio
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            {chapter.status === 'error' && (
+                                <p className="text-xs text-red-600 mt-2">Errore durante la generazione. Riprova.</p>
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
         </Card>

@@ -60,6 +60,7 @@ const RevisionTab: React.FC = () => {
     
     const [revisionAction, setRevisionAction] = useState<RevisionAction>('regenerate');
     const [isApplying, setIsApplying] = useState(false);
+    const [progress, setProgress] = useState<{ current: number, total: number } | null>(null);
 
     const [isLoadingDownload, setIsLoadingDownload] = useState(false);
     const [downloadFormat, setDownloadFormat] = useState<'txt' | 'html'>('html');
@@ -167,13 +168,19 @@ const RevisionTab: React.FC = () => {
         
         setIsApplying(true);
         setError(null);
+        setProgress(null);
+
         try {
             let result: string;
             let updates: Partial<Project['manuscript']> = {};
 
             switch (revisionAction) {
                 case 'regenerate':
-                    result = await regenerateManuscript(text, analysis);
+                    result = await regenerateManuscript(
+                        text, 
+                        analysis,
+                        (current, total) => setProgress({ current, total })
+                    );
                     break;
                 case 'highlight':
                     result = await highlightManuscriptChanges(text, analysis);
@@ -185,10 +192,11 @@ const RevisionTab: React.FC = () => {
             setOriginalStats(analyzeTextStats(text));
             setRevisedStats(analyzeTextStats(result));
             setProposedRevision({ type: revisionAction, content: result });
-        } catch (err) {
+        } catch (err: any) {
             setError(err.toString().toLowerCase().includes('429') ? t('apiErrors.rateLimit') : t('apiErrors.generic'));
         } finally {
             setIsApplying(false);
+            setProgress(null);
         }
     };
 
@@ -429,7 +437,17 @@ const RevisionTab: React.FC = () => {
                         </button>
                     </div>
                 </div>
-                 {isApplying && <p className="text-center mt-3 text-sm">{t('revisionTab.applying')}</p>}
+                 {isApplying && progress && (
+                     <div className="mt-4 p-3 bg-white border rounded-md">
+                         <p className="text-center text-sm font-semibold text-brand-primary mb-2">
+                             Elaborazione capitolo {progress.current} di {progress.total}...
+                         </p>
+                         <div className="w-full bg-gray-200 rounded-full h-2.5">
+                             <div className="bg-brand-primary h-2.5 rounded-full transition-all duration-300" style={{ width: `${(progress.current / progress.total) * 100}%` }}></div>
+                         </div>
+                     </div>
+                 )}
+                 {isApplying && !progress && <p className="text-center mt-3 text-sm">{t('revisionTab.applying')}</p>}
             </div>
             {(manuscript?.regenerated || manuscript?.highlighted || manuscript?.changeList) && (
                 <div className="animate-fade-in">
