@@ -41,6 +41,14 @@ export interface ResearchResult {
   sources: GroundingSource[];
 }
 
+export interface CompetitorBook {
+  title: string;
+  author: string;
+  asin: string;
+  reason: string;
+  imageUrl: string;
+}
+
 export type Language = 'it' | 'en';
 
 export type ToneOfVoice = 'Informal' | 'Formal' | 'Academic' | 'Persuasive' | 'Empathetic' | 'Humorous' | 'Professional' | 'Enthusiastic';
@@ -124,6 +132,7 @@ export interface Project {
   coverOptions: string[]; // array of base64 strings
   coverPrompts: string[];
   archivedCovers: string[]; // New: array of selected base64 strings
+  competitorBooks?: CompetitorBook[]; // New: Top 3 bestsellers
   contentBlocks: ContentBlock[]; 
   glossary: GlossaryTerm[];
   coverBonusCount: number;

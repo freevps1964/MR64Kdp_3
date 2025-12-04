@@ -219,7 +219,11 @@
     "refineSuggestion1": "Aggiungi un filtro retrò",
     "refineSuggestion2": "Rendila in bianco e nero",
     "refineSuggestion3": "Aumenta il contrasto",
-    "refineSuggestion4": "Cambia lo sfondo in una foresta"
+    "refineSuggestion4": "Cambia lo sfondo in una foresta",
+    "competitorsTitle": "Ispirazione dai Bestseller",
+    "competitorAnalysis": "Analizza i 3 Migliori Bestseller",
+    "analyzingCompetitors": "Ricerca bestseller in corso...",
+    "competitorReason": "Perché vende:"
   },
   "metadataTab": {
     "title": "Metadati del Libro",

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse, Modality } from "@google/genai";
-import type { BookStructure, ResearchResult, Keyword, GroundingSource, Project, ContentBlockType, Trend, Language } from '../types';
+import type { BookStructure, ResearchResult, Keyword, GroundingSource, Project, ContentBlockType, Trend, Language, CompetitorBook } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -357,6 +357,64 @@ Output:
     model: "gemini-2.5-pro",
     contents: prompt,
   }));
+};
+
+/**
+ * Recupera le copertine dei 3 migliori bestseller per un dato argomento/categoria.
+ * Tenta di trovare l'ASIN per costruire l'URL dell'immagine di Amazon.
+ */
+export const fetchCompetitorCovers = async (topic: string, category: string): Promise<CompetitorBook[]> => {
+    const prompt = `AGISCI COME un esperto di analisi di mercato editoriale.
+    Trova i 3 libri bestseller attuali su Amazon.com o Amazon.it che sono più pertinenti per l'argomento "${topic}" nella categoria "${category}".
+    
+    Il tuo obiettivo principale è trovare il codice **ASIN** (Amazon Standard Identification Number) o **ISBN-10** corretto per ciascun libro, in modo da poter recuperare l'immagine di copertina.
+    
+    Restituisci un array JSON con i seguenti campi per ogni libro:
+    1. "title": Titolo del libro.
+    2. "author": Autore del libro.
+    3. "asin": Il codice ASIN o ISBN-10 (stringa di 10 caratteri). DEVE essere accurato.
+    4. "reason": Una breve frase sul perché questo libro è un bestseller o cosa rende la sua copertina efficace.
+    
+    Usa Google Search per verificare i bestseller attuali.
+    L'output deve essere SOLO il JSON.`;
+
+    try {
+        const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+            model: "gemini-2.5-pro",
+            contents: prompt,
+            config: {
+                tools: [{ googleSearch: {} }],
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: { type: Type.STRING },
+                            author: { type: Type.STRING },
+                            asin: { type: Type.STRING },
+                            reason: { type: Type.STRING },
+                        },
+                        required: ["title", "author", "asin", "reason"]
+                    }
+                }
+            },
+        }));
+
+        const booksData = JSON.parse(response.text.trim()) as Omit<CompetitorBook, 'imageUrl'>[];
+        
+        // Costruisci l'URL dell'immagine di Amazon basato sull'ASIN
+        // Formato: https://images-na.ssl-images-amazon.com/images/P/[ASIN].01._SX500_.jpg
+        const competitors: CompetitorBook[] = booksData.map(book => ({
+            ...book,
+            imageUrl: `https://images-na.ssl-images-amazon.com/images/P/${book.asin}.01._SX500_.jpg`
+        }));
+
+        return competitors;
+    } catch (error) {
+        console.error("Error fetching competitor covers:", error);
+        return [];
+    }
 };
 
 /**

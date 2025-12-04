@@ -219,7 +219,11 @@
     "refineSuggestion1": "Add a retro filter",
     "refineSuggestion2": "Make it black and white",
     "refineSuggestion3": "Increase the contrast",
-    "refineSuggestion4": "Change background to a forest"
+    "refineSuggestion4": "Change background to a forest",
+    "competitorsTitle": "Bestseller Inspiration",
+    "competitorAnalysis": "Analyze Top 3 Bestsellers",
+    "analyzingCompetitors": "Finding bestsellers...",
+    "competitorReason": "Why it sells:"
   },
   "metadataTab": {
     "title": "Book Metadata",

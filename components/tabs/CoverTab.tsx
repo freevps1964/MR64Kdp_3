@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useProject } from '../../hooks/useProject';
-import { generateCoverImages, generateCoverPromptFromBestsellers, editCoverImage, generateCoverTagline } from '../../services/geminiService';
+import { generateCoverImages, generateCoverPromptFromBestsellers, editCoverImage, generateCoverTagline, fetchCompetitorCovers } from '../../services/geminiService';
 import Card from '../common/Card';
 import LoadingSpinner from '../icons/LoadingSpinner';
 import type { BonusStickerShape } from '../../types';
@@ -45,6 +45,8 @@ const CoverTab: React.FC = () => {
   const [refinePrompt, setRefinePrompt] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [isGeneratingTagline, setIsGeneratingTagline] = useState(false);
+  
+  const [isAnalyzingCompetitors, setIsAnalyzingCompetitors] = useState(false);
 
   const isMetadataComplete = !!(project?.bookTitle && project?.subtitle && project?.author && project?.categories && project?.categories.length > 0);
 
@@ -470,6 +472,23 @@ const CoverTab: React.FC = () => {
         setIsGeneratingTagline(false);
     }
   }
+  
+  const handleAnalyzeCompetitors = async () => {
+      if (!project?.topic || !project?.categories?.[0]) {
+          alert("Per favore, definisci l'argomento e la categoria del progetto prima di analizzare i competitor.");
+          return;
+      }
+      setIsAnalyzingCompetitors(true);
+      try {
+          const competitors = await fetchCompetitorCovers(project.topic, project.categories[0]);
+          updateProject({ competitorBooks: competitors });
+      } catch (e) {
+          console.error(e);
+          setError("Impossibile recuperare i competitor. Riprova più tardi.");
+      } finally {
+          setIsAnalyzingCompetitors(false);
+      }
+  };
 
   const refineSuggestions = [
     t('coverTab.refineSuggestion1'),
@@ -508,6 +527,56 @@ const CoverTab: React.FC = () => {
             <h4 className="text-sm font-semibold text-neutral-medium">{t('metadataTab.categories')}</h4>
             <p className="text-neutral-dark truncate">{project?.categories?.join(', ') || 'N/A'}</p>
         </div>
+      </div>
+      
+      {/* Competitor Analysis Section */}
+      <div className="mb-8 p-4 border rounded-lg bg-white shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-brand-dark">{t('coverTab.competitorsTitle')}</h3>
+              <button 
+                  onClick={handleAnalyzeCompetitors}
+                  disabled={isAnalyzingCompetitors}
+                  className="bg-brand-secondary hover:bg-brand-dark text-white text-sm font-bold py-2 px-4 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                  {isAnalyzingCompetitors ? <LoadingSpinner /> : '🔍'}
+                  {isAnalyzingCompetitors ? t('coverTab.analyzingCompetitors') : t('coverTab.competitorAnalysis')}
+              </button>
+          </div>
+          
+          {project?.competitorBooks && project.competitorBooks.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {project.competitorBooks.map((book, index) => (
+                      <div key={index} className="flex flex-col items-center">
+                          <div className="relative w-full aspect-[2/3] mb-2 rounded-md overflow-hidden shadow-md bg-gray-100 flex items-center justify-center">
+                              {/* Using object-contain to show full cover without cropping */}
+                              <img 
+                                  src={book.imageUrl} 
+                                  alt={book.title} 
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                      // Fallback if image fails to load
+                                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMzAwIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2MzYzRjNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBfyT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmIj5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                                  }}
+                              />
+                          </div>
+                          <div className="text-center w-full">
+                              <p className="font-bold text-sm text-neutral-dark truncate" title={book.title}>{book.title}</p>
+                              <p className="text-xs text-neutral-medium truncate">{book.author}</p>
+                              <div className="mt-2 text-xs text-left bg-neutral-light p-2 rounded border border-neutral-200 w-full">
+                                  <span className="font-semibold block mb-1">{t('coverTab.competitorReason')}</span>
+                                  {book.reason}
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          ) : (
+              !isAnalyzingCompetitors && (
+                  <div className="text-center py-8 text-neutral-medium bg-neutral-light/30 rounded border border-dashed">
+                      <p>Analizza i bestseller per vedere quali copertine funzionano nel tuo mercato.</p>
+                  </div>
+              )
+          )}
       </div>
 
 
