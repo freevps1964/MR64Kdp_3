@@ -376,7 +376,7 @@ export const fetchCompetitorCovers = async (topic: string, category: string): Pr
     4. "reason": Una breve frase sul perché questo libro è un bestseller o cosa rende la sua copertina efficace.
     
     Usa Google Search per verificare i bestseller attuali.
-    L'output deve essere SOLO il JSON.`;
+    L'output deve essere SOLO il JSON grezzo, senza markdown formatting come \`\`\`json.`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
@@ -384,24 +384,25 @@ export const fetchCompetitorCovers = async (topic: string, category: string): Pr
             contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            title: { type: Type.STRING },
-                            author: { type: Type.STRING },
-                            asin: { type: Type.STRING },
-                            reason: { type: Type.STRING },
-                        },
-                        required: ["title", "author", "asin", "reason"]
-                    }
-                }
+                // Removed responseMimeType and responseSchema because they are incompatible with tools in current API version for this specific request type.
             },
         }));
 
-        const booksData = JSON.parse(response.text.trim()) as Omit<CompetitorBook, 'imageUrl'>[];
+        let jsonString = response.text || '';
+        
+        // Robust extraction: find the first '[' and last ']'
+        const startIndex = jsonString.indexOf('[');
+        const endIndex = jsonString.lastIndexOf(']');
+
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            jsonString = jsonString.substring(startIndex, endIndex + 1);
+        } else {
+            console.warn("Could not find JSON array in response, trying raw parse.");
+            // Fallback: cleanup markdown code blocks if present at start/end
+            jsonString = jsonString.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+        }
+
+        const booksData = JSON.parse(jsonString) as Omit<CompetitorBook, 'imageUrl'>[];
         
         // Costruisci l'URL dell'immagine di Amazon basato sull'ASIN
         // Formato: https://images-na.ssl-images-amazon.com/images/P/[ASIN].01._SX500_.jpg
