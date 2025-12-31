@@ -53,6 +53,7 @@ async function withRetry<T>(
 
 /**
  * Scopre argomenti di tendenza per libri KDP in un dato periodo.
+ * Uses Gemini 3 Pro for deep market analysis.
  */
 export const discoverTrends = async (category: string, market: string): Promise<{ trends: Trend[] | null; sources: GroundingSource[] }> => {
   const marketToDomain: { [key: string]: string } = {
@@ -80,7 +81,7 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3-pro-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -111,6 +112,7 @@ Fornisci la risposta esclusivamente come un array JSON di oggetti. Ordina i risu
 
 /**
  * Esegue una ricerca approfondita su un argomento utilizzando Gemini con Google Search.
+ * Uses Gemini 3 Pro for deep research capabilities.
  */
 export const researchTopic = async (topic: string, market: string): Promise<{ result: ResearchResult | null; sources: GroundingSource[] }> => {
   const prompt = `AGISCI COME un esperto di marketing e publishing per Amazon KDP. Esegui una ricerca approfondita, basata sulle informazioni più recenti dal web e con un focus sul mercato di **${market}**, per un libro sull'argomento: "${topic}".
@@ -140,7 +142,7 @@ Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3-pro-preview",
       contents: prompt,
       config: {
         tools: [{googleSearch: {}}],
@@ -231,6 +233,7 @@ Formatta ogni voce in questo modo ESATTO, ordinando per Rilevanza decrescente:
 
 /**
  * Genera una struttura di libro (capitoli e sottocapitoli) in formato JSON.
+ * Uses Gemini 3 Flash for speed and structure.
  */
 export const generateStructure = async (topic: string, title: string, subtitle: string, keywords: Keyword[]): Promise<BookStructure | null> => {
   const keywordList = keywords.map(k => k.keyword).join(', ');
@@ -244,7 +247,7 @@ Fornisci la risposta come un singolo oggetto JSON con una chiave "chapters" che 
   
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -303,6 +306,7 @@ Fornisci la risposta come un singolo oggetto JSON con una chiave "chapters" che 
 
 /**
  * Genera il contenuto per un capitolo o sottocapitolo specifico in streaming.
+ * Uses Gemini 3 Pro for high-quality writing.
  */
 export const generateContentStream = (
   topic: string,
@@ -354,7 +358,7 @@ Output:
 - Formatta il testo in paragrafi ben strutturati per una leggibilità ottimale, utilizzando interruzioni di riga per separare le idee.`;
 
   return withRetry(() => ai.models.generateContentStream({
-    model: "gemini-2.5-pro",
+    model: "gemini-3-pro-preview",
     contents: prompt,
   }));
 };
@@ -362,6 +366,7 @@ Output:
 /**
  * Recupera le copertine dei 3 migliori bestseller per un dato argomento/categoria.
  * Tenta di trovare l'ASIN per costruire l'URL dell'immagine di Amazon.
+ * Uses Gemini 3 Pro because it uses Tools and needs complex reasoning.
  */
 export const fetchCompetitorCovers = async (topic: string, category: string): Promise<CompetitorBook[]> => {
     const prompt = `AGISCI COME un esperto di analisi di mercato editoriale.
@@ -380,7 +385,7 @@ export const fetchCompetitorCovers = async (topic: string, category: string): Pr
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-pro",
+            model: "gemini-3-pro-preview",
             contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
@@ -420,6 +425,7 @@ export const fetchCompetitorCovers = async (topic: string, category: string): Pr
 
 /**
  * Genera un prompt per la copertina analizzando i bestseller su Amazon.
+ * Uses Gemini 3 Pro for creative reasoning.
  */
 export const generateCoverPromptFromBestsellers = async (
   topic: string,
@@ -459,7 +465,7 @@ Example of a quality output for a book on procrastination:
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3-pro-preview",
       contents: prompt,
     }));
     return response.text.trim();
@@ -472,6 +478,7 @@ Example of a quality output for a book on procrastination:
 
 /**
  * Genera immagini di copertina per il libro.
+ * Uses Imagen 4.
  */
 export const generateCoverImages = (prompt: string): Promise<GenerateImagesResponse> => {
     return withRetry(() => ai.models.generateImages({
@@ -487,6 +494,7 @@ export const generateCoverImages = (prompt: string): Promise<GenerateImagesRespo
 
 /**
  * Modifica un'immagine di copertina esistente utilizzando un prompt di testo.
+ * Uses Gemini 2.5 Flash Image (best for editing currently).
  */
 const dataUrlToBase64 = (dataUrl: string) => dataUrl.split(',')[1];
 
@@ -526,6 +534,7 @@ export const editCoverImage = async (base64ImageDataUrl: string, prompt: string)
 
 /**
  * Genera una descrizione del libro per i metadati KDP.
+ * Uses Gemini 3 Flash for quick and effective copy.
  */
 export const generateDescription = async (title: string, structure: BookStructure | null): Promise<{ description: string, sources: GroundingSource[] }> => {
     const chapterTitles = structure?.chapters.map(c => c.title).join(', ') || 'vari argomenti';
@@ -547,7 +556,7 @@ Esempio di Call to Action efficace: "Non aspettare un altro giorno per trasforma
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             contents: prompt,
         }));
         return { description: response.text.trim(), sources: [] };
@@ -559,6 +568,7 @@ Esempio di Call to Action efficace: "Non aspettare un altro giorno per trasforma
 
 /**
  * Genera un elenco di categorie di libri comuni adatte per Amazon KDP.
+ * Uses Gemini 3 Flash.
  */
 export const fetchAmazonCategories = async (language: Language): Promise<string[]> => {
   const languageName = language === 'it' ? 'Italian' : 'English';
@@ -569,7 +579,7 @@ export const fetchAmazonCategories = async (language: Language): Promise<string[
 
   try {
     const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -593,6 +603,7 @@ export const fetchAmazonCategories = async (language: Language): Promise<string[
 
 /**
  * Genera un prompt per un blocco di contenuto bonus.
+ * Uses Gemini 3 Flash.
  */
 export const generateContentBlockPrompt = async (project: Project, contentType: ContentBlockType): Promise<string> => {
     const chapterTitles = project.bookStructure?.chapters.map(c => c.title).slice(0, 5).join(', ') || '';
@@ -615,7 +626,7 @@ export const generateContentBlockPrompt = async (project: Project, contentType: 
     
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: prompt
         }));
         return response.text.trim();
@@ -628,6 +639,7 @@ export const generateContentBlockPrompt = async (project: Project, contentType: 
 
 /**
  * Genera il testo per uno o più blocchi di contenuto bonus.
+ * Uses Gemini 3 Flash.
  */
 export const generateContentBlockText = async (
     project: Project,
@@ -654,7 +666,7 @@ Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: prompt,
             config: { 
                 responseMimeType: "application/json",
@@ -694,6 +706,7 @@ Rispondi con un array JSON di oggetti, anche se ne generi solo uno.`;
 
 /**
  * Genera un'immagine per un blocco di contenuto bonus.
+ * Uses Imagen 4.
  */
 export const generateContentBlockImage = async (title: string, project: Project): Promise<string | null> => {
     const stylePrompt = `Come illustratore per un libro su "${project.topic}", crea un'immagine pulita, professionale e simbolica per una voce dell'appendice intitolata "${title}". Lo stile deve essere minimalista e grafico, visivamente coerente con il tema del libro e adatto per un'appendice di un libro.`;
@@ -722,6 +735,7 @@ export const generateContentBlockImage = async (title: string, project: Project)
 
 /**
  * Traduce un dato testo in una lingua di destinazione.
+ * Uses Gemini 3 Flash for speed.
  */
 export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
     if (!text || text.trim() === '') {
@@ -741,7 +755,7 @@ export const translateText = async (text: string, targetLanguage: string): Promi
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: prompt,
         }));
         return response.text.trim();
@@ -817,25 +831,26 @@ export const translateFullProject = async (
 
 /**
  * Elabora il testo utilizzando Gemini per varie attività di modifica.
+ * Uses Gemini 3 Pro for quality improvement, Flash for simple summarization.
  */
 export const processTextWithGemini = async (
   text: string,
   action: 'improve' | 'summarize' | 'expand'
 ): Promise<string> => {
   let prompt = '';
-  let model: 'gemini-2.5-pro' | 'gemini-2.5-flash' = 'gemini-2.5-flash';
+  let model: 'gemini-3-pro-preview' | 'gemini-3-flash-preview' = 'gemini-3-flash-preview';
 
   switch (action) {
     case 'improve':
-      model = 'gemini-2.5-pro';
+      model = 'gemini-3-pro-preview';
       prompt = `AGISCI COME un editor professionista. Riscrivi il seguente testo per migliorarne la chiarezza, il coinvolgimento e la qualità generale senza alterarne il significato fondamentale. Migliora la scelta delle parole, la struttura delle frasi e il flusso. Fornisci solo il testo riscritto. Testo da migliorare:\n---\n${text}\n---`;
       break;
     case 'summarize':
-      model = 'gemini-2.5-flash';
+      model = 'gemini-3-flash-preview';
       prompt = `Riassumi il seguente testo in modo conciso, cogliendo i punti principali. Fornisci solo il riassunto. Testo da riassumere:\n---\n${text}\n---`;
       break;
     case 'expand':
-      model = 'gemini-2.5-pro';
+      model = 'gemini-3-pro-preview';
       prompt = `Espandi il seguente testo. Aggiungi maggiori dettagli, esempi o spiegazioni per renderlo più completo e informativo. Mantieni uno stile di scrittura coerente. Fornisci solo il testo espanso. Testo da espandere:\n---\n${text}\n---`;
       break;
   }
@@ -854,6 +869,7 @@ export const processTextWithGemini = async (
 
 /**
  * Genera una breve tagline ad alta conversione per la copertina di un libro.
+ * Uses Gemini 3 Flash.
  */
 export const generateCoverTagline = async (project: Project): Promise<string> => {
     const prompt = `AGISCI COME un copywriter specializzato in copertine di libri. Crea una tagline estremamente breve (massimo 10 parole), accattivante e ad alta conversione per un libro intitolato "${project.bookTitle}" sull'argomento "${project.topic}".
@@ -862,7 +878,7 @@ Fornisci solo il testo della tagline, nient'altro. Evita asterischi.`;
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: prompt,
         }));
         return cleanText(response.text.trim().replace(/"/g, '')); // Rimuove eventuali virgolette e asterischi
@@ -874,6 +890,7 @@ Fornisci solo il testo della tagline, nient'altro. Evita asterischi.`;
 
 /**
  * Analizza un manoscritto completo e fornisce un feedback strutturato.
+ * Uses Gemini 3 Pro for deep critical analysis.
  */
 export const analyzeManuscript = async (manuscriptText: string): Promise<string> => {
     const prompt = `AGISCI COME un editor di libri professionista e un critico letterario di fama mondiale. La tua missione è analizzare in modo approfondito il seguente manoscritto e fornire un feedback costruttivo, dettagliato e attuabile per migliorarne drasticamente la qualità.
@@ -916,7 +933,7 @@ ${manuscriptText}
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-pro",
+            model: "gemini-3-pro-preview",
             contents: prompt,
         }));
         return response.text.trim();
@@ -928,7 +945,7 @@ ${manuscriptText}
 
 /**
  * Rigenera un manoscritto basandosi sul testo originale e sull'analisi di un editor.
- * Divide il manoscritto in capitoli per elaborazione granulare e per evitare limiti di token.
+ * Uses Gemini 3 Pro to ensure high quality rewriting and context retention.
  */
 export const regenerateManuscript = async (
     originalText: string,
@@ -1030,7 +1047,7 @@ SEZIONE ESPANSA E AGGIORNATA (ORIGINALE + NUOVE AGGIUNTE):
 
         try {
             const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-                model: "gemini-2.5-pro",
+                model: "gemini-3-pro-preview",
                 contents: prompt,
                 config: {
                     tools: [{googleSearch: {}}],
@@ -1058,6 +1075,7 @@ SEZIONE ESPANSA E AGGIORNATA (ORIGINALE + NUOVE AGGIUNTE):
 
 /**
  * Highlights changes in a manuscript based on an editor's analysis.
+ * Uses Gemini 3 Pro.
  */
 export const highlightManuscriptChanges = async (originalText: string, analysisText: string): Promise<string> => {
     const prompt = `AGISCI COME un editor esperto che usa la funzione "Revisioni" in modalità solo aggiunta. La tua missione è modificare il "MANOSCRITTO ORIGINALE" applicando i suggerimenti dall'"ANALISI DELL'EDITOR" esclusivamente tramite aggiunte.
@@ -1086,7 +1104,7 @@ MANOSCRITTO CON REVISIONI EVIDENZIATE:
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-pro",
+            model: "gemini-3-pro-preview",
             contents: prompt,
         }));
         return response.text.trim();
@@ -1098,6 +1116,7 @@ MANOSCRITTO CON REVISIONI EVIDENZIATE:
 
 /**
  * Lists specific changes for a manuscript based on an editor's analysis.
+ * Uses Gemini 3 Pro.
  */
 export const listManuscriptChanges = async (originalText: string, analysisText: string): Promise<string> => {
     const prompt = `AGISCI COME un assistente editoriale meticoloso. La tua missione è creare una checklist di **integrazioni e aggiunte** basata sull'"ANALISI DELL'EDITOR" per il "MANOSCRITTO ORIGINALE". Le modifiche proposte devono solo aggiungere contenuto, non rimuoverlo o sostituirlo.
@@ -1131,7 +1150,7 @@ ELENCO DELLE MODIFICHE:
 
     try {
         const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
-            model: "gemini-2.5-pro",
+            model: "gemini-3-pro-preview",
             contents: prompt,
         }));
         return response.text.trim();
@@ -1143,6 +1162,7 @@ ELENCO DELLE MODIFICHE:
 
 /**
  * Genera l'audio da un testo utilizzando il modello Text-to-Speech di Gemini.
+ * Uses standard TTS model.
  */
 export const generateAudioSegment = async (text: string, voiceName: string = 'Puck'): Promise<ArrayBuffer | null> => {
   // Define chunk size (approx 2000 characters is a safe limit for TTS to avoid 8k token limit and keep latency reasonable)
